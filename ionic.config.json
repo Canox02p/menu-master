@@ -1,0 +1,8 @@
+{
+  "name": "MenuMaster",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular",
+  "id": "a47e45fd"
+}
