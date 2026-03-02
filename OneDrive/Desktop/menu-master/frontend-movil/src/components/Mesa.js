@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { COLORES_RESTO } from '../core/theme';
 
-const Mesa = ({ numero, area, estado, mesero, platillos, personas, total, botonTexto, customWidth }) => {
+const Mesa = ({ numero, area, estado, mesero, platillos, personas, total, botonTexto, customWidth, onAccion }) => {
     const estadoUpper = estado.toUpperCase();
     const colorEstado = estadoUpper === 'OCUPADO' ? COLORES_RESTO.naranja :
         estadoUpper === 'RESERVADA' ? '#5C6BC0' :
@@ -14,7 +14,6 @@ const Mesa = ({ numero, area, estado, mesero, platillos, personas, total, botonT
             styles.card,
             {
                 borderColor: estadoUpper === 'OCUPADO' ? colorEstado + '50' : '#2D3748',
-                // Aquí aplicamos el ancho exacto que le manda HomeScreen
                 width: customWidth
             }
         ]}>
@@ -40,7 +39,7 @@ const Mesa = ({ numero, area, estado, mesero, platillos, personas, total, botonT
                     <Text style={styles.totalValue}>${total}</Text>
                 </View>
                 {botonTexto && (
-                    <TouchableOpacity style={styles.actionButton}>
+                    <TouchableOpacity style={styles.actionButton} onPress={onAccion}>
                         <Text style={styles.actionButtonText}>{botonTexto}</Text>
                     </TouchableOpacity>
                 )}
@@ -49,7 +48,6 @@ const Mesa = ({ numero, area, estado, mesero, platillos, personas, total, botonT
     );
 };
 
-// Subcomponente para las filas de datos
 const DataRow = ({ label, value }) => (
     <View style={styles.row}>
         <Text style={styles.label}>{label}</Text>
@@ -63,7 +61,6 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         padding: 15,
         borderWidth: 1,
-        // Eliminados margin y minWidth para permitir el cálculo dinámico
     },
     header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
     mesaNum: { color: '#FFF', fontSize: 18, fontWeight: '700' },

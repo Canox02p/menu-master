@@ -1,36 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
 import Mesa from '../../src/components/Mesa';
+import ModalPedido from '../../src/components/ModalPedido';
 import { COLORES_RESTO } from '../../src/core/theme';
+
+const pedidosActivosMock = [
+  { id: '222', mesa: '1', estado: 'Pagado', color: COLORES_RESTO.cian },
+  { id: '223', mesa: '2', estado: 'En cocina', color: COLORES_RESTO.naranja },
+  { id: '224', mesa: '3', estado: 'Pendiente', color: COLORES_RESTO.grisTexto },
+  { id: '225', mesa: '1', estado: 'Listo', color: COLORES_RESTO.verde },
+];
+
+const mesasMock = [
+  { id: '1', numero: '1', area: 'Terraza A', estado: 'OCUPADO', mesero: 'Juan Sr.', platillos: 12, personas: 4, total: '12,400.00', botonTexto: '+ Nueva orden' },
+  { id: '2', numero: '2', area: 'Barra 1', estado: 'OCUPADO', subEstado: 'EN COCINA', mesero: 'Ana Sr.', platillos: 4, personas: 2, total: '450.00', botonTexto: '+ Nueva orden' },
+  { id: '3', numero: '3', area: 'Terraza B', estado: 'LIBRE', total: '0.00', botonTexto: '+ Nueva orden' },
+  { id: '4', numero: '4', area: 'Barra 1', estado: 'RESERVADA', total: '0.00', botonTexto: '+ Iniciar orden' },
+];
 
 export default function HomeScreen() {
   const { width, height } = useWindowDimensions();
   const isPortrait = height > width;
 
-  // 1. Calcular el espacio real disponible
-  const paddingMain = 30; // 15 de padding izquierdo + 15 derecho
+  // Estados para el Modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [mesaSeleccionada, setMesaSeleccionada] = useState(null);
+
+  const abrirModal = (mesa) => {
+    setMesaSeleccionada(mesa);
+    setModalVisible(true);
+  };
+
+  const paddingMain = 30;
   const sidebarWidth = isPortrait ? 0 : 350;
   const marginSidebar = isPortrait ? 0 : 20;
 
-  // Ancho del contenedor donde van las mesas
   const contenedorMesasWidth = isPortrait
     ? width - paddingMain
     : width - paddingMain - sidebarWidth - marginSidebar;
 
-  // 2. Lógica responsiva: Cuántas columnas queremos según el ancho disponible
-  let numColumnas = 2; // Por defecto en celulares (siempre 2)
-  if (contenedorMesasWidth >= 1200) numColumnas = 5; // Límite máximo en pantallas muy grandes
-  else if (contenedorMesasWidth >= 900) numColumnas = 4; // Laptops / Monitores estándar
-  else if (contenedorMesasWidth >= 600) numColumnas = 3; // Tablets o celulares rotados
+  let numColumnas = 2;
+  if (contenedorMesasWidth >= 1200) numColumnas = 5;
+  else if (contenedorMesasWidth >= 900) numColumnas = 4;
+  else if (contenedorMesasWidth >= 600) numColumnas = 3;
 
-  // 3. Calcular el ancho exacto de cada tarjeta de mesa
-  const gap = 10; // Espacio entre tarjetas
+  const gap = 10;
   const espacioTotalGaps = gap * (numColumnas - 1);
   const anchoTarjeta = (contenedorMesasWidth - espacioTotalGaps) / numColumnas;
 
   return (
     <View style={styles.main}>
-      {/* HEADER DINÁMICO */}
       <View style={[styles.topNav, { paddingBottom: isPortrait ? 15 : 10 }]}>
         <View style={styles.headerTopRow}>
           <View style={styles.brandGroup}>
@@ -69,10 +88,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* CUERPO RESPONSIVO */}
       <View style={[styles.contentLayout, { flexDirection: isPortrait ? 'column' : 'row' }]}>
 
-        {/* SECCIÓN DE MESAS */}
         <View style={[styles.mesasContainer, { flex: 1 }]}>
           <View style={styles.tabs}>
             <TouchableOpacity style={[styles.tab, styles.tabActive]}><Text style={[styles.tabText, styles.tabTextActive]}>Todos</Text></TouchableOpacity>
@@ -81,33 +98,49 @@ export default function HomeScreen() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-            {/* Contenedor Flex que usa el gap y el ancho calculado */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: gap }}>
-              <Mesa numero="1" area="Terraza A" estado="OCUPADO" mesero="Juan Sr." platillos={12} personas={4} total="12,400.00" botonTexto="+ Nueva orden" customWidth={anchoTarjeta} />
-              <Mesa numero="2" area="Barra 1" estado="OCUPADO" subEstado="EN COCINA" mesero="Ana Sr." platillos={4} personas={2} total="450.00" botonTexto="+ Nueva orden" customWidth={anchoTarjeta} />
-              <Mesa numero="3" area="Terraza B" estado="LIBRE" total="0.00" botonTexto="+ Nueva orden" customWidth={anchoTarjeta} />
-              <Mesa numero="4" area="Barra 1" estado="RESERVADA" total="0.00" botonTexto="+ Iniciar orden" customWidth={anchoTarjeta} />
-              {/* Puedes agregar más mesas aquí para probar cómo se adaptan */}
+              {mesasMock.map((mesa) => (
+                <Mesa
+                  key={mesa.id}
+                  numero={mesa.numero}
+                  area={mesa.area}
+                  estado={mesa.estado}
+                  subEstado={mesa.subEstado}
+                  mesero={mesa.mesero}
+                  platillos={mesa.platillos}
+                  personas={mesa.personas}
+                  total={mesa.total}
+                  botonTexto={mesa.botonTexto}
+                  customWidth={anchoTarjeta}
+                  onAccion={() => abrirModal(mesa)}
+                />
+              ))}
             </View>
           </ScrollView>
         </View>
 
-        {/* TABLA DE PEDIDOS */}
         <View style={[styles.sidebarContainer, {
           width: isPortrait ? '100%' : 350,
           marginLeft: isPortrait ? 0 : marginSidebar,
           marginTop: isPortrait ? 10 : 0
         }]}>
-          <SidebarTable titulo="PEDIDOS RECIENTES" />
+          <SidebarTable titulo="PEDIDOS RECIENTES" pedidos={pedidosActivosMock} />
         </View>
 
       </View>
+
+      {/* Componente del Modal */}
+      <ModalPedido
+        visible={modalVisible}
+        mesa={mesaSeleccionada}
+        onClose={() => setModalVisible(false)}
+      />
+
     </View>
   );
 }
 
-// Subcomponentes para la tabla de pedidos
-const SidebarTable = ({ titulo }) => (
+const SidebarTable = ({ titulo, pedidos }) => (
   <View style={styles.tablaCard}>
     <Text style={styles.tituloTabla}>{titulo}</Text>
     <View style={styles.filaHeader}>
@@ -115,9 +148,18 @@ const SidebarTable = ({ titulo }) => (
       <Text style={styles.col}>MESA</Text>
       <Text style={[styles.col, { textAlign: 'right' }]}>ESTADO</Text>
     </View>
-    <FilaPedido id="222" mesa="1" estado="Pagado" color={COLORES_RESTO.cian} />
-    <FilaPedido id="223" mesa="2" estado="En cocina" color={COLORES_RESTO.naranja} />
-    <FilaPedido id="224" mesa="3" estado="Pendiente" color={COLORES_RESTO.grisTexto} />
+
+    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+      {pedidos && pedidos.map((pedido) => (
+        <FilaPedido
+          key={pedido.id}
+          id={pedido.id}
+          mesa={pedido.mesa}
+          estado={pedido.estado}
+          color={pedido.color}
+        />
+      ))}
+    </ScrollView>
   </View>
 );
 
@@ -131,7 +173,6 @@ const FilaPedido = ({ id, mesa, estado, color }) => (
   </View>
 );
 
-// Estilos
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: COLORES_RESTO.fondo, padding: 15, paddingTop: 40 },
   topNav: { borderBottomWidth: 1, borderBottomColor: '#1A242D' },
