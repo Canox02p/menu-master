@@ -1,9 +1,8 @@
 import React from 'react';
 import { COLORES_RESTO } from "./constants/theme";
-// CAMBIO: Apuntamos a la nueva estructura de carpetas
 import { usePedidosCocina } from "./features/cocina/hooks/usePedidosCocina";
 import { Header } from "./features/cocina/components/Header";
-import { OrderCard } from "./features/cocina/components/OrderCard";
+import { PedidoCard } from "./features/cocina/components/PedidoCard";
 
 export default function App() {
   const { pedidos, actualizarEstado, eliminar } = usePedidosCocina();
@@ -17,11 +16,12 @@ export default function App() {
         gridAutoRows: '1fr', gap: '15px', padding: '15px', boxSizing: 'border-box'
       }}>
         {pedidos.map(p => (
-          <OrderCard
+          <PedidoCard
             key={p._id}
             pedido={p}
-            onListo={(id) => actualizarEstado(id, 'LISTO')}
-            onCancelar={(id) => eliminar(id)}
+            // ✅ PROPS CORREGIDAS: Deben llamarse igual que en el componente PedidoCard
+            onActualizar={actualizarEstado}
+            onEliminar={eliminar}
           />
         ))}
       </div>

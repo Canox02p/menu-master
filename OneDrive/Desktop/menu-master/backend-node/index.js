@@ -1,13 +1,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Vital para conectar con React/React Native
+const cors = require('cors');
 require('dotenv').config();
 
-require('./config/relacional');
+// 🐬 Configuración de MySQL (Inventario)
+const db = require('./config/relacional');
 
+// 📦 Controladores SOLID
 const pedidoController = require('./controllers/PedidoController');
 
-// IMPORTACIÓN DE MODELOS (Para los módulos que aún no hemos migrado)
+// 📂 Importación de Modelos de MongoDB
 const Usuario = require('./models/Usuario');
 const Mesa = require('./models/Mesa');
 const Pedido = require('./models/Pedidos');
@@ -19,15 +21,15 @@ const Notificacion = require('./models/Notificacion');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors()); // 🌎 Permite la conexión desde tu App Móvil y Web
 
-// --- CONEXIÓN A MONGODB ---
+// --- 🍃 CONEXIÓN A MONGODB ---
 mongoose.connect('mongodb://127.0.0.1:27017/restaurante_pos')
-    .then(() => console.log(' BD No Relacional (MongoDB) Conectada'))
-    .catch(err => console.error(' Error de conexión MongoDB:', err));
+    .then(() => console.log('🟢 BD No Relacional (MongoDB) Conectada'))
+    .catch(err => console.error('❌ Error de conexión MongoDB:', err));
 
 // ==========================================
-// 🔐 1. MÓDULO DE AUTENTICACIÓN (JWT Base)
+// 🔐 1. MÓDULO DE AUTENTICACIÓN
 // ==========================================
 app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
@@ -37,7 +39,7 @@ app.post('/auth/login', async (req, res) => {
 });
 
 // ==========================================
-// 👥 2. MÓDULO DE USUARIOS (HU-22)
+// 👥 2. MÓDULO DE USUARIOS
 // ==========================================
 app.post('/usuarios', async (req, res) => {
     try {
@@ -46,13 +48,14 @@ app.post('/usuarios', async (req, res) => {
         res.status(201).json(usuario);
     } catch (err) { res.status(400).json({ error: err.message }); }
 });
+
 app.get('/usuarios', async (req, res) => {
     const usuarios = await Usuario.find();
     res.json(usuarios);
 });
 
 // ==========================================
-// 🪑 3. MÓDULO DE MESAS (HU-02, HU-09, HU-23)
+// 🪑 3. MÓDULO DE MESAS
 // ==========================================
 app.post('/mesas', async (req, res) => {
     try {
@@ -61,49 +64,83 @@ app.post('/mesas', async (req, res) => {
         res.status(201).json(mesa);
     } catch (err) { res.status(400).json({ error: err.message }); }
 });
+
 app.get('/mesas', async (req, res) => {
     const mesas = await Mesa.find();
     res.json(mesas);
 });
+
 app.patch('/mesas/:id/estado', async (req, res) => {
-    const mesa = await Mesa.findByIdAndUpdate(req.params.id, { estado: req.body.estado, fecha_actualizacion: Date.now() }, { new: true });
+    const mesa = await Mesa.findByIdAndUpdate(
+        req.params.id,
+        { estado: req.body.estado, fecha_actualizacion: Date.now() },
+        { new: true }
+    );
     res.json(mesa);
 });
 
 // ==========================================
-// 📝 4. MÓDULO DE PEDIDOS (MESERO) (HU-01, 03, 06, 07, 21)
+// 📝 4. MÓDULO DE PEDIDOS (MÓVIL)
 // ==========================================
-
-// ✨ RUTA MIGRADA A SOLID (Usa Controlador, Servicio, Repositorio y MySQL/Mongo)
+// ✨ Ruta Híbrida: Descuenta en MySQL y guarda en MongoDB
 app.post('/pedidos', (req, res) => pedidoController.crearPedido(req, res));
 
-// Rutas pendientes de migrar de este módulo:
 app.get('/pedidos/activos', async (req, res) => {
     const pedidos = await Pedido.find({ estado: { $ne: 'PAGADO' } }).populate('id_mesa');
     res.json(pedidos);
 });
-app.put('/pedidos/:id', async (req, res) => {
-    req.body.fecha_actualizacion = Date.now();
-    const pedido = await Pedido.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(pedido);
-});
 
 // ==========================================
-// 👨‍🍳 5. MÓDULO DE COCINA (HU-12, 13, 14, 15)
+// 👨‍🍳 5. MÓDULO DE COCINA (WEB)
 // ==========================================
 app.get('/pedidos/cocina', async (req, res) => {
-    const pedidos = await Pedido.find({ estado: { $in: ['EN_COCINA', 'EN_PROCESO'] } }).sort({ fecha_creacion: 1 });
+    const pedidos = await Pedido.find({ estado: { $in: ['EN_COCINA', 'EN_PROCESO'] } })
+        .sort({ fecha_creacion: 1 });
     res.json(pedidos);
 });
-app.patch('/pedidos/:id/listo', async (req, res) => {
-    const pedido = await Pedido.findByIdAndUpdate(req.params.id, { estado: 'LISTO' }, { new: true });
-    const alerta = new Notificacion({ tipo: 'PEDIDO_LISTO', id_usuario_destino: pedido.id_mesero });
-    await alerta.save();
-    res.json({ mensaje: "Pedido listo", pedido, alerta });
+
+app.patch('/pedidos/:id/estado', async (req, res) => {
+    try {
+        const pedido = await Pedido.findByIdAndUpdate(
+            req.params.id,
+            { estado: req.body.estado, fecha_actualizacion: Date.now() },
+            { new: true }
+        );
+
+        if (req.body.estado === 'LISTO') {
+            const alerta = new Notificacion({
+                tipo: 'PEDIDO_LISTO',
+                id_usuario_destino: pedido.id_mesero
+            });
+            await alerta.save();
+        }
+        res.json(pedido);
+    } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/pedidos/:id', async (req, res) => {
+    try {
+        await Pedido.findByIdAndDelete(req.params.id);
+        res.json({ mensaje: "Pedido cancelado y eliminado correctamente" });
+    } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 // ==========================================
-// 💰 6. MÓDULO DE VENTAS Y TICKETS (HU-04, 05, 26, 27)
+// 📦 6. MÓDULO DE INVENTARIO (MySQL)
+// ==========================================
+app.get('/productos', async (req, res) => {
+    try {
+        // Trae el menú directamente desde tu base de datos relacional
+        const [rows] = await db.query('SELECT id_producto as id, nombre, precio, categoria FROM productos');
+        res.json(rows);
+    } catch (err) {
+        console.error("Error en MySQL:", err);
+        res.status(500).json({ error: "No se pudo conectar con el inventario" });
+    }
+});
+
+// ==========================================
+// 💰 7. MÓDULO DE VENTAS Y TICKETS
 // ==========================================
 app.post('/ventas', async (req, res) => {
     try {
@@ -130,12 +167,14 @@ app.post('/ventas', async (req, res) => {
 });
 
 // ==========================================
-// 📊 7. MÓDULO ADMINISTRADOR Y ESTADÍSTICAS (HU-16, 17, 19, 20, 24)
+// 📊 8. MÓDULO ADMINISTRADOR Y ESTADÍSTICAS
 // ==========================================
 app.post('/admin/corte-caja', async (req, res) => {
     try {
         const { inicio, fin, id_admin } = req.body;
-        const ventas = await Venta.find({ fecha_venta: { $gte: new Date(inicio), $lte: new Date(fin) } });
+        const ventas = await Venta.find({
+            fecha_venta: { $gte: new Date(inicio), $lte: new Date(fin) }
+        });
 
         let total = 0, efectivo = 0, tarjeta = 0;
         ventas.forEach(v => {
@@ -150,22 +189,23 @@ app.post('/admin/corte-caja', async (req, res) => {
         });
         await corte.save();
 
-        await new Estadistica({ id_admin, tipo_consulta: 'CORTE_CAJA', rango_consultado: `${inicio} - ${fin}` }).save();
-
         res.json(corte);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ==========================================
-// 🔔 8. MÓDULO DE NOTIFICACIONES (HU-25)
+// 🔔 9. MÓDULO DE NOTIFICACIONES
 // ==========================================
 app.get('/notificaciones/:id_usuario', async (req, res) => {
-    const alertas = await Notificacion.find({ id_usuario_destino: req.params.id_usuario, leida: false });
+    const alertas = await Notificacion.find({
+        id_usuario_destino: req.params.id_usuario,
+        leida: false
+    });
     res.json(alertas);
 });
 
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(` Servidor POS corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor POS corriendo en http://localhost:${PORT}`);
 });
