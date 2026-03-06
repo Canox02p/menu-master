@@ -12,7 +12,6 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// Verificamos la conexión al arrancar (opcional, pero buena práctica)
 pool.getConnection()
     .then(connection => {
         console.log('🔗 BD Relacional (MySQL) Conectada exitosamente');

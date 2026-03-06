@@ -1,5 +1,4 @@
-// frontend-movil/src/core/api.js
-const IP_COMPUTADORA = '10.40.207.66';
+const IP_COMPUTADORA = '10.0.151.68';
 const PUERTO = '3000';
 export const API_URL = `http://${IP_COMPUTADORA}:${PUERTO}`;
 

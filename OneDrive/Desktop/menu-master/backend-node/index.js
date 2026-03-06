@@ -3,13 +3,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// 🐬 Configuración de MySQL (Inventario)
 const db = require('./config/relacional');
 
-// 📦 Controladores SOLID
 const pedidoController = require('./controllers/PedidoController');
 
-// 📂 Importación de Modelos de MongoDB
 const Usuario = require('./models/Usuario');
 const Mesa = require('./models/Mesa');
 const Pedido = require('./models/Pedidos');
@@ -21,12 +18,12 @@ const Notificacion = require('./models/Notificacion');
 
 const app = express();
 app.use(express.json());
-app.use(cors()); // 🌎 Permite la conexión desde tu App Móvil y Web
+app.use(cors());
 
 // --- 🍃 CONEXIÓN A MONGODB ---
 mongoose.connect('mongodb://127.0.0.1:27017/restaurante_pos')
-    .then(() => console.log('🟢 BD No Relacional (MongoDB) Conectada'))
-    .catch(err => console.error('❌ Error de conexión MongoDB:', err));
+    .then(() => console.log(' BD No Relacional (MongoDB) Conectada'))
+    .catch(err => console.error(' Error de conexión MongoDB:', err));
 
 // ==========================================
 // 🔐 1. MÓDULO DE AUTENTICACIÓN
@@ -82,7 +79,6 @@ app.patch('/mesas/:id/estado', async (req, res) => {
 // ==========================================
 // 📝 4. MÓDULO DE PEDIDOS (MÓVIL)
 // ==========================================
-// ✨ Ruta Híbrida: Descuenta en MySQL y guarda en MongoDB
 app.post('/pedidos', (req, res) => pedidoController.crearPedido(req, res));
 
 app.get('/pedidos/activos', async (req, res) => {
@@ -130,15 +126,26 @@ app.delete('/pedidos/:id', async (req, res) => {
 // ==========================================
 app.get('/productos', async (req, res) => {
     try {
-        // Trae el menú directamente desde tu base de datos relacional
-        const [rows] = await db.query('SELECT id_producto as id, nombre, precio, categoria FROM productos');
+        // ✨ LA MAGIA: Unimos la tabla productos con la tabla categorias
+        const query = `
+            SELECT 
+                p.id_producto AS id, 
+                p.nombre, 
+                p.precio, 
+                c.nombre AS categoria 
+            FROM productos p
+            LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+        `;
+
+        const [rows] = await db.query(query);
+        console.log("📦 Productos extraídos con éxito:", rows);
+
         res.json(rows);
     } catch (err) {
-        console.error("Error en MySQL:", err);
+        console.error("Error en MySQL:", err.message);
         res.status(500).json({ error: "No se pudo conectar con el inventario" });
     }
 });
-
 // ==========================================
 // 💰 7. MÓDULO DE VENTAS Y TICKETS
 // ==========================================
@@ -204,8 +211,7 @@ app.get('/notificaciones/:id_usuario', async (req, res) => {
     res.json(alertas);
 });
 
-// --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor POS corriendo en http://localhost:${PORT}`);
+    console.log(` Servidor POS corriendo en http://localhost:${PORT}`);
 });
