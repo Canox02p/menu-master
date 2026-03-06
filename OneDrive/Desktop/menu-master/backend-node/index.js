@@ -3,14 +3,18 @@ const mongoose = require('mongoose');
 const cors = require('cors'); // Vital para conectar con React/React Native
 require('dotenv').config();
 
-// IMPORTACIÓN DE MODELOS (Debes tener estos 8 archivos en la carpeta models)
+require('./config/relacional');
+
+const pedidoController = require('./controllers/PedidoController');
+
+// IMPORTACIÓN DE MODELOS (Para los módulos que aún no hemos migrado)
 const Usuario = require('./models/Usuario');
 const Mesa = require('./models/Mesa');
 const Pedido = require('./models/Pedidos');
 const Venta = require('./models/Venta');
 const Ticket = require('./models/Ticket');
 const CorteCaja = require('./models/CorteCaja');
-const Estadistica = require('./models/Estadistica'); // Coleccion: estadisticas_consultas
+const Estadistica = require('./models/Estadistica');
 const Notificacion = require('./models/Notificacion');
 
 const app = express();
@@ -19,14 +23,13 @@ app.use(cors());
 
 // --- CONEXIÓN A MONGODB ---
 mongoose.connect('mongodb://127.0.0.1:27017/restaurante_pos')
-    .then(() => console.log('✅ BD No Relacional (MongoDB) Conectada'))
-    .catch(err => console.error('❌ Error de conexión:', err));
+    .then(() => console.log(' BD No Relacional (MongoDB) Conectada'))
+    .catch(err => console.error(' Error de conexión MongoDB:', err));
 
 // ==========================================
 // 🔐 1. MÓDULO DE AUTENTICACIÓN (JWT Base)
 // ==========================================
 app.post('/auth/login', async (req, res) => {
-    // Aquí a futuro implementaremos bcrypt y jwt.sign
     const { email, password } = req.body;
     const usuario = await Usuario.findOne({ email, password_hash: password });
     if (!usuario) return res.status(401).json({ error: "Credenciales inválidas" });
@@ -51,18 +54,18 @@ app.get('/usuarios', async (req, res) => {
 // ==========================================
 // 🪑 3. MÓDULO DE MESAS (HU-02, HU-09, HU-23)
 // ==========================================
-app.post('/mesas', async (req, res) => { // HU-23: Admin configura mesas
+app.post('/mesas', async (req, res) => {
     try {
         const mesa = new Mesa(req.body);
         await mesa.save();
         res.status(201).json(mesa);
     } catch (err) { res.status(400).json({ error: err.message }); }
 });
-app.get('/mesas', async (req, res) => { // HU-02: Mapa visual
+app.get('/mesas', async (req, res) => {
     const mesas = await Mesa.find();
     res.json(mesas);
 });
-app.patch('/mesas/:id/estado', async (req, res) => { // HU-09: Cambiar estado
+app.patch('/mesas/:id/estado', async (req, res) => {
     const mesa = await Mesa.findByIdAndUpdate(req.params.id, { estado: req.body.estado, fecha_actualizacion: Date.now() }, { new: true });
     res.json(mesa);
 });
@@ -70,20 +73,16 @@ app.patch('/mesas/:id/estado', async (req, res) => { // HU-09: Cambiar estado
 // ==========================================
 // 📝 4. MÓDULO DE PEDIDOS (MESERO) (HU-01, 03, 06, 07, 21)
 // ==========================================
-app.post('/pedidos', async (req, res) => { // HU-01 y HU-07: Toma de orden
-    try {
-        const pedido = new Pedido(req.body);
-        await pedido.save();
-        // Cambiar estado de la mesa a OCUPADA
-        await Mesa.findByIdAndUpdate(req.body.id_mesa, { estado: 'OCUPADA' });
-        res.status(201).json(pedido);
-    } catch (err) { res.status(400).json({ error: err.message }); }
-});
-app.get('/pedidos/activos', async (req, res) => { // HU-06: Ver pedidos activos
+
+// ✨ RUTA MIGRADA A SOLID (Usa Controlador, Servicio, Repositorio y MySQL/Mongo)
+app.post('/pedidos', (req, res) => pedidoController.crearPedido(req, res));
+
+// Rutas pendientes de migrar de este módulo:
+app.get('/pedidos/activos', async (req, res) => {
     const pedidos = await Pedido.find({ estado: { $ne: 'PAGADO' } }).populate('id_mesa');
     res.json(pedidos);
 });
-app.put('/pedidos/:id', async (req, res) => { // HU-03: Editar o cancelar productos
+app.put('/pedidos/:id', async (req, res) => {
     req.body.fecha_actualizacion = Date.now();
     const pedido = await Pedido.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json(pedido);
@@ -92,17 +91,14 @@ app.put('/pedidos/:id', async (req, res) => { // HU-03: Editar o cancelar produc
 // ==========================================
 // 👨‍🍳 5. MÓDULO DE COCINA (HU-12, 13, 14, 15)
 // ==========================================
-app.get('/pedidos/cocina', async (req, res) => { // HU-12 y HU-15: Pantalla cocina
+app.get('/pedidos/cocina', async (req, res) => {
     const pedidos = await Pedido.find({ estado: { $in: ['EN_COCINA', 'EN_PROCESO'] } }).sort({ fecha_creacion: 1 });
     res.json(pedidos);
 });
-app.patch('/pedidos/:id/listo', async (req, res) => { // HU-14: Marcar listo y notificar
+app.patch('/pedidos/:id/listo', async (req, res) => {
     const pedido = await Pedido.findByIdAndUpdate(req.params.id, { estado: 'LISTO' }, { new: true });
-
-    // Generar notificación al mesero
     const alerta = new Notificacion({ tipo: 'PEDIDO_LISTO', id_usuario_destino: pedido.id_mesero });
     await alerta.save();
-
     res.json({ mensaje: "Pedido listo", pedido, alerta });
 });
 
@@ -111,22 +107,19 @@ app.patch('/pedidos/:id/listo', async (req, res) => { // HU-14: Marcar listo y n
 // ==========================================
 app.post('/ventas', async (req, res) => {
     try {
-        // HU-04, 05 y 26: Cobro y división de cuenta
         const venta = new Venta(req.body);
         await venta.save();
 
-        // HU-27: Generar Ticket Histórico Automático
         const ticket = new Ticket({
             id_venta: venta._id,
             numero_mesa: req.body.numero_mesa,
             nombre_mesa: req.body.nombre_mesa,
             nombre_mesero: req.body.nombre_mesero,
-            detalle_productos: req.body.productos_cobrados, // Los que se pagaron en esta transacción
+            detalle_productos: req.body.productos_cobrados,
             total: venta.monto_pagado
         });
         await ticket.save();
 
-        // Si la cuenta NO se dividió, cerramos el pedido y liberamos la mesa
         if (req.body.division === false) {
             await Pedido.findByIdAndUpdate(req.body.id_pedido, { estado: 'PAGADO' });
             await Mesa.findOneAndUpdate({ numero_mesa: req.body.numero_mesa }, { estado: 'LIBRE' });
@@ -139,7 +132,7 @@ app.post('/ventas', async (req, res) => {
 // ==========================================
 // 📊 7. MÓDULO ADMINISTRADOR Y ESTADÍSTICAS (HU-16, 17, 19, 20, 24)
 // ==========================================
-app.post('/admin/corte-caja', async (req, res) => { // HU-19: Corte de caja
+app.post('/admin/corte-caja', async (req, res) => {
     try {
         const { inicio, fin, id_admin } = req.body;
         const ventas = await Venta.find({ fecha_venta: { $gte: new Date(inicio), $lte: new Date(fin) } });
@@ -157,7 +150,6 @@ app.post('/admin/corte-caja', async (req, res) => { // HU-19: Corte de caja
         });
         await corte.save();
 
-        // Registrar la consulta (HU-20)
         await new Estadistica({ id_admin, tipo_consulta: 'CORTE_CAJA', rango_consultado: `${inicio} - ${fin}` }).save();
 
         res.json(corte);
@@ -175,5 +167,5 @@ app.get('/notificaciones/:id_usuario', async (req, res) => {
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor POS corriendo perfectamente en http://localhost:${PORT}`);
+    console.log(` Servidor POS corriendo en http://localhost:${PORT}`);
 });
