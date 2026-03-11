@@ -1,17 +1,3 @@
-/* src/features/admin/components/AdminHeader.css */
-
-/* Variables simulando tu theme.js - Puedes mover esto a tu index.css global después */
-:root {
-    --bg-header: transparent;
-    --bg-card: #242D32;
-    --bg-card-hover: #2A353D;
-    --color-primary: #40E0D0;
-    --color-text-main: #FFFFFF;
-    --color-text-muted: #8C99A6;
-    --color-danger: #FC8181;
-    --border-color: rgba(255, 255, 255, 0.05);
-}
-
 .admin-header {
     display: flex;
     justify-content: space-between;
@@ -20,7 +6,6 @@
     background-color: var(--bg-header);
     position: relative;
     z-index: 50;
-    /* Para que el dropdown pase por encima del resto */
 }
 
 .header-brand h2 {
@@ -50,6 +35,7 @@
 
 .text-green {
     color: #4ADE80;
+
 }
 
 .search-bar {
@@ -74,7 +60,6 @@
     width: 200px;
 }
 
-/* --- ZONA DEL PERFIL Y DROPDOWN --- */
 .profile-container {
     position: relative;
 }
@@ -94,8 +79,7 @@
 }
 
 .notification-btn {
-    background: #FF8C00;
-    /* Naranja de tu diseño */
+    background: var(--color-primary);
     border: none;
     color: #FFF;
     width: 35px;
@@ -114,7 +98,7 @@
     right: -2px;
     width: 8px;
     height: 8px;
-    background-color: red;
+    background-color: var(--color-danger);
     border-radius: 50%;
 }
 
@@ -144,7 +128,6 @@
     transform: rotate(180deg);
 }
 
-/* --- EL MENÚ DESPLEGABLE --- */
 .profile-dropdown {
     position: absolute;
     top: 110%;

@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, CheckCircle2, Settings, LogOut, ChevronDown, AlertTriangle } from 'lucide-react';
+import { COLORES_RESTO } from '../../../constants/theme';
 import './AdminHeader.css';
 
 export default function AdminHeader({ onLogout }) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false); // Estado para el modal
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Cierra el menú desplegable si haces clic fuera de él
     useEffect(() => {
         function handleClickOutside(event) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -20,27 +20,37 @@ export default function AdminHeader({ onLogout }) {
         };
     }, []);
 
-    // Función que abre el modal en lugar de cerrar sesión de golpe
     const handleLogoutClick = () => {
-        setIsDropdownOpen(false); // Esconde el menú
-        setShowLogoutModal(true); // Muestra el modal
+        setIsDropdownOpen(false);
+        setShowLogoutModal(true);
     };
 
-    // Funciones de los botones del modal
     const confirmLogout = () => {
         setShowLogoutModal(false);
-        if (onLogout) onLogout(); // Ejecuta el cierre de sesión real
+        if (onLogout) onLogout();
     };
 
     const cancelLogout = () => {
         setShowLogoutModal(false);
     };
 
+    const themeStyle = {
+        '--color-primary': COLORES_RESTO.cian,
+        '--bg-header': 'transparent',
+        '--bg-card': COLORES_RESTO.tarjeta,
+        '--color-danger': COLORES_RESTO.rojo,
+        '--color-text-muted': COLORES_RESTO.grisTexto,
+        '--border-color': COLORES_RESTO.borde,
+        '--bg-card-hover': '#2A353D',
+        '--color-text-main': '#FFFFFF',
+    };
+
     return (
         <>
-            <header className="admin-header">
+            {/* Pasamos themeStyle directamente a la etiqueta header */}
+            <header className="admin-header" style={themeStyle}>
                 <div className="header-brand">
-                    <h2>Carlo's Restaurant <span>POS</span></h2>
+                    <h2>Menu <span>Master</span></h2>
                 </div>
 
                 <div className="header-actions">

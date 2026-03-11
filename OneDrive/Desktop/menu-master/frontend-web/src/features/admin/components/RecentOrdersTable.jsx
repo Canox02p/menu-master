@@ -1,5 +1,6 @@
 import React from 'react';
 import { Smartphone } from 'lucide-react';
+import { COLORES_RESTO } from '../../../constants/theme';
 
 const orders = [
     { id: '#222', mesa: 'Mesa 1', mesero: 'Juan Sr.', avatar: '👨🏽', platillos: '12 Platillos', total: '$12,400.00', estado: 'EN PREPARACIÓN', color: 'green', device: true },
@@ -8,8 +9,17 @@ const orders = [
 ];
 
 export default function RecentOrdersTable() {
+    // Inyectamos las variables dinámicas
+    const themeStyle = {
+        '--bg-card': COLORES_RESTO.tarjeta,
+        '--color-text-muted': COLORES_RESTO.grisTexto,
+        '--border-color': COLORES_RESTO.borde,
+        '--color-success': COLORES_RESTO.verde, // Tomamos tu verde del theme.js
+        '--color-primary': COLORES_RESTO.cian,
+    };
+
     return (
-        <div className="table-card">
+        <div className="table-card" style={themeStyle}>
             <h4>ÚLTIMOS PEDIDOS</h4>
             <div className="table-responsive">
                 <table className="orders-table">

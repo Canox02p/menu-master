@@ -3,8 +3,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell
 } from 'recharts';
-
-// Datos de prueba para la gráfica de línea
+import { COLORES_RESTO } from '../../../constants/theme';
 const dataLine = [
     { time: '06:00', ventas: 100 },
     { time: '10:00', ventas: 350 },
@@ -16,38 +15,57 @@ const dataLine = [
     { time: '22:00', ventas: 800 },
 ];
 
-// Datos para la gráfica de dona (33% ocupado)
 const dataPie = [
     { name: 'Ocupadas', value: 33 },
     { name: 'Libres', value: 67 },
 ];
-const COLORS = ['#FF9F43', '#3A4750']; // Naranja y Gris oscuro
 
 export default function ChartsSection() {
+    const colorPrimario = COLORES_RESTO.cian;
+    const colorSecundario = COLORES_RESTO.borde;
+    const colorTexto = COLORES_RESTO.grisTexto;
+    const colorFondoToolip = COLORES_RESTO.fondo;
+
+    const pieColors = [colorPrimario, colorSecundario];
+
+    const themeStyle = {
+        '--color-primary': colorPrimario,
+        '--color-text-muted': colorTexto,
+        '--border-color': colorSecundario,
+        '--bg-card': COLORES_RESTO.tarjeta,
+    };
+
     return (
-        <div className="charts-grid">
+        <div className="charts-grid" style={themeStyle}>
             {/* Gráfica de Línea */}
             <div className="chart-card line-chart-container">
                 <h4>RENDIMIENTO DIARIO (VENTAS POR HORA)</h4>
                 <div className="chart-wrapper">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={dataLine} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#2A353D" vertical={false} />
-                            <XAxis dataKey="time" stroke="#8C99A6" tick={{ fill: '#8C99A6', fontSize: 12 }} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#8C99A6" tick={{ fill: '#8C99A6', fontSize: 12 }} tickLine={false} axisLine={false} />
+                            {/* Líneas de cuadrícula */}
+                            <CartesianGrid strokeDasharray="3 3" stroke={colorSecundario} vertical={false} />
+
+                            {/* Ejes */}
+                            <XAxis dataKey="time" stroke={colorTexto} tick={{ fill: colorTexto, fontSize: 12 }} tickLine={false} axisLine={false} />
+                            <YAxis stroke={colorTexto} tick={{ fill: colorTexto, fontSize: 12 }} tickLine={false} axisLine={false} />
+
+                            {/* Tooltip (Cajita de información al pasar el mouse) */}
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#12171A', borderColor: '#40E0D0', color: '#fff', borderRadius: '8px' }}
-                                itemStyle={{ color: '#FF9F43' }}
+                                contentStyle={{ backgroundColor: colorFondoToolip, borderColor: colorPrimario, color: '#fff', borderRadius: '8px' }}
+                                itemStyle={{ color: colorPrimario }}
                             />
-                            {/* La línea naranja con efecto de resplandor */}
+
+                            {/* La línea principal con efecto de resplandor */}
                             <Line
                                 type="monotone"
                                 dataKey="ventas"
-                                stroke="#FF9F43"
+                                stroke={colorPrimario}
                                 strokeWidth={3}
                                 dot={false}
-                                activeDot={{ r: 6, fill: '#FF9F43', stroke: '#fff', strokeWidth: 2 }}
-                                style={{ filter: 'drop-shadow(0px 4px 6px rgba(255, 159, 67, 0.4))' }}
+                                activeDot={{ r: 6, fill: colorPrimario, stroke: '#fff', strokeWidth: 2 }}
+                                /* Agregamos '66' al hex del cian para darle un 40% de opacidad a la sombra */
+                                style={{ filter: `drop-shadow(0px 4px 6px ${colorPrimario}66)` }}
                             />
                         </LineChart>
                     </ResponsiveContainer>
@@ -71,7 +89,7 @@ export default function ChartsSection() {
                                 stroke="none"
                             >
                                 {dataPie.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
                                 ))}
                             </Pie>
                         </PieChart>
@@ -81,9 +99,15 @@ export default function ChartsSection() {
                         <span>Occupancy</span>
                     </div>
                 </div>
+
+                {/* Leyenda con los colores inyectados en línea para evitar depender del CSS para los puntitos */}
                 <div className="donut-legend">
-                    <span className="legend-item"><span className="dot busy"></span> Ocupadas</span>
-                    <span className="legend-item"><span className="dot free"></span> Libres</span>
+                    <span className="legend-item">
+                        <span className="dot busy" style={{ backgroundColor: colorPrimario }}></span> Ocupadas
+                    </span>
+                    <span className="legend-item">
+                        <span className="dot free" style={{ backgroundColor: colorSecundario }}></span> Libres
+                    </span>
                 </div>
             </div>
         </div>

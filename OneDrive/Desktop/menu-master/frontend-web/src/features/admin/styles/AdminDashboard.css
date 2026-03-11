@@ -139,9 +139,7 @@
 }
 
 .kpi-card h2 {
-    margin: 0;
-    color: #FF9F43;
-    font-size: 24px;
+    color: var(--color-primary);
 }
 
 .currency {
