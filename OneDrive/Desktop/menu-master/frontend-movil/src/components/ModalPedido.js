@@ -3,7 +3,6 @@ import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView 
 import { COLORES_RESTO } from '../core/theme';
 import { usePedidoMesa } from '../hooks/usePedidoMesa';
 
-// Importamos nuestros nuevos componentes limpios
 import ListaProductos from './pedido/ListaProductos';
 import CarritoPanel from './pedido/CarritoPanel';
 

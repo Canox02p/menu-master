@@ -1,0 +1,220 @@
+/* src/features/admin/components/AdminHeader.css */
+
+/* Variables simulando tu theme.js - Puedes mover esto a tu index.css global después */
+:root {
+    --bg-header: transparent;
+    --bg-card: #242D32;
+    --bg-card-hover: #2A353D;
+    --color-primary: #40E0D0;
+    --color-text-main: #FFFFFF;
+    --color-text-muted: #8C99A6;
+    --color-danger: #FC8181;
+    --border-color: rgba(255, 255, 255, 0.05);
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: var(--bg-header);
+    position: relative;
+    z-index: 50;
+    /* Para que el dropdown pase por encima del resto */
+}
+
+.header-brand h2 {
+    color: var(--color-text-main);
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.header-brand span {
+    color: var(--color-primary);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+.text-green {
+    color: #4ADE80;
+}
+
+.search-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    color: var(--color-text-muted);
+}
+
+.search-bar input {
+    background-color: var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 8px 15px 8px 35px;
+    color: var(--color-text-main);
+    outline: none;
+    width: 200px;
+}
+
+/* --- ZONA DEL PERFIL Y DROPDOWN --- */
+.profile-container {
+    position: relative;
+}
+
+.profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.profile-trigger:hover {
+    background-color: var(--border-color);
+}
+
+.notification-btn {
+    background: #FF8C00;
+    /* Naranja de tu diseño */
+    border: none;
+    color: #FFF;
+    width: 35px;
+    height: 35px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background-color: red;
+    border-radius: 50%;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-greeting {
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+
+.user-role {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-main);
+    letter-spacing: 0.5px;
+}
+
+.chevron-icon {
+    color: var(--color-text-muted);
+    transition: transform 0.3s ease;
+}
+
+.chevron-icon.rotate {
+    transform: rotate(180deg);
+}
+
+/* --- EL MENÚ DESPLEGABLE --- */
+.profile-dropdown {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    width: 220px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-header {
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.dropdown-header p {
+    margin: 0;
+    color: var(--color-text-main);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.dropdown-header span {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+}
+
+.dropdown-item:hover {
+    background-color: var(--bg-card-hover);
+    color: var(--color-text-main);
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: rgba(252, 129, 129, 0.1);
+    color: var(--color-danger);
+}

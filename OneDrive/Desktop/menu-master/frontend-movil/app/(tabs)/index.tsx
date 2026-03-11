@@ -1,26 +1,28 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, Image, ActivityIndicator } from 'react-native';
 import Mesa from '../../src/components/Mesa';
 import ModalPedido from '../../src/components/ModalPedido';
 import { COLORES_RESTO } from '../../src/core/theme';
 
-const pedidosActivosMock = [
-  { id: '222', mesa: '1', estado: 'Pagado', color: COLORES_RESTO.cian },
-  { id: '223', mesa: '2', estado: 'En cocina', color: COLORES_RESTO.naranja },
-  { id: '224', mesa: '3', estado: 'Pendiente', color: COLORES_RESTO.grisTexto },
-  { id: '225', mesa: '1', estado: 'Listo', color: COLORES_RESTO.verde },
-];
+// 🚀 1. IMPORTAMOS EL MOTOR (EL HOOK)
+import { useMesasDashboard } from '../../src/hooks/useMesasDashboard';
 
-const mesasMock = [
-  { id: '1', numero: '1', area: 'Terraza A', estado: 'OCUPADO', mesero: 'Juan Sr.', platillos: 12, personas: 4, total: '12,400.00', botonTexto: '+ Nueva orden' },
-  { id: '2', numero: '2', area: 'Barra 1', estado: 'OCUPADO', subEstado: 'EN COCINA', mesero: 'Ana Sr.', platillos: 4, personas: 2, total: '450.00', botonTexto: '+ Nueva orden' },
-  { id: '3', numero: '3', area: 'Terraza B', estado: 'LIBRE', total: '0.00', botonTexto: '+ Nueva orden' },
-  { id: '4', numero: '4', area: 'Barra 1', estado: 'RESERVADA', total: '0.00', botonTexto: '+ Iniciar orden' },
-];
+// Función para pintar el color correcto según el estado de la base de datos
+const getColorPorEstado = (estado) => {
+  if (!estado) return COLORES_RESTO.grisTexto;
+  const e = estado.toUpperCase();
+  if (e === 'PAGADO') return COLORES_RESTO.cian;
+  if (e === 'EN_COCINA' || e === 'EN_PROCESO') return COLORES_RESTO.naranja;
+  if (e === 'LISTO') return COLORES_RESTO.verde;
+  return COLORES_RESTO.grisTexto;
+};
 
 export default function HomeScreen() {
   const { width, height } = useWindowDimensions();
   const isPortrait = height > width;
+
+  // 🚀 2. CONECTAMOS EL MOTOR A LA PANTALLA
+  const { mesas, pedidosRecientes, cargando, recargarDatos } = useMesasDashboard();
 
   // Estados para el Modal
   const [modalVisible, setModalVisible] = useState(false);
@@ -47,6 +49,14 @@ export default function HomeScreen() {
   const gap = 10;
   const espacioTotalGaps = gap * (numColumnas - 1);
   const anchoTarjeta = (contenedorMesasWidth - espacioTotalGaps) / numColumnas;
+
+  // Adaptamos los pedidos recientes para la tabla
+  const pedidosAdaptados = pedidosRecientes.map(p => ({
+    id: p._id ? p._id.substring(p._id.length - 4) : '...', // Mostramos solo los últimos 4 números del ID largo de Mongo
+    mesa: p.id_mesa?.numero || p.id_mesa || '?', // Si el backend lo une (populate), usa el número. Si no, usa el ID o '?'
+    estado: p.estado || 'PENDIENTE',
+    color: getColorPorEstado(p.estado)
+  }));
 
   return (
     <View style={styles.main}>
@@ -82,8 +92,9 @@ export default function HomeScreen() {
             <Text style={styles.searchIcon}>🔍</Text>
           </View>
 
-          <TouchableOpacity style={[styles.btnCliente, { marginLeft: 15 }]}>
-            <Text style={styles.btnClienteText}>+ Cliente</Text>
+          {/* Botón para recargar los datos manualmente */}
+          <TouchableOpacity style={[styles.btnCliente, { marginLeft: 15 }]} onPress={recargarDatos}>
+            <Text style={styles.btnClienteText}>↻ Actualizar</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -97,26 +108,34 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.tab}><Text style={styles.tabText}>Terraza 3</Text></TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: gap }}>
-              {mesasMock.map((mesa) => (
-                <Mesa
-                  key={mesa.id}
-                  numero={mesa.numero}
-                  area={mesa.area}
-                  estado={mesa.estado}
-                  subEstado={mesa.subEstado}
-                  mesero={mesa.mesero}
-                  platillos={mesa.platillos}
-                  personas={mesa.personas}
-                  total={mesa.total}
-                  botonTexto={mesa.botonTexto}
-                  customWidth={anchoTarjeta}
-                  onAccion={() => abrirModal(mesa)}
-                />
-              ))}
+          {/* 🚀 3. MOSTRAR CARGA O LAS MESAS REALES */}
+          {cargando ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={COLORES_RESTO.cian} />
+              <Text style={{ color: COLORES_RESTO.grisTexto, marginTop: 10 }}>Cargando distribución...</Text>
             </View>
-          </ScrollView>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: gap }}>
+                {mesas.map((mesa) => (
+                  <Mesa
+                    key={mesa._id}
+                    numero={mesa.numero}
+                    area={mesa.area || 'Planta base'} // Si tu backend no tiene area, pone esto por defecto
+                    estado={mesa.estado || 'LIBRE'}
+                    subEstado={mesa.estado === 'OCUPADA' ? 'CON COMENSALES' : ''}
+                    mesero={mesa.mesero || '---'}
+                    platillos={mesa.platillos || 0}
+                    personas={mesa.capacidad || 0}
+                    total={mesa.total || '0.00'}
+                    botonTexto={mesa.estado === 'OCUPADA' ? '+ Nueva orden' : '+ Iniciar orden'}
+                    customWidth={anchoTarjeta}
+                    onAccion={() => abrirModal(mesa)}
+                  />
+                ))}
+              </View>
+            </ScrollView>
+          )}
         </View>
 
         <View style={[styles.sidebarContainer, {
@@ -124,7 +143,7 @@ export default function HomeScreen() {
           marginLeft: isPortrait ? 0 : marginSidebar,
           marginTop: isPortrait ? 10 : 0
         }]}>
-          <SidebarTable titulo="PEDIDOS RECIENTES" pedidos={pedidosActivosMock} />
+          <SidebarTable titulo="PEDIDOS RECIENTES" pedidos={pedidosAdaptados} cargando={cargando} />
         </View>
 
       </View>
@@ -133,14 +152,17 @@ export default function HomeScreen() {
       <ModalPedido
         visible={modalVisible}
         mesa={mesaSeleccionada}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          recargarDatos(); // 🔄 Cuando cerramos el modal, recargamos para ver si la mesa cambió a OCUPADA
+        }}
       />
 
     </View>
   );
 }
 
-const SidebarTable = ({ titulo, pedidos }) => (
+const SidebarTable = ({ titulo, pedidos, cargando }) => (
   <View style={styles.tablaCard}>
     <Text style={styles.tituloTabla}>{titulo}</Text>
     <View style={styles.filaHeader}>
@@ -149,17 +171,21 @@ const SidebarTable = ({ titulo, pedidos }) => (
       <Text style={[styles.col, { textAlign: 'right' }]}>ESTADO</Text>
     </View>
 
-    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
-      {pedidos && pedidos.map((pedido) => (
-        <FilaPedido
-          key={pedido.id}
-          id={pedido.id}
-          mesa={pedido.mesa}
-          estado={pedido.estado}
-          color={pedido.color}
-        />
-      ))}
-    </ScrollView>
+    {cargando ? (
+      <ActivityIndicator color={COLORES_RESTO.cian} style={{ marginTop: 20 }} />
+    ) : (
+      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+        {pedidos && pedidos.map((pedido, index) => (
+          <FilaPedido
+            key={pedido.id || index}
+            id={pedido.id}
+            mesa={pedido.mesa}
+            estado={pedido.estado}
+            color={pedido.color}
+          />
+        ))}
+      </ScrollView>
+    )}
   </View>
 );
 

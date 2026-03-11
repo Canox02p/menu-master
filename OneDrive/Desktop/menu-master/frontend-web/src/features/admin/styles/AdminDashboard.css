@@ -1,0 +1,375 @@
+/* src/features/admin/styles/AdminDashboard.css */
+
+/* =========================================
+   LAYOUT PRINCIPAL (Esto es lo único que debería quedar aquí al final)
+   ========================================= */
+.admin-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background-color: #12171A;
+    color: #FFFFFF;
+    font-family: 'Inter', -apple-system, sans-serif;
+    overflow: hidden;
+}
+
+.admin-main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dashboard-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 30px;
+}
+
+/* =========================================
+   SIDEBAR (Pendiente de mover a Sidebar.css)
+   ========================================= */
+.sidebar {
+    width: 220px;
+    background-color: #161D22;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-logo-container {
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.sidebar-logo {
+    width: 50px;
+    height: 50px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 15px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: #8C99A6;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+    color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.nav-item.active {
+    background-color: #242D32;
+    color: #FFFFFF;
+    position: relative;
+}
+
+.nav-item.active .nav-icon {
+    color: #40E0D0;
+}
+
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 60%;
+    width: 4px;
+    background-color: #40E0D0;
+    border-radius: 0 4px 4px 0;
+}
+
+/* =========================================
+   KPI CARDS (Pendiente de mover a KpiCards.css)
+   ========================================= */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.kpi-card {
+    background-color: #242D32;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.kpi-header h4 {
+    margin: 0;
+    color: #8C99A6;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.badge-green {
+    background-color: rgba(74, 222, 128, 0.2);
+    color: #4ADE80;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.kpi-card h2 {
+    margin: 0;
+    color: #FF9F43;
+    font-size: 24px;
+}
+
+.currency {
+    font-size: 14px;
+    color: #8C99A6;
+}
+
+.crack-card .crack-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.crack-card h2 {
+    color: #FFF;
+    font-size: 18px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.icecream-icon {
+    font-size: 30px;
+}
+
+/* =========================================
+   CHARTS SECTION (Pendiente de mover a ChartsSection.css)
+   ========================================= */
+.charts-grid {
+    display: grid;
+    grid-template-columns: 2.5fr 1fr;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.chart-card {
+    background-color: #242D32;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.chart-card h4 {
+    margin: 0 0 20px 0;
+    color: #8C99A6;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.chart-wrapper {
+    height: 250px;
+    width: 100%;
+}
+
+.donut-wrapper {
+    position: relative;
+    height: 200px;
+    width: 100%;
+}
+
+.donut-center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.donut-center-text h3 {
+    margin: 0;
+    color: #FFF;
+    font-size: 24px;
+}
+
+.donut-center-text span {
+    color: #8C99A6;
+    font-size: 12px;
+}
+
+.donut-legend {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #8C99A6;
+    font-size: 13px;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.dot.busy {
+    background-color: #FF9F43;
+}
+
+.dot.free {
+    background-color: #3A4750;
+}
+
+/* =========================================
+   TABLE (Pendiente de mover a RecentOrdersTable.css)
+   ========================================= */
+.table-card {
+    background-color: #242D32;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.table-card h4 {
+    margin: 0 0 20px 0;
+    color: #8C99A6;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.orders-table th {
+    text-align: left;
+    color: #8C99A6;
+    font-size: 13px;
+    font-weight: 500;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.orders-table td {
+    padding: 15px 0;
+    color: #FFF;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-gray {
+    color: #8C99A6 !important;
+}
+
+.mesero-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar {
+    width: 28px;
+    height: 28px;
+    background-color: #3A4750;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+}
+
+.estado-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.badge-estado {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.badge-estado.green {
+    background-color: transparent;
+    border: 1px solid #4ADE80;
+    color: #4ADE80;
+}
+
+.badge-estado.white {
+    background-color: #FFF;
+    color: #000;
+}
+
+/* =========================================
+   RESPONSIVIDAD BÁSICA
+   ========================================= */
+@media screen and (max-width: 1024px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .admin-layout {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}
