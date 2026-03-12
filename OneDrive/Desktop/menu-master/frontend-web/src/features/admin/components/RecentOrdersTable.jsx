@@ -14,7 +14,7 @@ export default function RecentOrdersTable() {
         '--bg-card': COLORES_RESTO.tarjeta,
         '--color-text-muted': COLORES_RESTO.grisTexto,
         '--border-color': COLORES_RESTO.borde,
-        '--color-success': COLORES_RESTO.verde, // Tomamos tu verde del theme.js
+        '--color-success': COLORES_RESTO.verde,
         '--color-primary': COLORES_RESTO.cian,
     };
 

@@ -1,0 +1,209 @@
+/* --- LAYOUT PRINCIPAL --- */
+.mesas-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.mesas-grid-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+/* --- HEADER Y PESTAÑAS --- */
+.management-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.status-tabs {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-tabs button {
+    background: transparent;
+    border: none;
+    color: #8C99A6;
+    padding: 10px 5px;
+    cursor: pointer;
+    position: relative;
+    font-weight: bold;
+}
+
+.status-tabs button.active {
+    color: white;
+}
+
+.status-tabs button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #40E0D0;
+}
+
+.btn-add-mesa {
+    background: #40E0D0;
+    color: #12171A;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* --- TARJETAS DE MESA (DISEÑO PROFESIONAL) --- */
+.mesas-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+.mesa-card {
+    background-color: #242D32;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border-left: 4px solid transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.mesa-card.libre {
+    border-left-color: #40E0D0;
+}
+
+/* Cian para libre */
+.mesa-card.ocupada {
+    border-left-color: #E68A46;
+}
+
+/* Naranja para ocupada */
+
+.mesa-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mesa-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+}
+
+.mesa-title h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.mesa-title .icon {
+    color: #8C99A6;
+}
+
+.mesa-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.mesa-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+.mesa-desc {
+    font-size: 12px;
+    color: #8C99A6;
+    margin: 0;
+}
+
+.btn-delete {
+    background: transparent;
+    border: none;
+    color: #5A6975;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-delete:hover {
+    color: #EF4444;
+}
+
+/* --- MODAL (FORMULARIO) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #242D32;
+    padding: 30px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    color: white;
+}
+
+.btn-close {
+    background: transparent;
+    border: none;
+    color: #8C99A6;
+    cursor: pointer;
+}
+
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal-content label {
+    color: #8C99A6;
+    font-size: 12px;
+}
+
+.modal-content input {
+    background: transparent;
+    border: 1px solid #40E0D0;
+    padding: 12px;
+    border-radius: 8px;
+    color: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.modal-content input:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(64, 224, 208, 0.5);
+}

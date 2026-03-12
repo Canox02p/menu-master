@@ -9,7 +9,7 @@ import {
     BarChart3
 } from 'lucide-react';
 
-export default function Sidebar() {
+export default function Sidebar({ vistaActiva, setVistaActiva }) {
     return (
         <aside className="sidebar">
             <div className="sidebar-logo-container">
@@ -17,41 +17,62 @@ export default function Sidebar() {
             </div>
 
             <nav className="sidebar-nav">
-                <a href="#dashboard" className="nav-item active">
+                <button
+                    className={`nav-item ${vistaActiva === 'dashboard' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('dashboard')}
+                >
                     <LayoutDashboard size={20} className="nav-icon" />
                     <span>DASHBOARD</span>
-                </a>
+                </button>
 
-                <a href="#menu" className="nav-item">
+                <button
+                    className={`nav-item ${vistaActiva === 'menu' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('menu')}
+                >
                     <MenuSquare size={20} className="nav-icon" />
                     <span>MENU</span>
-                </a>
+                </button>
 
-                <a href="#mesas" className="nav-item">
+                {/* BOTÓN DE MESAS FUNCIONAL */}
+                <button
+                    className={`nav-item ${vistaActiva === 'mesas' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('mesas')}
+                >
                     <Table size={20} className="nav-icon" />
                     <span>MESAS</span>
-                </a>
+                </button>
 
-                <a href="#inventario" className="nav-item">
+                <button
+                    className={`nav-item ${vistaActiva === 'inventario' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('inventario')}
+                >
                     <ShoppingBag size={20} className="nav-icon" />
                     <span>INVENTORY</span>
-                </a>
+                </button>
 
-                {/* SECCIÓN ACTUALIZADA: INFORMES DE VENTAS */}
-                <a href="#reportes" className="nav-item">
+                <button
+                    className={`nav-item ${vistaActiva === 'reportes' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('reportes')}
+                >
                     <BarChart3 size={20} className="nav-icon" />
                     <span>REPORTS</span>
-                </a>
+                </button>
 
-                <a href="#personal" className="nav-item">
+                <button
+                    className={`nav-item ${vistaActiva === 'personal' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('personal')}
+                >
                     <Users size={20} className="nav-icon" />
                     <span>STAFF</span>
-                </a>
+                </button>
 
-                <a href="#configuraciones" className="nav-item">
+                <button
+                    className={`nav-item ${vistaActiva === 'configuraciones' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('configuraciones')}
+                >
                     <Settings size={20} className="nav-icon" />
                     <span>SETTINGS</span>
-                </a>
+                </button>
             </nav>
         </aside>
     );

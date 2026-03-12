@@ -76,6 +76,15 @@ app.patch('/mesas/:id/estado', async (req, res) => {
     res.json(mesa);
 });
 
+app.delete('/mesas/:id', async (req, res) => {
+    try {
+        await Mesa.findByIdAndDelete(req.params.id);
+        res.json({ mensaje: "Mesa eliminada correctamente de la base de datos" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
 // ==========================================
 // 📝 4. MÓDULO DE PEDIDOS (MÓVIL)
 // ==========================================
