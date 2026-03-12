@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, CheckCircle2, Settings, LogOut, ChevronDown, AlertTriangle } from 'lucide-react';
 import { COLORES_RESTO } from '../../../constants/theme';
-import './AdminHeader.css';
+import './ChefHeader.css';
 
-export default function AdminHeader({ onLogout }) {
+export default function ChefHeader({ onLogout }) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const dropdownRef = useRef(null);
+    const tiempoActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    // Cierra el menú desplegable si haces clic fuera de él
     useEffect(() => {
         function handleClickOutside(event) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -30,38 +32,27 @@ export default function AdminHeader({ onLogout }) {
         if (onLogout) onLogout();
     };
 
-    const cancelLogout = () => {
-        setShowLogoutModal(false);
-    };
-
-    const themeStyle = {
-        '--color-primary': COLORES_RESTO.cian,
-        '--bg-header': 'transparent',
-        '--bg-card': COLORES_RESTO.tarjeta,
-        '--color-danger': COLORES_RESTO.rojo,
-        '--color-text-muted': COLORES_RESTO.grisTexto,
-        '--border-color': COLORES_RESTO.borde,
-        '--bg-card-hover': '#2A353D',
-        '--color-text-main': '#FFFFFF',
-    };
-
     return (
         <>
-            {/* Pasamos themeStyle directamente a la etiqueta header */}
-            <header className="admin-header" style={themeStyle}>
-                <div className="header-brand">
-                    <h2>Menu Master <span> | ADMIN</span></h2>
+            <header className="chef-header" style={{ borderBottom: `2px solid ${COLORES_RESTO.borde}` }}>
+                <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img
+                        src="/logo_sin_letras.png" // Reemplaza con la ruta real de tu logo
+                        alt="Logo Menu Master"
+                        style={{ width: '35px', height: '35px' }}
+                    />
+                    <h2>MENU MASTER <span style={{ color: COLORES_RESTO.cian }}>| COCINA</span></h2>
                 </div>
 
                 <div className="header-actions">
                     <div className="status-indicator">
                         <CheckCircle2 size={16} className="text-green" />
-                        <span className="status-text">Real time update (online)</span>
+                        <span className="status-text">🕒 {tiempoActual}</span>
                     </div>
 
                     <div className="search-bar">
                         <Search size={18} className="search-icon" />
-                        <input type="text" placeholder="Search" />
+                        <input type="text" placeholder="Buscar orden..." />
                     </div>
 
                     <div className="profile-container" ref={dropdownRef}>
@@ -69,6 +60,7 @@ export default function AdminHeader({ onLogout }) {
                             className="profile-trigger"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         >
+                            {/* Botón Naranja Oficial */}
                             <button className="notification-btn">
                                 <Bell size={20} />
                                 <span className="notification-dot"></span>
@@ -76,7 +68,7 @@ export default function AdminHeader({ onLogout }) {
 
                             <div className="user-info">
                                 <span className="user-greeting">BIENVENIDO,</span>
-                                <span className="user-role">ADMIN</span>
+                                <span className="user-role">CHEF DENI</span>
                             </div>
 
                             <ChevronDown
@@ -85,12 +77,12 @@ export default function AdminHeader({ onLogout }) {
                             />
                         </div>
 
-                        {/* Menú Desplegable */}
+                        {/* Menú Desplegable Estilo Admin */}
                         {isDropdownOpen && (
                             <div className="profile-dropdown">
                                 <div className="dropdown-header">
-                                    <p>Admin User</p>
-                                    <span>admin@menumaster.com</span>
+                                    <p>Chef Deni User</p>
+                                    <span>deni@menumaster.com</span>
                                 </div>
                                 <div className="dropdown-divider"></div>
                                 <button className="dropdown-item">
@@ -115,9 +107,9 @@ export default function AdminHeader({ onLogout }) {
                             <AlertTriangle size={32} className="warning-icon" />
                         </div>
                         <h3>¿Cerrar Sesión?</h3>
-                        <p>¿Estás seguro de que deseas salir del punto de venta?</p>
+                        <p>¿Estás seguro de que deseas salir del monitor de cocina?</p>
                         <div className="modal-buttons">
-                            <button className="btn-cancel" onClick={cancelLogout}>Cancelar</button>
+                            <button className="btn-cancel" onClick={() => setShowLogoutModal(false)}>Cancelar</button>
                             <button className="btn-confirm" onClick={confirmLogout}>Sí, salir</button>
                         </div>
                     </div>

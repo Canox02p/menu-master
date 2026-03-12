@@ -1,0 +1,259 @@
+.chef-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 25px;
+    background-color: #1A202C;
+    /* Color oscuro profundo de tu theme */
+    position: relative;
+    z-index: 50;
+    height: 65px;
+    box-sizing: border-box;
+}
+
+.header-brand h2 {
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #8C99A6;
+    font-size: 14px;
+}
+
+.text-green {
+    color: #4ADE80;
+}
+
+.search-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    color: #8C99A6;
+}
+
+.search-bar input {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 6px 15px 6px 35px;
+    color: #FFFFFF;
+    outline: none;
+    width: 180px;
+}
+
+/* --- PERFIL --- */
+.profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.profile-trigger:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.notification-btn {
+    background: #FF8C00;
+    /* Naranja oficial solicitado */
+    border: none;
+    color: #FFF;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    background-color: #FF0000;
+    border: 2px solid #1A202C;
+    border-radius: 50%;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.user-greeting {
+    font-size: 10px;
+    color: #8C99A6;
+    font-weight: bold;
+}
+
+.user-role {
+    font-size: 13px;
+    font-weight: 900;
+    color: #FFFFFF;
+}
+
+.chevron-icon {
+    color: #8C99A6;
+    transition: transform 0.3s;
+}
+
+.chevron-icon.rotate {
+    transform: rotate(180deg);
+}
+
+/* --- DROPDOWN --- */
+.profile-dropdown {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    width: 230px;
+    background-color: #242D32;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-header {
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.dropdown-header p {
+    margin: 0;
+    color: #FFF;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dropdown-header span {
+    color: #8C99A6;
+    font-size: 12px;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    background: transparent;
+    border: none;
+    color: #8C99A6;
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background-color: #2A353D;
+    color: #FFF;
+}
+
+.dropdown-item.text-danger:hover {
+    color: #FC8181;
+    background-color: rgba(252, 129, 129, 0.1);
+}
+
+/* --- MODAL --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.logout-modal {
+    background: #242D32;
+    padding: 30px;
+    border-radius: 16px;
+    width: 350px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.warning-icon {
+    color: #FF8C00;
+    margin-bottom: 15px;
+}
+
+.logout-modal h3 {
+    color: #FFF;
+    margin-bottom: 10px;
+}
+
+.logout-modal p {
+    color: #8C99A6;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-cancel {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: #3A444C;
+    color: #FFF;
+    cursor: pointer;
+}
+
+.btn-confirm {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: #FC8181;
+    color: #FFF;
+    cursor: pointer;
+    font-weight: bold;
+}

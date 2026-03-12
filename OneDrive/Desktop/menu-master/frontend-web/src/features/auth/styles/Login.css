@@ -54,14 +54,11 @@
     padding: 35px 30px;
     border-radius: 12px;
 
-    /* El secreto está aquí: Sombra cyan a la izquierda, naranja a la derecha */
+    /* Sombra cyan a la izquierda, naranja a la derecha */
     box-shadow:
         -40px 0px 80px -20px rgba(64, 224, 208, 0.18),
-        /* Resplandor suave cyan */
         40px 20px 80px -20px rgba(230, 138, 70, 0.12),
-        /* Resplandor suave naranja */
         0 15px 30px rgba(0, 0, 0, 0.4);
-    /* Sombra base para dar profundidad */
 
     width: 100%;
     box-sizing: border-box;
@@ -78,13 +75,46 @@
     margin-bottom: 25px;
 }
 
+/* --- 🆕 SELECTOR DE PLATAFORMA (AÑADIDO) --- */
+.platform-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.platform-selector button {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: #8C99A6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+/* Botón Activo: Color Primario Cian */
+.platform-selector button.active {
+    background-color: #40E0D0;
+    color: #12171A;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(64, 224, 208, 0.3);
+}
+
 /* --- INPUTS --- */
 .input-group {
     display: flex;
     align-items: center;
     background-color: transparent;
     border: 1px solid #40E0D0;
-    /* Borde cyan delgado */
     border-radius: 8px;
     padding: 0 15px;
     margin-bottom: 20px;
@@ -109,7 +139,6 @@
 
 .input-group input::placeholder {
     color: #8C99A6;
-    /* Gris sutil para el placeholder */
 }
 
 .btn-eye {
@@ -122,13 +151,11 @@
     padding: 0;
 }
 
-/* --- BOTÓN --- */
+/* --- BOTÓN SUBMIT --- */
 .btn-submit {
     width: 100%;
     background-color: #40E0D0;
-    /* Cyan vibrante sin brillos exagerados */
     color: #12171A;
-    /* Letra oscura */
     border: none;
     height: 48px;
     border-radius: 24px;
@@ -143,7 +170,7 @@
     opacity: 0.9;
 }
 
-/* --- ENLACES --- */
+/* --- ENLACES (SOPORTE DISCRETO) --- */
 .login-links {
     display: flex;
     flex-direction: column;
@@ -154,6 +181,7 @@
 
 .login-links a {
     color: #8C99A6;
+    /* Color gris sutil */
     text-decoration: underline;
     text-decoration-color: #5A6975;
     font-size: 13px;

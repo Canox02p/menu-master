@@ -4,7 +4,7 @@ import AdminHeader from '../components/AdminHeader';
 import KpiCards from '../components/KpiCards';
 import ChartsSection from '../components/ChartsSection';
 import RecentOrdersTable from '../components/RecentOrdersTable';
-import { COLORES_RESTO } from '../../constants/theme'; // Asegúrate de que la ruta sea correcta
+import { COLORES_RESTO } from "../../../constants/theme";
 import '../styles/AdminDashboard.css';
 
 export default function AdminDashboard() {

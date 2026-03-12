@@ -1,69 +1,101 @@
 import React, { useState } from 'react';
 import { COLORES_RESTO } from "./constants/theme";
 
-// Importamos el Login
+// --- CAPA DE AUTENTICACIÓN ---
 import Login from "./features/auth/pages/Login";
 
-// Importamos la vista de Administrador
+// --- CAPA DE ADMINISTRACIÓN ---
 import AdminDashboard from "./features/admin/pages/AdminDashboard";
 
-// Importamos lo de Cocina
+// --- CAPA DE COCINA ---
 import { usePedidosCocina } from "./features/cocina/hooks/usePedidosCocina";
-import { Header } from "./features/cocina/components/Header";
+import ChefHeader from "./features/cocina/components/ChefHeader";
 import { PedidoCard } from "./features/cocina/components/PedidoCard";
 
-export default function App() {
-  // 🔄 ESTADO DE AUTENTICACIÓN (null = no logueado)
-  const [rolUsuario, setRolUsuario] = useState(null);
+// Importamos el CSS global adaptativo
+import './App.css';
 
-  // Hooks de la cocina
+export default function App() {
+  // 🔄 ESTADO DUAL: Guardamos el rol y la plataforma (web/movil)
+  const [auth, setAuth] = useState({ rol: null, plataforma: 'web' });
+
+  // Hook de sincronización
   const { pedidos, actualizarEstado, eliminar } = usePedidosCocina();
 
-  // Función para manejar el login exitoso
-  const manejarLogin = (rol) => {
-    setRolUsuario(rol); // Puede ser 'admin' o 'cocina'
+  // Ahora el login nos pasa dos cosas: el rol y la plataforma elegida
+  const manejarLogin = (rol, plataforma) => {
+    setAuth({ rol, plataforma });
   };
 
-  // Función para cerrar sesión
   const manejarLogout = () => {
-    setRolUsuario(null);
+    setAuth({ rol: null, plataforma: 'web' });
   };
 
-  // 👨‍🍳 COMPONENTE DE LA COCINA
+  // 👨‍🍳 VISTA DE COCINA (SE ADAPTA A LA PLATAFORMA)
   const VistaCocina = () => (
-    <div style={{ minHeight: '100vh', width: '100vw', backgroundColor: COLORES_RESTO.fondo, display: 'flex', flexDirection: 'column' }}>
-      <Header onLogout={manejarLogout} /> {/* Sería ideal pasarle el logout al header después */}
+    <div className={`main-app-container ${auth.plataforma}`} style={{
+      minHeight: '100vh',
+      width: '100%',
+      backgroundColor: COLORES_RESTO.fondo,
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <ChefHeader onLogout={manejarLogout} />
 
-      {/* Botón temporal de cerrar sesión para la cocina */}
-      <button onClick={manejarLogout} style={{ position: 'absolute', top: 15, left: 15, padding: '5px 10px', background: 'red', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cerrar Sesión</button>
-
-      <div style={{
-        flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        gridAutoRows: '1fr', gap: '15px', padding: '15px', boxSizing: 'border-box'
-      }}>
-        {pedidos.map(p => (
-          <PedidoCard key={p._id} pedido={p} onActualizar={actualizarEstado} onEliminar={eliminar} />
-        ))}
+      <div className="dashboard-grid">
+        {pedidos.length > 0 ? (
+          pedidos.map(p => (
+            <PedidoCard
+              key={p._id}
+              pedido={p}
+              onActualizar={actualizarEstado}
+              onEliminar={eliminar}
+            />
+          ))
+        ) : (
+          <div className="no-pedidos-container">
+            <h2>No hay pedidos pendientes en cocina 👨‍🍳</h2>
+          </div>
+        )}
       </div>
     </div>
   );
 
-  // 🚦 ENRUTADOR (ROUTER) BASADO EN EL ROL
-  if (!rolUsuario) {
-    return <Login onLogin={manejarLogin} />;
-  }
+  // 🚦 ENRUTADOR DE ROLES Y PLATAFORMAS
 
-  if (rolUsuario === 'admin') {
+  // 1. Si no hay sesión, mostramos el Login
+  if (!auth.rol) {
     return (
-      <div style={{ position: 'relative' }}>
-        {/* Botón temporal de cerrar sesión para el admin */}
-        <button onClick={manejarLogout} style={{ position: 'absolute', top: 15, right: 300, padding: '5px 10px', background: 'red', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', zIndex: 9999 }}>Cerrar Sesión</button>
-        <AdminDashboard />
+      <div className="login-full-screen-wrapper">
+        <Login onLogin={manejarLogin} />
       </div>
     );
   }
 
-  if (rolUsuario === 'cocina') {
+  // 2. Vista de Administrador
+  if (auth.rol === 'admin') {
+    return (
+      <div className={`main-app-container ${auth.plataforma}`}>
+        <AdminDashboard onLogout={manejarLogout} />
+      </div>
+    );
+  }
+
+  // 3. Vista de Cocina (Cocinero)
+  if (auth.rol === 'cocina') {
     return <VistaCocina />;
   }
+
+  // 4. Vista de Mesero (Nueva opción para el móvil)
+  if (auth.rol === 'mesero') {
+    return (
+      <div className="main-app-container movil">
+        {/* Aquí puedes crear un componente específico para el mesero luego */}
+        <ChefHeader onLogout={manejarLogout} />
+        <h2 style={{ color: 'white', textAlign: 'center' }}>Panel de Mesero - Versión Móvil</h2>
+      </div>
+    );
+  }
+
+  return null;
 }

@@ -1,26 +1,26 @@
 import React, { useState } from 'react';
-import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Monitor, Smartphone } from 'lucide-react';
 import '../styles/Login.css';
 
 export default function Login({ onLogin }) {
     const [usuario, setUsuario] = useState('');
     const [password, setPassword] = useState('');
+    const [plataforma, setPlataforma] = useState('web'); // 'web' o 'movil'
     const [mostrarPassword, setMostrarPassword] = useState(false);
     const [error, setError] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
         setError('');
-
-        // 🚦 Lógica temporal de inicio de sesión
         const userLower = usuario.toLowerCase();
 
+        // Enviamos el rol y la plataforma seleccionada
         if (userLower === 'admin' && password === '1234') {
-            onLogin('admin');
+            onLogin('admin', plataforma);
         } else if (userLower === 'cocinero' && password === '1234') {
-            onLogin('cocina');
+            onLogin('cocina', plataforma);
         } else if (userLower === 'mesero' && password === '1234') {
-            onLogin('mesero');
+            onLogin('mesero', plataforma);
         } else {
             setError('Credenciales incorrectas. Intenta de nuevo.');
         }
@@ -28,17 +28,31 @@ export default function Login({ onLogin }) {
 
     return (
         <div className="login-wrapper">
-
-            {/* --- LOGO Y TÍTULO --- */}
             <div className="brand-header">
-                {/* Asegúrate de que tu logo coincida con el de la imagen */}
-                <img src="/logo_sin_letras.png" alt="Logo" className="brand-logo" onError={(e) => e.target.style.display = 'none'} />
+                <img src="/logo_sin_letras.png" alt="Logo" className="brand-logo" />
                 <h1 className="brand-title">Menu <span>Master</span></h1>
             </div>
 
             <div className="login-container">
-                {/* --- LA TARJETA DE LOGIN --- */}
                 <div className="login-card">
+                    {/* --- SELECTOR DE PLATAFORMA --- */}
+                    <div className="platform-selector">
+                        <button
+                            type="button"
+                            className={plataforma === 'web' ? 'active' : ''}
+                            onClick={() => setPlataforma('web')}
+                        >
+                            <Monitor size={18} /> Web
+                        </button>
+                        <button
+                            type="button"
+                            className={plataforma === 'movil' ? 'active' : ''}
+                            onClick={() => setPlataforma('movil')}
+                        >
+                            <Smartphone size={18} /> Móvil
+                        </button>
+                    </div>
+
                     <h3>Iniciar Sesión</h3>
 
                     <form onSubmit={handleSubmit}>
@@ -46,7 +60,7 @@ export default function Login({ onLogin }) {
                             <User size={18} className="input-icon" />
                             <input
                                 type="text"
-                                placeholder="Usuario / Correo electrónico"
+                                placeholder="Usuario"
                                 value={usuario}
                                 onChange={(e) => setUsuario(e.target.value)}
                                 required
@@ -74,7 +88,7 @@ export default function Login({ onLogin }) {
                         {error && <p className="error-msg">{error}</p>}
 
                         <button type="submit" className="btn-submit">
-                            INICIAR SESIÓN
+                            INGRESAR ({plataforma.toUpperCase()})
                         </button>
                     </form>
 

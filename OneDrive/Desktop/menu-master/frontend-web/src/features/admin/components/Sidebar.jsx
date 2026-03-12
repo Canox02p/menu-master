@@ -4,15 +4,15 @@ import {
     MenuSquare,
     ShoppingBag,
     Users,
-    FileText,
-    Settings
+    Settings,
+    Table,
+    BarChart3
 } from 'lucide-react';
 
 export default function Sidebar() {
     return (
         <aside className="sidebar">
             <div className="sidebar-logo-container">
-                {/* Asegúrate de que la ruta al logo sea la correcta */}
                 <img src="/logo_sin_letras.png" alt="Logo" className="sidebar-logo" />
             </div>
 
@@ -21,23 +21,34 @@ export default function Sidebar() {
                     <LayoutDashboard size={20} className="nav-icon" />
                     <span>DASHBOARD</span>
                 </a>
+
                 <a href="#menu" className="nav-item">
                     <MenuSquare size={20} className="nav-icon" />
                     <span>MENU</span>
                 </a>
-                <a href="#inventory" className="nav-item">
+
+                <a href="#mesas" className="nav-item">
+                    <Table size={20} className="nav-icon" />
+                    <span>MESAS</span>
+                </a>
+
+                <a href="#inventario" className="nav-item">
                     <ShoppingBag size={20} className="nav-icon" />
                     <span>INVENTORY</span>
                 </a>
-                <a href="#staff" className="nav-item">
+
+                {/* SECCIÓN ACTUALIZADA: INFORMES DE VENTAS */}
+                <a href="#reportes" className="nav-item">
+                    <BarChart3 size={20} className="nav-icon" />
+                    <span>REPORTS</span>
+                </a>
+
+                <a href="#personal" className="nav-item">
                     <Users size={20} className="nav-icon" />
                     <span>STAFF</span>
                 </a>
-                <a href="#reports" className="nav-item">
-                    <FileText size={20} className="nav-icon" />
-                    <span>REPORTS</span>
-                </a>
-                <a href="#settings" className="nav-item">
+
+                <a href="#configuraciones" className="nav-item">
                     <Settings size={20} className="nav-icon" />
                     <span>SETTINGS</span>
                 </a>
