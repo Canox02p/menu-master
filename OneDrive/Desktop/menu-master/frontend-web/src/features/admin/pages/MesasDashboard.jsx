@@ -2,71 +2,108 @@ import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import MesaCard from '../components/MesaCard';
 import MesaModal from '../components/MesaModal';
-import RecentOrdersTable from '../components/RecentOrdersTable'; // Reutilizamos tu componente
+import RecentOrdersTable from '../components/RecentOrdersTable';
 import { COLORES_RESTO } from '../../../constants/theme';
+import '../styles/Mesas.css';
 
 export default function MesasDashboard() {
     const [mesas, setMesas] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [filtroEstado, setFiltroEstado] = useState('TODAS'); // Filtro basado en tu Schema
+
+    // FILTROS DOBLES
+    const [filtroArea, setFiltroArea] = useState('TODAS');
+    const [filtroEstado, setFiltroEstado] = useState('TODAS');
 
     const fetchMesas = async () => {
         try {
             const res = await fetch('http://localhost:3000/mesas');
             const data = await res.json();
             setMesas(data);
-        } catch (error) { console.error("Error al cargar mesas", error); }
+        } catch (error) { console.error("Error al cargar mesas:", error); }
     };
 
     useEffect(() => { fetchMesas(); }, []);
 
     const handleEliminarMesa = async (id) => {
-        if (!window.confirm("¿Eliminar esta mesa permanentemente?")) return;
-        await fetch(`http://localhost:3000/mesas/${id}`, { method: 'DELETE' });
-        fetchMesas();
+        if (!window.confirm("¿Estás seguro de eliminar esta mesa permanentemente?")) return;
+        try {
+            await fetch(`http://localhost:3000/mesas/${id}`, { method: 'DELETE' });
+            fetchMesas();
+        } catch (error) { console.error("Error al eliminar la mesa:", error); }
     };
 
-    // Cálculos para los KPIs
     const ocupadas = mesas.filter(m => m.estado === 'OCUPADA').length;
-    const libres = mesas.filter(m => m.estado === 'LIBRE').length;
+    const libres = mesas.filter(m => m.estado === 'LIBRE' || m.estado === 'DISPONIBLE').length;
+    const reservadas = mesas.filter(m => m.estado === 'RESERVADA').length;
 
-    // Filtrado de la vista
-    const mesasFiltradas = filtroEstado === 'TODAS' ? mesas : mesas.filter(m => m.estado === filtroEstado);
+    const mesasFiltradas = mesas.filter(m => {
+        const pasaFiltroArea = filtroArea === 'TODAS' || m.area === filtroArea;
+        const pasaFiltroEstado = filtroEstado === 'TODAS' || m.estado === filtroEstado;
+        return pasaFiltroArea && pasaFiltroEstado;
+    });
 
     return (
         <div className="mesas-layout">
-            {/* Modal Separado */}
             <MesaModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onMesaAgregada={fetchMesas} />
 
-            {/* KPIs SUPERIORES */}
             <div className="kpi-grid">
-                <div className="kpi-card"><h4>TOTAL MESAS</h4><h2>{mesas.length}</h2></div>
-                <div className="kpi-card"><h4>MESAS OCUPADAS</h4><h2 style={{ color: COLORES_RESTO.naranja || '#E68A46' }}>{ocupadas}</h2></div>
-                <div className="kpi-card"><h4>MESAS LIBRES</h4><h2 style={{ color: COLORES_RESTO.cian }}>{libres}</h2></div>
+                <div className="kpi-card" style={{ border: `1px solid ${COLORES_RESTO.grisTexto || '#2D3748'}` }}>
+                    <h4>TOTAL MESAS</h4>
+                    <h2 style={{ color: '#FFF' }}>{mesas.length}</h2>
+                </div>
+                <div className="kpi-card" style={{ border: `1px solid ${COLORES_RESTO.naranja || '#E68A46'}` }}>
+                    <h4>MESAS OCUPADAS</h4>
+                    <h2 style={{ color: COLORES_RESTO.naranja || '#E68A46' }}>{ocupadas}</h2>
+                </div>
+                <div className="kpi-card" style={{ border: `1px solid ${COLORES_RESTO.verde || '#48BB78'}` }}>
+                    <h4>MESAS LIBRES</h4>
+                    <h2 style={{ color: COLORES_RESTO.verde || '#48BB78' }}>{libres}</h2>
+                </div>
+                <div className="kpi-card" style={{ border: `1px solid ${COLORES_RESTO.morado || '#9F7AEA'}` }}>
+                    <h4>RESERVADAS</h4>
+                    <h2 style={{ color: COLORES_RESTO.morado || '#9F7AEA' }}>{reservadas}</h2>
+                </div>
             </div>
 
             <div className="mesas-grid-container">
-                {/* ZONA IZQUIERDA: GESTIÓN */}
                 <div className="mesas-management">
-                    <div className="management-header">
-                        <div className="status-tabs">
-                            <button className={filtroEstado === 'TODAS' ? 'active' : ''} onClick={() => setFiltroEstado('TODAS')}>Todas</button>
-                            <button className={filtroEstado === 'LIBRE' ? 'active' : ''} onClick={() => setFiltroEstado('LIBRE')}>Libres</button>
-                            <button className={filtroEstado === 'OCUPADA' ? 'active' : ''} onClick={() => setFiltroEstado('OCUPADA')}>Ocupadas</button>
+
+                    <div className="management-header-modern">
+                        <div className="pill-filters-container">
+
+                            {/* ÁREAS */}
+                            <div className="pill-group area-group">
+                                <button className={`pill-btn ${filtroArea === 'TODAS' ? 'active-area' : ''}`} onClick={() => setFiltroArea('TODAS')}>TODAS</button>
+                                <button className={`pill-btn ${filtroArea === 'Principal' ? 'active-area' : ''}`} onClick={() => setFiltroArea('Principal')}>PRINCIPAL</button>
+                                <button className={`pill-btn ${filtroArea === 'Terraza' ? 'active-area' : ''}`} onClick={() => setFiltroArea('Terraza')}>TERRAZA</button>
+                                <button className={`pill-btn ${filtroArea === 'VIP' ? 'active-area' : ''}`} onClick={() => setFiltroArea('VIP')}>VIP</button>
+                            </div>
+
+                            {/* ESTADOS */}
+                            <div className="pill-group status-group">
+                                <button className={`pill-btn ${filtroEstado === 'TODAS' ? 'active-status' : ''}`} onClick={() => setFiltroEstado('TODAS')}>VER TODO</button>
+                                <button className={`pill-btn ${filtroEstado === 'LIBRE' ? 'active-status' : ''}`} onClick={() => setFiltroEstado('LIBRE')}>LIBRES</button>
+                                <button className={`pill-btn ${filtroEstado === 'OCUPADA' ? 'active-status' : ''}`} onClick={() => setFiltroEstado('OCUPADA')}>OCUPADAS</button>
+                                <button className={`pill-btn ${filtroEstado === 'RESERVADA' ? 'active-status' : ''}`} onClick={() => setFiltroEstado('RESERVADA')}>RESERVAS</button>
+                            </div>
                         </div>
-                        <button className="btn-add-mesa" onClick={() => setIsModalOpen(true)}>
+
+                        <button className="btn-add-mesa" onClick={() => setIsModalOpen(true)} style={{ backgroundColor: COLORES_RESTO.cian, color: '#000' }}>
                             <Plus size={18} /> Añadir Mesa
                         </button>
                     </div>
 
                     <div className="mesas-cards-grid">
-                        {mesasFiltradas.map(mesa => (
-                            <MesaCard key={mesa._id} mesa={mesa} onEliminar={handleEliminarMesa} />
-                        ))}
+                        {mesasFiltradas.length === 0 ? (
+                            <p style={{ color: '#718096', marginTop: '20px' }}>No hay mesas que coincidan con estos filtros.</p>
+                        ) : (
+                            mesasFiltradas.map(mesa => (
+                                <MesaCard key={mesa._id} mesa={mesa} onEliminar={handleEliminarMesa} />
+                            ))
+                        )}
                     </div>
                 </div>
 
-                {/* ZONA DERECHA: REUTILIZAMOS TU TABLA DE PEDIDOS */}
                 <div className="mesas-sidebar-right">
                     <RecentOrdersTable />
                 </div>

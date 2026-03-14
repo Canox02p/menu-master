@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native'; // O importalo de tu librería web si esto es React Web
+import { Alert } from 'react-native';
 import { ENDPOINTS } from '../core/api';
 
 export const useMesasDashboard = () => {
@@ -10,10 +10,10 @@ export const useMesasDashboard = () => {
     const cargarDatos = async () => {
         setCargando(true);
         try {
-            // 🚀 Hacemos las dos peticiones en paralelo para mayor velocidad
+            // 🚀 Hacemos las dos peticiones con las rutas correctas
             const [resMesas, resPedidos] = await Promise.all([
                 fetch(ENDPOINTS.mesas),
-                fetch(ENDPOINTS.pedidos) // Asumiendo que este endpoint trae el historial
+                fetch(ENDPOINTS.pedidosActivos) // 🔥 Usamos la nueva ruta aquí
             ]);
 
             const dataMesas = await resMesas.json();
@@ -22,15 +22,12 @@ export const useMesasDashboard = () => {
             // 🛡️ Blindaje de datos
             setMesas(Array.isArray(dataMesas) ? dataMesas : []);
 
-            // Si el backend te devuelve un objeto con "pedidos", ajústalo. Si es un array directo, déjalo así.
             const listaPedidos = Array.isArray(dataPedidos) ? dataPedidos : (dataPedidos.pedidos || []);
-
-            // Tomamos solo los últimos 5 pedidos para la tabla de "Recientes"
             setPedidosRecientes(listaPedidos.slice(0, 5));
 
         } catch (error) {
             console.error("Error cargando dashboard:", error);
-            Alert.alert("Error de Conexión", "No se pudo conectar con el servidor para traer las mesas.");
+            // Si el servidor falla, mostramos esto en consola para depurar
         } finally {
             setCargando(false);
         }

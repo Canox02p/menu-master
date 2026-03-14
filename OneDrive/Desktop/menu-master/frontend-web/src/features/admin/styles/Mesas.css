@@ -1,209 +1,407 @@
-/* --- LAYOUT PRINCIPAL --- */
+/* =========================================
+   1. ESTRUCTURA GENERAL DEL DASHBOARD
+   ========================================= */
 .mesas-layout {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    height: 100%;
 }
 
 .mesas-grid-container {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 2.5fr 1fr;
     gap: 20px;
+    align-items: start;
 }
 
-/* --- HEADER Y PESTAÑAS --- */
-.management-header {
+.mesas-sidebar-right {
+    position: sticky;
+    top: 20px;
+}
+
+/* =========================================
+   2. KPI CARDS (Tarjetas superiores)
+   ========================================= */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.kpi-card {
+    background-color: #1A242D;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+}
+
+.kpi-card h4 {
+    color: #A0AEC0;
+    font-size: 13px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.kpi-card h2 {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0;
+}
+
+/* =========================================
+   3. BARRA DE FILTROS ESTILO PÍLDORA
+   ========================================= */
+.management-header-modern {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-}
-
-.status-tabs {
-    display: flex;
+    margin-bottom: 25px;
     gap: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.status-tabs button {
+.pill-filters-container {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+.pill-group {
+    display: flex;
+    background-color: #0B0F13;
+    border-radius: 30px;
+    padding: 4px;
+    border: 1px solid #1A242D;
+}
+
+.pill-btn {
     background: transparent;
-    border: none;
-    color: #8C99A6;
-    padding: 10px 5px;
+    border: 1px solid transparent;
+    color: #4A5568;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
     cursor: pointer;
-    position: relative;
-    font-weight: bold;
+    transition: all 0.3s ease;
 }
 
-.status-tabs button.active {
-    color: white;
+.pill-btn:hover {
+    color: #A0AEC0;
 }
 
-.status-tabs button.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: #40E0D0;
+.pill-btn.active-area {
+    background-color: #FFFFFF;
+    color: #000000;
+}
+
+.pill-btn.active-status {
+    border-color: #FC8181;
+    color: #FC8181;
 }
 
 .btn-add-mesa {
-    background: #40E0D0;
-    color: #12171A;
     border: none;
-    padding: 10px 15px;
+    padding: 10px 18px;
     border-radius: 8px;
     font-weight: bold;
+    font-size: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
 }
 
-/* --- TARJETAS DE MESA (DISEÑO PROFESIONAL) --- */
+.btn-add-mesa:hover {
+    opacity: 0.9;
+}
+
+.btn-add-mesa:active {
+    transform: scale(0.97);
+}
+
+/* =========================================
+   4. TARJETAS DE MESAS
+   ========================================= */
 .mesas-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
 }
 
 .mesa-card {
-    background-color: #242D32;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    border-left: 4px solid transparent;
+    background-color: #151C24;
+    border-radius: 16px;
+    padding: 30px 20px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-}
-
-.mesa-card.libre {
-    border-left-color: #40E0D0;
-}
-
-/* Cian para libre */
-.mesa-card.ocupada {
-    border-left-color: #E68A46;
-}
-
-/* Naranja para ocupada */
-
-.mesa-card-header {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.mesa-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: white;
-}
-
-.mesa-title h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 500;
-}
-
-.mesa-title .icon {
-    color: #8C99A6;
-}
-
-.mesa-card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.mesa-number {
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-}
-
-.mesa-desc {
-    font-size: 12px;
-    color: #8C99A6;
-    margin: 0;
+.mesa-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 .btn-delete {
+    position: absolute;
+    top: 10px;
+    right: 10px;
     background: transparent;
     border: none;
-    color: #5A6975;
+    color: #718096;
     cursor: pointer;
-    transition: 0.2s;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    opacity: 0;
+}
+
+.mesa-card:hover .btn-delete {
+    opacity: 1;
 }
 
 .btn-delete:hover {
-    color: #EF4444;
+    color: #FF5252;
+    background-color: rgba(255, 82, 82, 0.15);
 }
 
-/* --- MODAL (FORMULARIO) --- */
+.mesa-number-box {
+    background-color: #0B0F13;
+    width: 65px;
+    height: 65px;
+    border-radius: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-width: 1.5px;
+    border-style: solid;
+}
+
+.mesa-number-box span {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.mesa-name-container {
+    text-align: center;
+}
+
+.mesa-name {
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.mesa-area {
+    color: #718096;
+    font-size: 11px;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.badge-estado {
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.mesa-capacity {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 5px;
+}
+
+/* =========================================
+   5. MODAL DISEÑO NEÓN OSCURO
+   ========================================= */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(11, 15, 19, 0.85);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    backdrop-filter: blur(4px);
 }
 
-.modal-content {
-    background: #242D32;
-    padding: 30px;
-    border-radius: 12px;
+.modal-content-modern {
+    background: #1C242B;
+    padding: 35px;
+    border-radius: 20px;
     width: 100%;
-    max-width: 400px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    max-width: 500px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    border: 1px solid #2D3748;
 }
 
-.modal-header {
+.modal-header-modern {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     color: white;
 }
 
-.btn-close {
-    background: transparent;
-    border: none;
-    color: #8C99A6;
-    cursor: pointer;
+.modal-header-modern h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
 }
 
-.modal-content form {
+.btn-close-modern {
+    background: transparent;
+    border: none;
+    color: #4DD0E1;
+    cursor: pointer;
+    transition: transform 0.2s;
+    padding: 0;
+}
+
+.btn-close-modern:hover {
+    transform: scale(1.1);
+}
+
+.modal-form-modern {
     display: flex;
     flex-direction: column;
+    gap: 20px;
+}
+
+.form-row-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 15px;
 }
 
-.modal-content label {
-    color: #8C99A6;
-    font-size: 12px;
+.input-group-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.modal-content input {
-    background: transparent;
-    border: 1px solid #40E0D0;
-    padding: 12px;
-    border-radius: 8px;
+.input-group-modern.full-width {
+    grid-column: 1 / -1;
+}
+
+.input-group-modern label {
+    color: #E2E8F0;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.input-group-modern input,
+.input-group-modern select {
+    background: #11181D;
+    border: 1px solid #2D3748;
+    padding: 14px 15px;
+    border-radius: 12px;
     color: white;
+    font-size: 14px;
     width: 100%;
     box-sizing: border-box;
+    transition: all 0.3s ease;
+    outline: none;
 }
 
-.modal-content input:focus {
-    outline: none;
-    box-shadow: 0 0 5px rgba(64, 224, 208, 0.5);
+.input-group-modern input::placeholder {
+    color: #4A5568;
+}
+
+.input-group-modern input:focus,
+.input-group-modern select:focus {
+    border-color: #4DD0E1;
+    box-shadow: 0 0 0 1px rgba(77, 208, 225, 0.5);
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+.select-wrapper select {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+.select-wrapper::after {
+    content: '⌄';
+    font-size: 20px;
+    color: #4DD0E1;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-60%);
+    pointer-events: none;
+}
+
+.modal-actions-modern {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.btn-cancel-modern {
+    background: transparent;
+    border: 1px solid #2D3748;
+    color: #A0AEC0;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel-modern:hover {
+    border-color: #4A5568;
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-create-modern {
+    border: none;
+    color: #0B0F13;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-create-modern:hover {
+    opacity: 0.9;
+}
+
+.btn-create-modern:active {
+    transform: scale(0.97);
 }

@@ -4,10 +4,8 @@ import Mesa from '../../src/components/Mesa';
 import ModalPedido from '../../src/components/ModalPedido';
 import { COLORES_RESTO } from '../../src/core/theme';
 
-// 🚀 1. IMPORTAMOS EL MOTOR (EL HOOK)
 import { useMesasDashboard } from '../../src/hooks/useMesasDashboard';
 
-// Función para pintar el color correcto según el estado de la base de datos
 const getColorPorEstado = (estado) => {
   if (!estado) return COLORES_RESTO.grisTexto;
   const e = estado.toUpperCase();
@@ -21,10 +19,8 @@ export default function HomeScreen() {
   const { width, height } = useWindowDimensions();
   const isPortrait = height > width;
 
-  // 🚀 2. CONECTAMOS EL MOTOR A LA PANTALLA
   const { mesas, pedidosRecientes, cargando, recargarDatos } = useMesasDashboard();
 
-  // Estados para el Modal
   const [modalVisible, setModalVisible] = useState(false);
   const [mesaSeleccionada, setMesaSeleccionada] = useState(null);
 
@@ -52,8 +48,8 @@ export default function HomeScreen() {
 
   // Adaptamos los pedidos recientes para la tabla
   const pedidosAdaptados = pedidosRecientes.map(p => ({
-    id: p._id ? p._id.substring(p._id.length - 4) : '...', // Mostramos solo los últimos 4 números del ID largo de Mongo
-    mesa: p.id_mesa?.numero || p.id_mesa || '?', // Si el backend lo une (populate), usa el número. Si no, usa el ID o '?'
+    id: p._id ? p._id.substring(p._id.length - 4) : '...',
+    mesa: p.id_mesa?.numero_mesa || p.id_mesa || '?',
     estado: p.estado || 'PENDIENTE',
     color: getColorPorEstado(p.estado)
   }));
@@ -92,7 +88,6 @@ export default function HomeScreen() {
             <Text style={styles.searchIcon}>🔍</Text>
           </View>
 
-          {/* Botón para recargar los datos manualmente */}
           <TouchableOpacity style={[styles.btnCliente, { marginLeft: 15 }]} onPress={recargarDatos}>
             <Text style={styles.btnClienteText}>↻ Actualizar</Text>
           </TouchableOpacity>
@@ -108,7 +103,6 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.tab}><Text style={styles.tabText}>Terraza 3</Text></TouchableOpacity>
           </View>
 
-          {/* 🚀 3. MOSTRAR CARGA O LAS MESAS REALES */}
           {cargando ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
               <ActivityIndicator size="large" color={COLORES_RESTO.cian} />
@@ -120,8 +114,8 @@ export default function HomeScreen() {
                 {mesas.map((mesa) => (
                   <Mesa
                     key={mesa._id}
-                    numero={mesa.numero}
-                    area={mesa.area || 'Planta base'} // Si tu backend no tiene area, pone esto por defecto
+                    numero={mesa.numero_mesa} /* 🔥 CORREGIDO PARA LEER DE MONGODB */
+                    area={mesa.area || 'Principal'} /* 🔥 AHORA LEE EL ÁREA REAL */
                     estado={mesa.estado || 'LIBRE'}
                     subEstado={mesa.estado === 'OCUPADA' ? 'CON COMENSALES' : ''}
                     mesero={mesa.mesero || '---'}
@@ -148,13 +142,12 @@ export default function HomeScreen() {
 
       </View>
 
-      {/* Componente del Modal */}
       <ModalPedido
         visible={modalVisible}
         mesa={mesaSeleccionada}
         onClose={() => {
           setModalVisible(false);
-          recargarDatos(); // 🔄 Cuando cerramos el modal, recargamos para ver si la mesa cambió a OCUPADA
+          recargarDatos();
         }}
       />
 
