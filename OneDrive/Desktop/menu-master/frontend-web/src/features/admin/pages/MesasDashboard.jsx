@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import MesaCard from '../components/MesaCard';
 import MesaModal from '../components/MesaModal';
 import RecentOrdersTable from '../components/RecentOrdersTable';
+import { mockMesas } from '../data/mock-mesas'; // Importamos los datos de ejemplo
 import { COLORES_RESTO } from '../../../constants/theme';
 import '../styles/Mesas.css';
 
@@ -14,22 +15,16 @@ export default function MesasDashboard() {
     const [filtroArea, setFiltroArea] = useState('TODAS');
     const [filtroEstado, setFiltroEstado] = useState('TODAS');
 
-    const fetchMesas = async () => {
-        try {
-            const res = await fetch('http://localhost:3000/mesas');
-            const data = await res.json();
-            setMesas(data);
-        } catch (error) { console.error("Error al cargar mesas:", error); }
-    };
+    // Simulación de la carga de datos
+    useEffect(() => {
+        // Usamos los datos de ejemplo directamente
+        setMesas(mockMesas);
+    }, []);
 
-    useEffect(() => { fetchMesas(); }, []);
-
-    const handleEliminarMesa = async (id) => {
+    const handleEliminarMesa = (id) => {
+        // Simulación de eliminación en el estado local
         if (!window.confirm("¿Estás seguro de eliminar esta mesa permanentemente?")) return;
-        try {
-            await fetch(`http://localhost:3000/mesas/${id}`, { method: 'DELETE' });
-            fetchMesas();
-        } catch (error) { console.error("Error al eliminar la mesa:", error); }
+        setMesas(mesas.filter(m => m._id !== id));
     };
 
     const ocupadas = mesas.filter(m => m.estado === 'OCUPADA').length;
@@ -44,7 +39,7 @@ export default function MesasDashboard() {
 
     return (
         <div className="mesas-layout">
-            <MesaModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onMesaAgregada={fetchMesas} />
+            <MesaModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onMesaAgregada={() => {}} />
 
             <div className="kpi-grid">
                 <div className="kpi-card" style={{ border: `1px solid ${COLORES_RESTO.grisTexto || '#2D3748'}` }}>

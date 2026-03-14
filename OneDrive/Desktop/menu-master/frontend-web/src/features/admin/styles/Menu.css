@@ -1,0 +1,75 @@
+/* Estilos para la página de Gestión de Menú */
+.menu-layout {
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+.menu-header {
+    margin-bottom: 30px;
+}
+
+.menu-header h1 {
+    color: var(--color-primario, #4DD0E1);
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.menu-header p {
+    color: #8B98A5;
+    font-size: 15px;
+    margin: 0;
+}
+
+.categorias-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.categoria-card {
+    background-color: #151C24;
+    border: 1px solid #2D3748;
+    border-radius: 16px;
+    padding: 25px;
+    transition: all 0.2s ease;
+}
+
+.categoria-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--color-primario, #4DD0E1);
+}
+
+.categoria-card h3 {
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+}
+
+.categoria-card p {
+    color: #8B98A5;
+    font-size: 14px;
+    margin: 0 0 20px 0;
+}
+
+.categoria-card footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-explorar {
+    background-color: transparent;
+    border: 1px solid var(--color-primario, #4DD0E1);
+    color: var(--color-primario, #4DD0E1);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-explorar:hover {
+    background-color: var(--color-primario, #4DD0E1);
+    color: #FFFFFF;
+}

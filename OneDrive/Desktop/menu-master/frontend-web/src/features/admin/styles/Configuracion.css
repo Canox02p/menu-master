@@ -8,8 +8,9 @@
     font-family: 'Inter', sans-serif;
 }
 
+/* Encabezado Principal */
 .config-header h1 {
-    color: #FFFFFF;
+    color: var(--color-primario, #4DD0E1);
     font-size: 28px;
     font-weight: 800;
     margin-bottom: 8px;
@@ -43,7 +44,7 @@
     margin-bottom: 25px;
 }
 
-/* Grid de Colores */
+/* Personalización de Tema */
 .theme-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -67,6 +68,10 @@
     background-color: rgba(255, 255, 255, 0.05);
 }
 
+.color-option.selected {
+    border-color: var(--color-primario, #4DD0E1);
+}
+
 .color-left {
     display: flex;
     align-items: center;
@@ -83,6 +88,12 @@
     color: #E2E8F0;
     font-weight: 600;
     font-size: 14px;
+}
+
+.check-icon {
+    color: var(--color-primario, #4DD0E1);
+    font-size: 18px;
+    font-weight: bold;
 }
 
 /* Botón de Restablecer */
@@ -127,39 +138,34 @@
     transition: all 0.2s;
 }
 
-/* 🔥 Usamos la variable CSS para que el botón activo tome el color elegido */
 .mode-btn.active {
     background-color: rgba(255, 255, 255, 0.05);
     color: #FFFFFF;
     border-color: var(--color-primario, #4DD0E1);
 }
 
-/* Inputs de Información */
-.input-group {
+/* Información del Restaurante */
+.info-fields-container {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 15px;
 }
 
-.input-group label {
-    color: #FFFFFF;
-    font-size: 14px;
-    font-weight: 700;
-}
-
-.input-group input {
-    background-color: #11181D;
-    border: 1px solid #2D3748;
-    padding: 15px;
+.info-field {
+    border: 1px solid var(--color-primario, #4DD0E1);
     border-radius: 12px;
+    padding: 15px;
+    background-color: transparent;
+}
+
+.info-field-label {
+    color: #8B98A5;
+    font-size: 15px;
+    margin-right: 10px;
+}
+
+.info-field-value {
     color: #FFFFFF;
     font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-/* 🔥 Borde dinámico al escribir */
-.input-group input:focus {
-    border-color: var(--color-primario, #4DD0E1);
+    font-weight: 500;
 }

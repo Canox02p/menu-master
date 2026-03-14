@@ -1,0 +1,99 @@
+/* Estilos para la lista de productos */
+.product-list-layout {
+    padding: 20px;
+}
+
+.product-list-header {
+    margin-bottom: 30px;
+}
+
+.product-list-header h1 {
+    color: #FFFFFF;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 10px 0;
+}
+
+.product-list-header p {
+    color: #8B98A5;
+    font-size: 15px;
+}
+
+.btn-back {
+    background: none;
+    border: none;
+    color: var(--color-primario, #4DD0E1);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 15px;
+    padding-bottom: 5px;
+}
+
+.product-table-container {
+    background-color: #151C24;
+    border: 1px solid #2D3748;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.product-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.product-table th, .product-table td {
+    padding: 20px;
+    text-align: left;
+    border-bottom: 1px solid #2D3748;
+    color: #E2E8F0;
+}
+
+.product-table th {
+    background-color: #1A222C;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: #8B98A5;
+}
+
+.product-row:last-child td {
+    border-bottom: none;
+}
+
+.stock-indicator {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.stock-high { background-color: rgba(72, 187, 120, 0.1); color: #48BB78; }
+.stock-medium { background-color: rgba(236, 201, 75, 0.1); color: #ECC94B; }
+.stock-low { background-color: rgba(245, 101, 101, 0.1); color: #F56565; }
+
+.product-actions button {
+    border: 1px solid #2D3748;
+    background-color: transparent;
+    color: #E2E8F0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: all 0.2s;
+}
+
+.product-actions .btn-edit:hover {
+    border-color: #4299E1;
+    color: #4299E1;
+}
+
+.product-actions .btn-delete:hover {
+    border-color: #F56565;
+    color: #F56565;
+}
+
+.no-products td {
+    text-align: center;
+    padding: 40px;
+    color: #8B98A5;
+}

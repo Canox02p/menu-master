@@ -1,0 +1,42 @@
+export const mockUsuarios = [
+  {
+    id: '1',
+    nombre: 'Carlos Santana',
+    email: 'carlos.santana@example.com',
+    rol: 'ADMIN',
+    estado: 'ACTIVO',
+    fecha_creacion: '2023-01-15T10:00:00.000Z',
+  },
+  {
+    id: '2',
+    nombre: 'Ana López',
+    email: 'ana.lopez@example.com',
+    rol: 'MESERO',
+    estado: 'ACTIVO',
+    fecha_creacion: '2023-03-22T11:30:00.000Z',
+  },
+  {
+    id: '3',
+    nombre: 'Pedro Martínez',
+    email: 'pedro.martinez@example.com',
+    rol: 'COCINERO',
+    estado: 'ACTIVO',
+    fecha_creacion: '2023-05-10T09:00:00.000Z',
+  },
+  {
+    id: '4',
+    nombre: 'Laura Fernandez',
+    email: 'laura.fernandez@example.com',
+    rol: 'MESERO',
+    estado: 'INACTIVO',
+    fecha_creacion: '2022-11-30T15:45:00.000Z',
+  },
+  {
+    id: '5',
+    nombre: 'Javier García',
+    email: 'javier.garcia@example.com',
+    rol: 'COCINERO',
+    estado: 'ACTIVO',
+    fecha_creacion: '2024-01-20T08:00:00.000Z',
+  },
+];

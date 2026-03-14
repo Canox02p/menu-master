@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, CheckCircle2, Settings, LogOut, ChevronDown, AlertTriangle } from 'lucide-react';
-import { COLORES_RESTO } from '../../../constants/theme';
 import './ChefHeader.css';
 
-export default function ChefHeader({ onLogout }) {
+// 1. Recibimos la nueva prop `onOpenSettings`
+export default function ChefHeader({ onLogout, onOpenSettings }) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const dropdownRef = useRef(null);
     const tiempoActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Cierra el menú desplegable si haces clic fuera de él
     useEffect(() => {
         function handleClickOutside(event) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -27,6 +26,14 @@ export default function ChefHeader({ onLogout }) {
         setShowLogoutModal(true);
     };
 
+    // 2. Creamos la función para manejar el clic en "Configuraciones"
+    const handleSettingsClick = () => {
+        if (onOpenSettings) {
+            onOpenSettings(); // Llama a la función para abrir el modal
+        }
+        setIsDropdownOpen(false); // Cierra el menú desplegable
+    };
+
     const confirmLogout = () => {
         setShowLogoutModal(false);
         if (onLogout) onLogout();
@@ -34,50 +41,36 @@ export default function ChefHeader({ onLogout }) {
 
     return (
         <>
-            <header className="chef-header" style={{ borderBottom: `2px solid ${COLORES_RESTO.borde}` }}>
-                <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <img
-                        src="/logo_sin_letras.png" // Reemplaza con la ruta real de tu logo
-                        alt="Logo Menu Master"
-                        style={{ width: '35px', height: '35px' }}
-                    />
-                    <h2>MENU MASTER <span style={{ color: COLORES_RESTO.cian }}>| COCINA</span></h2>
+            <header className="chef-header">
+                <div className="header-brand">
+                    <img src="/logo_sin_letras.png" alt="Logo Menu Master" style={{ width: '35px', height: '35px' }} />
+                    <h2>MENU MASTER <span style={{ color: 'var(--color-primario-chef, #4DD0E1)' }}>| COCINA</span></h2>
                 </div>
 
                 <div className="header-actions">
                     <div className="status-indicator">
-                        <CheckCircle2 size={16} className="text-green" />
-                        <span className="status-text">🕒 {tiempoActual}</span>
+                        <CheckCircle2 size={16} />
+                        <span>🕒 {tiempoActual}</span>
                     </div>
 
                     <div className="search-bar">
-                        <Search size={18} className="search-icon" />
+                        <Search size={18} />
                         <input type="text" placeholder="Buscar orden..." />
                     </div>
 
                     <div className="profile-container" ref={dropdownRef}>
-                        <div
-                            className="profile-trigger"
-                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        >
-                            {/* Botón Naranja Oficial */}
+                        <div className="profile-trigger" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
                             <button className="notification-btn">
                                 <Bell size={20} />
                                 <span className="notification-dot"></span>
                             </button>
-
                             <div className="user-info">
                                 <span className="user-greeting">BIENVENIDO,</span>
                                 <span className="user-role">CHEF DENI</span>
                             </div>
-
-                            <ChevronDown
-                                size={16}
-                                className={`chevron-icon ${isDropdownOpen ? 'rotate' : ''}`}
-                            />
+                            <ChevronDown size={16} className={`chevron-icon ${isDropdownOpen ? 'rotate' : ''}`} />
                         </div>
 
-                        {/* Menú Desplegable Estilo Admin */}
                         {isDropdownOpen && (
                             <div className="profile-dropdown">
                                 <div className="dropdown-header">
@@ -85,7 +78,8 @@ export default function ChefHeader({ onLogout }) {
                                     <span>deni@menumaster.com</span>
                                 </div>
                                 <div className="dropdown-divider"></div>
-                                <button className="dropdown-item">
+                                {/* 3. Asignamos la función al onClick del botón */}
+                                <button className="dropdown-item" onClick={handleSettingsClick}>
                                     <Settings size={16} />
                                     <span>Configuraciones</span>
                                 </button>
@@ -99,12 +93,11 @@ export default function ChefHeader({ onLogout }) {
                 </div>
             </header>
 
-            {/* --- MODAL DE CONFIRMACIÓN --- */}
             {showLogoutModal && (
                 <div className="modal-overlay">
                     <div className="logout-modal">
                         <div className="modal-icon-container">
-                            <AlertTriangle size={32} className="warning-icon" />
+                            <AlertTriangle size={32} />
                         </div>
                         <h3>¿Cerrar Sesión?</h3>
                         <p>¿Estás seguro de que deseas salir del monitor de cocina?</p>

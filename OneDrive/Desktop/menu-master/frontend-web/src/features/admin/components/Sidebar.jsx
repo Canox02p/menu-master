@@ -30,10 +30,9 @@ export default function Sidebar({ vistaActiva, setVistaActiva }) {
                     onClick={() => setVistaActiva('menu')}
                 >
                     <MenuSquare size={20} className="nav-icon" />
-                    <span>MENU</span>
+                    <span>MENÚ</span>
                 </button>
 
-                {/* BOTÓN DE MESAS FUNCIONAL */}
                 <button
                     className={`nav-item ${vistaActiva === 'mesas' ? 'active' : ''}`}
                     onClick={() => setVistaActiva('mesas')}
@@ -47,7 +46,7 @@ export default function Sidebar({ vistaActiva, setVistaActiva }) {
                     onClick={() => setVistaActiva('inventario')}
                 >
                     <ShoppingBag size={20} className="nav-icon" />
-                    <span>INVENTORY</span>
+                    <span>INVENTARIO</span>
                 </button>
 
                 <button
@@ -55,7 +54,7 @@ export default function Sidebar({ vistaActiva, setVistaActiva }) {
                     onClick={() => setVistaActiva('reportes')}
                 >
                     <BarChart3 size={20} className="nav-icon" />
-                    <span>REPORTS</span>
+                    <span>REPORTES</span>
                 </button>
 
                 <button
@@ -63,16 +62,15 @@ export default function Sidebar({ vistaActiva, setVistaActiva }) {
                     onClick={() => setVistaActiva('personal')}
                 >
                     <Users size={20} className="nav-icon" />
-                    <span>STAFF</span>
+                    <span>PERSONAL</span>
                 </button>
 
-                {/* 🔥 BOTÓN DE CONFIGURACIÓN CORREGIDO */}
                 <button
                     className={`nav-item ${vistaActiva === 'settings' ? 'active' : ''}`}
                     onClick={() => setVistaActiva('settings')}
                 >
                     <Settings size={20} className="nav-icon" />
-                    <span>SETTINGS</span>
+                    <span>CONFIGURACIÓN</span>
                 </button>
             </nav>
         </aside>

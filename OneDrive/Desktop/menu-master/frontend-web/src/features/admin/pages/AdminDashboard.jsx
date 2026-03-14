@@ -6,12 +6,15 @@ import ChartsSection from '../components/ChartsSection';
 import RecentOrdersTable from '../components/RecentOrdersTable';
 import MesasDashboard from '../pages/MesasDashboard';
 import Configuracion from '../pages/Configuracion';
+import Menu from '../pages/Menu';
+import Inventario from '../pages/Inventario';
+import Reportes from '../pages/Reportes';
+import Personal from '../pages/Personal'; // Importamos el nuevo componente
 import { COLORES_RESTO } from "../../../constants/theme";
 import '../styles/AdminDashboard.css';
 
 export default function AdminDashboard() {
-    // 🔥 PRUEBA DE FUEGO: Lo forzamos a iniciar directamente en la configuración
-    const [vistaActiva, setVistaActiva] = useState('settings');
+    const [vistaActiva, setVistaActiva] = useState('dashboard');
 
     useEffect(() => {
         const colorGuardado = localStorage.getItem('admin_color') || 'cian';
@@ -24,10 +27,10 @@ export default function AdminDashboard() {
             adminWrapper.style.setProperty('--color-primario', colores[colorGuardado] || colores.cian);
 
             if (modoOscuro) {
-                adminWrapper.style.backgroundColor = '#0B1014'; // Fondo oscuro
+                adminWrapper.style.backgroundColor = '#0B1014';
                 adminWrapper.style.color = '#FFFFFF';
             } else {
-                adminWrapper.style.backgroundColor = '#F7FAFC'; // Fondo claro
+                adminWrapper.style.backgroundColor = '#F7FAFC';
                 adminWrapper.style.color = '#1A202C';
             }
         }
@@ -43,9 +46,6 @@ export default function AdminDashboard() {
     };
 
     const renderizarContenido = () => {
-        // 🕵️‍♂️ TRUCO DETECTIVE: Esto imprimirá en la consola de tu navegador la vista actual
-        console.log("React intentando abrir la vista:", vistaActiva);
-
         if (vistaActiva === 'dashboard') {
             return (
                 <>
@@ -58,11 +58,22 @@ export default function AdminDashboard() {
         if (vistaActiva === 'mesas') {
             return <MesasDashboard />;
         }
+        if (vistaActiva === 'menu') {
+            return <Menu />;
+        }
+        if (vistaActiva === 'inventario') {
+            return <Inventario />;
+        }
+        if (vistaActiva === 'reportes') {
+            return <Reportes />;
+        }
+        if (vistaActiva === 'personal') { // <-- ¡AQUÍ ESTÁ LA MAGIA!
+            return <Personal />;
+        }
         if (vistaActiva === 'settings') {
             return <Configuracion />;
         }
 
-        // 🕵️‍♂️ TRUCO DETECTIVE 2: Si falla, nos dirá en pantalla qué palabra estaba esperando
         return (
             <h2 style={{ color: 'var(--color-primario)', padding: '20px' }}>
                 Vista en construcción... (React leyó: "{vistaActiva}")

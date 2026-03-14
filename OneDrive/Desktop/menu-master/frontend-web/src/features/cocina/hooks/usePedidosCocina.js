@@ -1,33 +1,27 @@
-import { useState, useEffect } from 'react';
-// IMPORTANTE: Subimos tres niveles para salir hasta src/ y luego entrar a services/
-import { cocinaService } from '../../../services/cocinaService';
+import { useState } from 'react';
+// Importamos los datos de ejemplo que creamos
+import { mockPedidosCocina } from '../data/mock-pedidos';
 
 export const usePedidosCocina = () => {
-    const [pedidos, setPedidos] = useState([]);
+    // El estado inicial ahora contiene nuestros pedidos de ejemplo
+    const [pedidos, setPedidos] = useState(mockPedidosCocina);
 
-    const cargarPedidos = async () => {
-        try {
-            const data = await cocinaService.getPedidos();
-            setPedidos(data);
-        } catch (err) {
-            console.error("Error sincronizando con MongoDB:", err);
-        }
+    // Ya no necesitamos `useEffect` porque no cargamos datos de un servidor.
+
+    // Esta función ahora actualiza el estado localmente
+    const actualizarEstado = (id, nuevoEstado) => {
+        setPedidos(currentPedidos =>
+            currentPedidos.map(p =>
+                p._id === id ? { ...p, estado: nuevoEstado } : p
+            )
+        );
     };
 
-    useEffect(() => {
-        cargarPedidos();
-        const intervalo = setInterval(cargarPedidos, 10000); // Actualización cada 10 segundos
-        return () => clearInterval(intervalo);
-    }, []);
-
-    const actualizarEstado = async (id, nuevoEstado) => {
-        await cocinaService.cambiarEstado(id, nuevoEstado);
-        cargarPedidos(); // Recarga la lista tras el cambio
-    };
-
-    const eliminar = async (id) => {
-        await cocinaService.cancelar(id);
-        cargarPedidos(); // Quita el pedido de la pantalla
+    // Esta función ahora elimina el pedido del estado local
+    const eliminar = (id) => {
+        setPedidos(currentPedidos =>
+            currentPedidos.filter(p => p._id !== id)
+        );
     };
 
     return { pedidos, actualizarEstado, eliminar };

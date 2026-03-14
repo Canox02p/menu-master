@@ -2,21 +2,18 @@
    1. ESTRUCTURA GENERAL DEL DASHBOARD
    ========================================= */
 
-/* 🔥 Cambiamos "display: grid" por "flex-direction: column" para romper las columnas */
 .mesas-grid-container {
     display: flex;
     flex-direction: column;
     gap: 30px;
 }
 
-/* 🔥 Le quitamos el "sticky" y le damos el 100% del ancho para que se estire abajo */
 .mesas-sidebar-right {
     position: static;
     width: 100%;
     margin-top: 10px;
 }
 
-/* La nueva sección inferior para la tabla */
 .mesas-bottom-section {
     width: 100%;
     margin-top: 10px;
@@ -59,6 +56,7 @@
     font-size: 32px;
     font-weight: 800;
     margin: 0;
+    color: var(--color-primario, #4DD0E1);
 }
 
 /* =========================================
@@ -108,13 +106,14 @@
     color: #000000;
 }
 
-/* 🔥 El estilo CIAN para el Estado seleccionado */
 .pill-btn.active-status {
-    border-color: #4DD0E1;
-    color: #4DD0E1;
+    border-color: var(--color-primario, #4DD0E1);
+    color: var(--color-primario, #4DD0E1);
 }
 
 .btn-add-mesa {
+    background-color: var(--color-primario, #4DD0E1);
+    color: #0B0F13;
     border: none;
     padding: 10px 18px;
     border-radius: 8px;
@@ -282,7 +281,7 @@
 .btn-close-modern {
     background: transparent;
     border: none;
-    color: #4DD0E1;
+    color: var(--color-primario, #4DD0E1);
     cursor: pointer;
     transition: transform 0.2s;
     padding: 0;
@@ -340,8 +339,8 @@
 
 .input-group-modern input:focus,
 .input-group-modern select:focus {
-    border-color: #4DD0E1;
-    box-shadow: 0 0 0 1px rgba(77, 208, 225, 0.5);
+    border-color: var(--color-primario, #4DD0E1);
+    box-shadow: 0 0 0 1px var(--color-primario, #4DD0E1);
 }
 
 .select-wrapper {
@@ -357,7 +356,7 @@
 .select-wrapper::after {
     content: '⌄';
     font-size: 20px;
-    color: #4DD0E1;
+    color: var(--color-primario, #4DD0E1);
     position: absolute;
     right: 15px;
     top: 50%;
@@ -391,6 +390,7 @@
 }
 
 .btn-create-modern {
+    background-color: var(--color-primario, #9F7AEA);
     border: none;
     color: #0B0F13;
     padding: 14px;
@@ -414,7 +414,6 @@
    ========================================= */
 .orders-table-wrapper {
     background-color: #1A2228;
-    /* Fondo oscuro que coincide con tu imagen */
     border-radius: 16px;
     padding: 24px;
     width: 100%;
@@ -446,7 +445,6 @@
     border-bottom: 1px solid #2D3748;
 }
 
-/* Alineamos "Estado" a la derecha como en tu foto */
 .orders-table th:last-child {
     text-align: right;
 }
@@ -461,10 +459,8 @@
 
 .orders-table tr:last-child td {
     border-bottom: none;
-    /* Quitamos la línea del último elemento */
 }
 
-/* Tipografías y celdas específicas */
 .cell-id {
     color: #8B98A5 !important;
 }
@@ -477,7 +473,6 @@
     font-weight: 700;
 }
 
-/* El grupo del mesero con su foto */
 .mesero-group {
     display: flex;
     align-items: center;
@@ -495,7 +490,6 @@
     font-size: 14px;
 }
 
-/* Contenedor del estado para alinearlo a la derecha con su icono */
 .estado-group {
     display: flex;
     justify-content: flex-end;
@@ -503,7 +497,6 @@
     gap: 15px;
 }
 
-/* Etiquetas de estado (Badges) */
 .badge-table {
     padding: 6px 14px;
     border-radius: 6px;

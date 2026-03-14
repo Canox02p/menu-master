@@ -83,7 +83,7 @@
 }
 
 .nav-item.active .nav-icon {
-    color: #40E0D0;
+    color: var(--color-primario, #4DD0E1);
 }
 
 .nav-item.active::before {
@@ -94,7 +94,7 @@
     transform: translateY(-50%);
     height: 60%;
     width: 4px;
-    background-color: #40E0D0;
+    background-color: var(--color-primario, #4DD0E1);
     border-radius: 0 4px 4px 0;
 }
 
