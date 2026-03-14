@@ -66,9 +66,10 @@ export default function Sidebar({ vistaActiva, setVistaActiva }) {
                     <span>STAFF</span>
                 </button>
 
+                {/* 🔥 BOTÓN DE CONFIGURACIÓN CORREGIDO */}
                 <button
-                    className={`nav-item ${vistaActiva === 'configuraciones' ? 'active' : ''}`}
-                    onClick={() => setVistaActiva('configuraciones')}
+                    className={`nav-item ${vistaActiva === 'settings' ? 'active' : ''}`}
+                    onClick={() => setVistaActiva('settings')}
                 >
                     <Settings size={20} className="nav-icon" />
                     <span>SETTINGS</span>

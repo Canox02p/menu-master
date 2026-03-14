@@ -1,0 +1,165 @@
+/* src/features/admin/styles/Configuracion.css */
+
+.config-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding-bottom: 40px;
+    font-family: 'Inter', sans-serif;
+}
+
+.config-header h1 {
+    color: #FFFFFF;
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.config-header p {
+    color: #8B98A5;
+    font-size: 15px;
+    margin: 0;
+}
+
+/* Tarjetas de Configuración */
+.config-card {
+    background-color: #151C24;
+    border: 1px solid #2D3748;
+    border-radius: 16px;
+    padding: 30px;
+}
+
+.config-card h3 {
+    color: #FFFFFF;
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+
+.config-card p {
+    color: #8B98A5;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+/* Grid de Colores */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.color-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: transparent;
+    border: 1px solid #2D3748;
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.color-option:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.color-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.color-circle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+}
+
+.color-name {
+    color: #E2E8F0;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* Botón de Restablecer */
+.btn-reset {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid #2D3748;
+    color: #E2E8F0;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: fit-content;
+}
+
+.btn-reset:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Selector Claro/Oscuro */
+.mode-toggle-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: transparent;
+    border: 1px solid #2D3748;
+    color: #8B98A5;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+/* 🔥 Usamos la variable CSS para que el botón activo tome el color elegido */
+.mode-btn.active {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #FFFFFF;
+    border-color: var(--color-primario, #4DD0E1);
+}
+
+/* Inputs de Información */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.input-group input {
+    background-color: #11181D;
+    border: 1px solid #2D3748;
+    padding: 15px;
+    border-radius: 12px;
+    color: #FFFFFF;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+/* 🔥 Borde dinámico al escribir */
+.input-group input:focus {
+    border-color: var(--color-primario, #4DD0E1);
+}

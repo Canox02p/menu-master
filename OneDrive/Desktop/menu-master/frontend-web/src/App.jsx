@@ -12,17 +12,13 @@ import { usePedidosCocina } from "./features/cocina/hooks/usePedidosCocina";
 import ChefHeader from "./features/cocina/components/ChefHeader";
 import { PedidoCard } from "./features/cocina/components/PedidoCard";
 
-// Importamos el CSS global adaptativo
 import './App.css';
 
 export default function App() {
-  // 🔄 ESTADO DUAL: Guardamos el rol y la plataforma (web/movil)
   const [auth, setAuth] = useState({ rol: null, plataforma: 'web' });
 
-  // Hook de sincronización
   const { pedidos, actualizarEstado, eliminar } = usePedidosCocina();
 
-  // Ahora el login nos pasa dos cosas: el rol y la plataforma elegida
   const manejarLogin = (rol, plataforma) => {
     setAuth({ rol, plataforma });
   };
@@ -31,7 +27,6 @@ export default function App() {
     setAuth({ rol: null, plataforma: 'web' });
   };
 
-  // 👨‍🍳 VISTA DE COCINA (SE ADAPTA A LA PLATAFORMA)
   const VistaCocina = () => (
     <div className={`main-app-container ${auth.plataforma}`} style={{
       minHeight: '100vh',
@@ -61,9 +56,7 @@ export default function App() {
     </div>
   );
 
-  // 🚦 ENRUTADOR DE ROLES Y PLATAFORMAS
 
-  // 1. Si no hay sesión, mostramos el Login
   if (!auth.rol) {
     return (
       <div className="login-full-screen-wrapper">
@@ -72,7 +65,6 @@ export default function App() {
     );
   }
 
-  // 2. Vista de Administrador
   if (auth.rol === 'admin') {
     return (
       <div className={`main-app-container ${auth.plataforma}`}>
@@ -81,12 +73,10 @@ export default function App() {
     );
   }
 
-  // 3. Vista de Cocina (Cocinero)
   if (auth.rol === 'cocina') {
     return <VistaCocina />;
   }
 
-  // 4. Vista de Mesero (Nueva opción para el móvil)
   if (auth.rol === 'mesero') {
     return (
       <div className="main-app-container movil">

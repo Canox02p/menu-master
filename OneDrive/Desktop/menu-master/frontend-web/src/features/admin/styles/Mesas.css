@@ -1,23 +1,25 @@
 /* =========================================
    1. ESTRUCTURA GENERAL DEL DASHBOARD
    ========================================= */
-.mesas-layout {
+
+/* 🔥 Cambiamos "display: grid" por "flex-direction: column" para romper las columnas */
+.mesas-grid-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    height: 100%;
+    gap: 30px;
 }
 
-.mesas-grid-container {
-    display: grid;
-    grid-template-columns: 2.5fr 1fr;
-    gap: 20px;
-    align-items: start;
-}
-
+/* 🔥 Le quitamos el "sticky" y le damos el 100% del ancho para que se estire abajo */
 .mesas-sidebar-right {
-    position: sticky;
-    top: 20px;
+    position: static;
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* La nueva sección inferior para la tabla */
+.mesas-bottom-section {
+    width: 100%;
+    margin-top: 10px;
 }
 
 /* =========================================
@@ -106,9 +108,10 @@
     color: #000000;
 }
 
+/* 🔥 El estilo CIAN para el Estado seleccionado */
 .pill-btn.active-status {
-    border-color: #FC8181;
-    color: #FC8181;
+    border-color: #4DD0E1;
+    color: #4DD0E1;
 }
 
 .btn-add-mesa {
@@ -404,4 +407,126 @@
 
 .btn-create-modern:active {
     transform: scale(0.97);
+}
+
+/* =========================================
+   6. TABLA DE ÚLTIMOS PEDIDOS (ANCHO COMPLETO)
+   ========================================= */
+.orders-table-wrapper {
+    background-color: #1A2228;
+    /* Fondo oscuro que coincide con tu imagen */
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    border: 1px solid #2D3748;
+    box-sizing: border-box;
+}
+
+.orders-table-title {
+    color: #8B98A5;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.orders-table th {
+    color: #8B98A5;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #2D3748;
+}
+
+/* Alineamos "Estado" a la derecha como en tu foto */
+.orders-table th:last-child {
+    text-align: right;
+}
+
+.orders-table td {
+    padding: 16px 0;
+    border-bottom: 1px solid #2D3748;
+    color: #FFFFFF;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.orders-table tr:last-child td {
+    border-bottom: none;
+    /* Quitamos la línea del último elemento */
+}
+
+/* Tipografías y celdas específicas */
+.cell-id {
+    color: #8B98A5 !important;
+}
+
+.cell-mesa {
+    font-weight: 700;
+}
+
+.cell-total {
+    font-weight: 700;
+}
+
+/* El grupo del mesero con su foto */
+.mesero-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar-mesero {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: #2D3748;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+/* Contenedor del estado para alinearlo a la derecha con su icono */
+.estado-group {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Etiquetas de estado (Badges) */
+.badge-table {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid transparent;
+}
+
+.badge-table.preparacion {
+    color: #48BB78;
+    border-color: #48BB78;
+    background-color: transparent;
+}
+
+.badge-table.cocina {
+    color: #48BB78;
+    border-color: #48BB78;
+    background-color: transparent;
+}
+
+.badge-table.reservada {
+    color: #000000;
+    background-color: #FFFFFF;
 }

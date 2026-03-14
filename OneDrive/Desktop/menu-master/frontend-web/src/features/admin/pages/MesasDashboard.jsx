@@ -104,7 +104,8 @@ export default function MesasDashboard() {
                     </div>
                 </div>
 
-                <div className="mesas-sidebar-right">
+                {/* 🔥 LA TABLA AHORA SE MUESTRA EN LA PARTE INFERIOR */}
+                <div className="mesas-bottom-section">
                     <RecentOrdersTable />
                 </div>
             </div>

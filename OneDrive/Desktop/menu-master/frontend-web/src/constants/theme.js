@@ -1,10 +1,12 @@
 export const COLORES_RESTO = {
-    fondo: '#0B0F13',
+    cian: 'var(--color-primario, #4DD0E1)',
+
+    naranja: '#E68A46',
+    verde: '#48BB78',
+    morado: '#9F7AEA',
+    grisTexto: '#8B98A5',
+    fondo: '#0B1014',
     tarjeta: '#151C24',
-    cian: '#4DD0E1',
-    naranja: '#FFB74D',
-    rojo: '#FF5252',
-    verde: '#81C784',
     borde: '#2D3748',
-    grisTexto: '#718096'
+    textoBlanco: '#FFFFFF'
 };
