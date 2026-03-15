@@ -78,7 +78,7 @@
 
 .nav-item.active {
     background-color: #242D32;
-    color: #FFFFFF;
+    color: var(--color-primario, #4DD0E1);
     position: relative;
 }
 
