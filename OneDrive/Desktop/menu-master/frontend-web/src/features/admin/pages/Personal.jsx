@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from 'react-modal';
 import { mockUsuarios } from '../data/mock-data'; // Crearemos este archivo a continuación
 import '../styles/Personal.css';
+import { COLORES_RESTO } from '../../../constants/theme';
 
 // Estilos personalizados para el modal
 const customModalStyles = {
@@ -12,12 +13,13 @@ const customModalStyles = {
     bottom: 'auto',
     marginRight: '-50%',
     transform: 'translate(-50%, -50%)',
-    backgroundColor: '#1C242B',
-    border: '1px solid #2D3748',
+    backgroundColor: COLORES_RESTO.tarjeta,
+    border: `1px solid ${COLORES_RESTO.borde}`,
     borderRadius: '20px',
     padding: '35px',
     maxWidth: '500px',
     width: '100%',
+    color: COLORES_RESTO.textoBlanco,
   },
   overlay: {
     backgroundColor: 'rgba(11, 15, 19, 0.85)',

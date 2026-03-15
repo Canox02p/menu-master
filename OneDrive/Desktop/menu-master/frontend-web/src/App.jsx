@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { COLORES_RESTO } from "./constants/theme";
 
 // --- CAPA DE AUTENTICACIÓN ---
@@ -16,14 +16,32 @@ import './App.css';
 
 export default function App() {
   const [auth, setAuth] = useState({ rol: null, plataforma: 'web' });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const storedAuth = localStorage.getItem('auth');
+      if (storedAuth) {
+        setAuth(JSON.parse(storedAuth));
+      }
+    } catch (error) {
+      console.error("Error al parsear la sesión del localStorage:", error);
+      localStorage.removeItem('auth');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const { pedidos, actualizarEstado, eliminar } = usePedidosCocina();
 
   const manejarLogin = (rol, plataforma) => {
-    setAuth({ rol, plataforma });
+    const authData = { rol, plataforma };
+    localStorage.setItem('auth', JSON.stringify(authData));
+    setAuth(authData);
   };
 
   const manejarLogout = () => {
+    localStorage.removeItem('auth');
     setAuth({ rol: null, plataforma: 'web' });
   };
 
@@ -36,7 +54,6 @@ export default function App() {
       flexDirection: 'column'
     }}>
       <ChefHeader onLogout={manejarLogout} />
-
       <div className="dashboard-grid">
         {pedidos.length > 0 ? (
           pedidos.map(p => (
@@ -56,6 +73,11 @@ export default function App() {
     </div>
   );
 
+  if (isLoading) {
+    return (
+      <div style={{ height: '100vh', backgroundColor: COLORES_RESTO.fondo }} />
+    );
+  }
 
   if (!auth.rol) {
     return (
@@ -80,7 +102,6 @@ export default function App() {
   if (auth.rol === 'mesero') {
     return (
       <div className="main-app-container movil">
-        {/* Aquí puedes crear un componente específico para el mesero luego */}
         <ChefHeader onLogout={manejarLogout} />
         <h2 style={{ color: 'white', textAlign: 'center' }}>Panel de Mesero - Versión Móvil</h2>
       </div>

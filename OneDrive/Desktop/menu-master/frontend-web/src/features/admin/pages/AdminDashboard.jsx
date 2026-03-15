@@ -13,7 +13,7 @@ import Personal from '../pages/Personal'; // Importamos el nuevo componente
 import { COLORES_RESTO } from "../../../constants/theme";
 import '../styles/AdminDashboard.css';
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ onLogout }) {
     const [vistaActiva, setVistaActiva] = useState('dashboard');
 
     useEffect(() => {
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
             <Sidebar vistaActiva={vistaActiva} setVistaActiva={setVistaActiva} />
 
             <main className="admin-main-content">
-                <AdminHeader />
+                <AdminHeader onLogout={onLogout} />
 
                 <div className="dashboard-scroll-area">
                     {renderizarContenido()}
