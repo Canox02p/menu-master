@@ -1,26 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePedidosCocina } from '../features/cocina/hooks/usePedidosCocina';
 import PedidoCard from '../features/cocina/components/PedidoCard';
 import ChefHeader from '../features/cocina/components/ChefHeader';
 import ChefSettingsModal from '../features/cocina/components/ChefSettingsModal';
-import '../features/cocina/styles/CocinaDashboard.css'; // Asegúrate de crear este archivo
+import '../features/cocina/styles/CocinaDashboard.css';
 
 export default function CocinaDashboard() {
+    // 1. Hook de datos
     const { pedidos, actualizarEstado, eliminar } = usePedidosCocina();
+
+    // 2. Estado para abrir/cerrar el modal
     const [isSettingsOpen, setSettingsOpen] = useState(false);
 
-    const enCocina = pedidos.filter(p => p.estado === 'EN_COCINA');
-    const enProceso = pedidos.filter(p => p.estado === 'EN_PROCESO');
+    // 3. Persistencia: Carga el color al entrar a la página
+    useEffect(() => {
+        const colorIdGuardado = localStorage.getItem('chef_color') || 'cian';
+        const colores = {
+            'cian': '#4DD0E1',
+            'verde': '#48BB78',
+            'naranja': '#ED8936',
+            'rojo': '#F56565'
+        };
+        const colorHex = colores[colorIdGuardado] || '#4DD0E1';
+
+        const wrapper = document.getElementById('chef-dashboard-wrapper');
+        if (wrapper) {
+            wrapper.style.setProperty('--color-primario-chef', colorHex);
+        }
+    }, []);
+
+    // 4. Filtrado de pedidos
+    const enCocina = pedidos.filter(p => p.estado === 'EN_COCINA' || p.estado === 'PENDIENTE');
+    const enProceso = pedidos.filter(p => p.estado === 'EN_PROCESO' || p.estado === 'PREPARANDO');
+
+    const handleLogout = () => { window.location.href = '/'; };
 
     return (
         <div id="chef-dashboard-wrapper" className="cocina-dashboard-layout">
-            {/* El Header ahora puede abrir el modal de configuración */}
-            <ChefHeader onOpenSettings={() => setSettingsOpen(true)} />
+
+            {/* ENCABEZADO: Es vital pasar onOpenSettings */}
+            <ChefHeader
+                onLogout={handleLogout}
+                onOpenSettings={() => setSettingsOpen(true)}
+            />
 
             {pedidos.length > 0 ? (
                 <main className="pedidos-grid">
-                    <div className="columna-pedidos">
-                        <div className="columna-header" style={{ backgroundColor: 'var(--color-primario-chef, #4DD0E1)' }}>
+                    <section className="columna-pedidos">
+                        <div className="columna-header" style={{ backgroundColor: 'var(--color-primario-chef)' }}>
                             <h3>EN ESPERA ({enCocina.length})</h3>
                         </div>
                         <div className="columna-body">
@@ -28,9 +55,9 @@ export default function CocinaDashboard() {
                                 <PedidoCard key={p._id} pedido={p} onActualizar={actualizarEstado} onEliminar={eliminar} />
                             ))}
                         </div>
-                    </div>
+                    </section>
 
-                    <div className="columna-pedidos">
+                    <section className="columna-pedidos">
                         <div className="columna-header" style={{ backgroundColor: '#48BB78' }}>
                             <h3>PREPARANDO... ({enProceso.length})</h3>
                         </div>
@@ -39,7 +66,7 @@ export default function CocinaDashboard() {
                                 <PedidoCard key={p._id} pedido={p} onActualizar={actualizarEstado} onEliminar={eliminar} />
                             ))}
                         </div>
-                    </div>
+                    </section>
                 </main>
             ) : (
                 <div className="no-pedidos-mensaje">
@@ -47,8 +74,11 @@ export default function CocinaDashboard() {
                 </div>
             )}
 
-            {/* El modal se renderiza aquí */}
-            <ChefSettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
+            {/* 5. MODAL: Es fundamental pasar isOpen={isSettingsOpen} */}
+            <ChefSettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setSettingsOpen(false)}
+            />
         </div>
     );
 }

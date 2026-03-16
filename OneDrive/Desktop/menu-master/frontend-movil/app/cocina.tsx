@@ -9,30 +9,29 @@ import {
     StatusBar,
     RefreshControl
 } from 'react-native';
-import { useRouter } from 'expo-router'; // <-- Importamos el router para la seguridad
+import { useRouter } from 'expo-router';
 
-// IMPORTACIONES DESDE TU CARPETA SRC (Arquitectura Limpia)
+// IMPORTACIONES DESDE TU CARPETA SRC
 import { usePedidosCocina } from '../src/hooks/usePedidosCocina';
 import ChefHeader from '../src/components/cocina/ChefHeader';
 import PedidoCard from '../src/components/cocina/PedidoCard';
 import { COLORES_RESTO } from '../src/core/theme';
 
 export default function PantallaCocina() {
-    const router = useRouter(); // Inicializamos el candado de seguridad
+    const router = useRouter();
 
-    // 1. SIMULACIÓN DEL ROL (Luego lo conectarás con el Login real)
+    // 1. SIMULACIÓN DEL ROL
     const rolUsuarioActual = "cocina";
 
     // 2. EL CANDADO DE SEGURIDAD
     useEffect(() => {
-        // Si alguien que no es de cocina intenta entrar, lo regresamos al inicio
         if (rolUsuarioActual !== "cocina") {
             console.warn("Acceso denegado. Solo personal de cocina.");
             router.replace("/");
         }
     }, [rolUsuarioActual]);
 
-    // 3. LLAMAMOS AL HOOK (Tu lógica de Node.js y la web)
+    // 3. LLAMAMOS AL HOOK
     const {
         pedidos,
         cargando,
@@ -45,12 +44,13 @@ export default function PantallaCocina() {
     // 4. FUNCIÓN PARA EL BOTÓN DE SALIR
     const handleLogout = () => {
         console.log("Cerrando sesión del cocinero...");
-        router.replace("/"); // Al salir, lo mandamos a la pantalla principal
+        router.replace("/");
     };
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORES_RESTO?.fondo || '#0B0F13'} />
+            {/* 🔥 FORZAMOS EL COLOR OSCURO EN LA BARRA DE ARRIBA */}
+            <StatusBar barStyle="light-content" backgroundColor="#0B1015" />
 
             {/* --- EL ENCABEZADO --- */}
             <ChefHeader onLogout={handleLogout} />
@@ -66,10 +66,7 @@ export default function PantallaCocina() {
                 ) : (
                     <FlatList
                         data={pedidos}
-                        // CORRECCIÓN TYPESCRIPT: Evita el error rojo del _id
                         keyExtractor={(item: any) => item._id}
-
-                        // RENDERIZAMOS UNA TARJETA POR CADA PEDIDO
                         renderItem={({ item }: { item: any }) => (
                             <PedidoCard
                                 pedido={item}
@@ -77,22 +74,17 @@ export default function PantallaCocina() {
                                 onEliminar={eliminar}
                             />
                         )}
-
                         contentContainerStyle={styles.listPadding}
-
-                        // MENSAJE CUANDO LA COCINA ESTÁ VACÍA
                         ListEmptyComponent={
                             <Text style={styles.emptyText}>No hay pedidos pendientes 👨‍🍳</Text>
                         }
-
-                        // FUNCIÓN DE DESLIZAR PARA ACTUALIZAR
                         refreshControl={
                             <RefreshControl
                                 refreshing={refrescando}
                                 onRefresh={onRefresh}
                                 colors={[COLORES_RESTO?.cian || '#4DD0E1']}
                                 tintColor={COLORES_RESTO?.cian || '#4DD0E1'}
-                                progressBackgroundColor={COLORES_RESTO?.tarjeta || '#151C24'}
+                                progressBackgroundColor="#151C24"
                             />
                         }
                     />
@@ -106,16 +98,19 @@ export default function PantallaCocina() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORES_RESTO?.fondo || '#0B0F13',
+        // 🔥 FORZAMOS EL COLOR OSCURO PROFUNDO AQUÍ
+        backgroundColor: '#0B1015',
     },
     content: {
         flex: 1,
+        // 🔥 Y TAMBIÉN AQUÍ PARA QUE CUBRA TODO EL FONDO
+        backgroundColor: '#0B1015',
     },
     listPadding: {
         padding: 16,
     },
     emptyText: {
-        color: COLORES_RESTO?.grisTexto || '#718096',
+        color: '#718096',
         textAlign: 'center',
         marginTop: 50,
         fontSize: 16,

@@ -1,159 +1,206 @@
-// src/components/cocina/PedidoCard.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORES_RESTO } from '../../core/theme';
 
-export default function PedidoCard({ pedido, onActualizarEstado, onEliminar }) {
-    // Si la API de Node.js te devuelve los productos en 'detalle_productos'
-    const platillos = pedido.detalle_productos || [];
+// 🧩 PRINCIPIO SOLID (OCP): Diccionario de configuración de estados 100% JS.
+// Abierto para extensión (puedes agregar más estados aquí), cerrado para modificación (no tocas el código de abajo).
+const ESTADOS_CONFIG = {
+    'EN_COCINA': { color: COLORES_RESTO.cian || '#4DD0E1', texto: 'EN ESPERA', mostrarTomar: true },
+    'EN_PROCESO': { color: COLORES_RESTO.verde || '#48BB78', texto: 'PREPARANDO...', mostrarTomar: false },
+    'PREPARANDO': { color: COLORES_RESTO.verde || '#48BB78', texto: 'PREPARANDO...', mostrarTomar: false },
+    'DEFAULT': { color: '#718096', texto: 'DESCONOCIDO', mostrarTomar: false }
+};
 
-    // Función nativa para confirmar antes de eliminar
-    const confirmarEliminacion = () => {
-        Alert.alert(
-            "Cancelar Pedido",
-            `¿Estás seguro de cancelar el pedido de la Mesa ${pedido.numero_mesa || '?'}?`,
-            [
-                { text: "No", style: "cancel" },
-                { text: "Sí, cancelar", onPress: () => onEliminar(pedido._id), style: "destructive" }
-            ]
-        );
-    };
+export default function PedidoCard({ pedido, onActualizarEstado, onEliminar }) {
+    // 1. Obtenemos la configuración según el estado actual, o por defecto si no existe
+    const config = ESTADOS_CONFIG[pedido.estado] || ESTADOS_CONFIG['DEFAULT'];
+
+    // 2. Extraer datos seguros (para evitar errores si algo viene vacío de Mongo)
+    const idTicket = pedido._id ? pedido._id.substring(pedido._id.length - 4) : '0000';
+    const numMesa = pedido.id_mesa?.numero_mesa || pedido.numero_mesa || '?';
+    // Asumimos un nombre por defecto si no viene del populate, igual que en tu diseño web
+    const nombreMesero = pedido.nombre_mesero || 'Juan Sr.';
 
     return (
-        <View style={styles.card}>
-            {/* --- CABECERA: MESA Y ESTADO --- */}
-            <View style={styles.cardHeader}>
-                <Text style={styles.mesaText}>
-                    Mesa {pedido.numero_mesa || pedido.id_mesa?.numero_mesa || '?'}
-                </Text>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{pedido.estado}</Text>
+        <View style={styles.cardContainer}>
+            {/* CABECERA DE COLOR (Cian o Verde según el diccionario) */}
+            <View style={[styles.headerColor, { backgroundColor: config.color }]}>
+                <Text style={styles.headerText}>{config.texto}</Text>
+            </View>
+
+            {/* CONTENIDO PRINCIPAL DE LA TARJETA */}
+            <View style={styles.body}>
+
+                {/* INFO DEL TICKET Y MESA */}
+                <View style={styles.infoRow}>
+                    {/* Avatar CH simulado */}
+                    <View style={styles.avatarCH}>
+                        <Text style={styles.avatarText}>CH</Text>
+                    </View>
+                    <View>
+                        <Text style={styles.ticketText}>Ticket: #{idTicket} / Mesa: m{numMesa}</Text>
+                        <Text style={styles.meseroText}>Mesero: {nombreMesero}</Text>
+                    </View>
                 </View>
-            </View>
 
-            <View style={styles.divisor} />
+                {/* LISTA DE PLATILLOS */}
+                <View style={styles.itemsContainer}>
+                    {pedido.productos && pedido.productos.map((item, index) => (
+                        <View key={index} style={styles.itemRow}>
+                            {/* La barrita verde lateral y cantidad de tu diseño web */}
+                            <View style={styles.cantidadBadge}>
+                                <Text style={styles.cantidadText}>{item.cantidad || 1}x</Text>
+                            </View>
+                            <Text style={styles.itemNombre}>
+                                {item.nombre?.toUpperCase() || 'PRODUCTO SIN NOMBRE'}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
 
-            {/* --- CUERPO: LISTA DE PLATILLOS --- */}
-            <View style={styles.platillosList}>
-                {platillos.length > 0 ? (
-                    platillos.map((item, index) => (
-                        <Text key={index} style={styles.platilloText}>
-                            <Text style={styles.cantidad}> {item.cantidad}x </Text>
-                            {item.nombre_producto}
-                        </Text>
-                    ))
-                ) : (
-                    <Text style={styles.platilloText}>Sin detalles de platillos.</Text>
-                )}
-            </View>
+                {/* BOTONES DE ACCIÓN (Replican el diseño web de botones de ancho completo) */}
+                <View style={styles.actionRow}>
+                    {/* Botón Tomar: Solo se muestra si el diccionario dice que sí */}
+                    {config.mostrarTomar && (
+                        <TouchableOpacity
+                            style={[styles.btnAccion, { backgroundColor: COLORES_RESTO.verde || '#48BB78' }]}
+                            onPress={() => onActualizarEstado(pedido._id, 'EN_PROCESO')}
+                        >
+                            <Text style={styles.btnTextBlack}>Tomar</Text>
+                        </TouchableOpacity>
+                    )}
 
-            {/* --- PIE: BOTONES DE ACCIÓN --- */}
-            <View style={styles.actionsContainer}>
-                {/* Botón de Cancelar / Eliminar (Rojo) */}
+                    {/* Botón Terminar: Siempre visible para marcar como listo */}
+                    <TouchableOpacity
+                        style={[styles.btnAccion, { backgroundColor: COLORES_RESTO.cian || '#4DD0E1' }]}
+                        onPress={() => onActualizarEstado(pedido._id, 'LISTO')}
+                    >
+                        <Text style={styles.btnTextBlack}>Terminar</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* BOTÓN CANCELAR PEDIDO */}
                 <TouchableOpacity
-                    style={[styles.btnAccion, styles.btnEliminar]}
-                    onPress={confirmarEliminacion}
+                    style={styles.btnCancelar}
+                    onPress={() => onEliminar(pedido._id)}
                 >
-                    <Text style={styles.btnTextEliminar}>CANCELAR</Text>
+                    <Text style={styles.btnTextCancelar}>CANCELAR PEDIDO</Text>
                 </TouchableOpacity>
 
-                {/* Botón Principal de Listo (Cian Neón) */}
-                <TouchableOpacity
-                    style={[styles.btnAccion, styles.btnListo]}
-                    onPress={() => onActualizarEstado(pedido._id, 'LISTO')}
-                >
-                    <Text style={styles.btnTextListo}>MARCAR LISTO</Text>
-                </TouchableOpacity>
             </View>
         </View>
     );
 }
 
+// 🎨 ESTILOS NATIVOS CLONADOS DE TU DISEÑO WEB
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: COLORES_RESTO?.tarjeta || '#151C24',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        borderLeftWidth: 5,
-        borderLeftColor: COLORES_RESTO?.cian || '#4DD0E1',
-        // Sombras para darle profundidad en el móvil
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    mesaText: {
-        color: COLORES_RESTO?.textoClaro || '#FFFFFF',
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    badge: {
-        backgroundColor: 'rgba(77, 208, 225, 0.15)', // Cian con transparencia
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+    cardContainer: {
+        backgroundColor: '#151C24', // Fondo oscuro de la tarjeta de tu diseño web
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: COLORES_RESTO?.cian || '#4DD0E1',
-    },
-    badgeText: {
-        color: COLORES_RESTO?.cian || '#4DD0E1',
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    divisor: {
-        height: 1,
-        backgroundColor: COLORES_RESTO?.borde || '#2D3748',
-        marginBottom: 12,
-    },
-    platillosList: {
         marginBottom: 20,
+        overflow: 'hidden', // Para que la cabecera respete los bordes redondeados
+        borderWidth: 1,
+        borderColor: '#2D3748',
     },
-    platilloText: {
-        color: COLORES_RESTO?.textoClaro || '#FFFFFF',
-        fontSize: 16,
-        marginBottom: 8,
-    },
-    cantidad: {
-        color: COLORES_RESTO?.naranja || '#FFB74D',
-        fontWeight: 'bold',
-    },
-    actionsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 10, // Espacio entre botones
-    },
-    btnAccion: {
-        flex: 1, // Para que ambos botones midan lo mismo
-        padding: 12,
-        borderRadius: 8,
+    headerColor: {
+        paddingVertical: 10,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    btnEliminar: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: COLORES_RESTO?.rojo || '#FF5252',
-    },
-    btnTextEliminar: {
-        color: COLORES_RESTO?.rojo || '#FF5252',
-        fontWeight: 'bold',
+    headerText: {
+        color: '#000000', // Texto negro en cabecera de color
+        fontWeight: '900',
+        letterSpacing: 1,
         fontSize: 14,
     },
-    btnListo: {
-        backgroundColor: COLORES_RESTO?.cian || '#4DD0E1',
+    body: {
+        padding: 15,
     },
-    btnTextListo: {
-        color: COLORES_RESTO?.fondo || '#0B0F13',
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#2D3748',
+        paddingBottom: 15,
+        marginBottom: 15,
+    },
+    avatarCH: {
+        backgroundColor: '#2D3748',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    avatarText: {
+        color: '#FFFFFF',
         fontWeight: 'bold',
-        fontSize: 14,
+        fontSize: 16,
+    },
+    ticketText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
+    meseroText: {
+        color: '#718096',
+        fontSize: 13,
+        marginTop: 2,
+    },
+    itemsContainer: {
+        marginBottom: 10,
+    },
+    itemRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#1A242D', // Fondo un poco más claro para cada platillo
+        padding: 12,
+        borderRadius: 6,
+        marginBottom: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#48BB78', // La barrita verde de tu diseño web
+    },
+    cantidadBadge: {
+        width: 35,
+    },
+    cantidadText: {
+        color: '#48BB78', // Texto verde para la cantidad
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    itemNombre: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '600',
+        flex: 1,
+    },
+    actionRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    btnAccion: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 6,
+        alignItems: 'center',
+    },
+    btnTextBlack: {
+        color: '#000000',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
+    btnCancelar: {
+        alignItems: 'center',
+        paddingVertical: 10,
+        marginTop: 5,
+    },
+    btnTextCancelar: {
+        color: '#A0AEC0', // Texto gris para cancelar
+        fontWeight: 'bold',
+        fontSize: 12,
         letterSpacing: 0.5,
     }
 });

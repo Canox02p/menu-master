@@ -1,8 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORES_RESTO } from '../../core/theme';
-// Importamos los iconos. Si tu compañero usó otra librería, puedes cambiar 'lucide-react-native'
-import { Bell, LogOut } from 'lucide-react-native';
 
 export default function ChefHeader({ onLogout }) {
     return (
@@ -16,22 +14,21 @@ export default function ChefHeader({ onLogout }) {
 
             {/* 2. BOTONES DE ACCIÓN */}
             <View style={styles.actions}>
-                {/* Campana de Notificaciones */}
+                {/* Campana de Notificaciones (Usando un Emoji para evitar el error) */}
                 <TouchableOpacity style={styles.bellBtn}>
-                    <Bell color={COLORES_RESTO.fondo} size={20} />
+                    <Text style={{ fontSize: 16 }}>🔔</Text>
                     <View style={styles.notificationDot} />
                 </TouchableOpacity>
 
-                {/* Botón de Salir */}
+                {/* Botón de Salir (Usando Texto estilizado) */}
                 <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
-                    <LogOut color={COLORES_RESTO.rojo} size={22} />
+                    <Text style={styles.logoutText}>SALIR</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
 
-// 3. ESTILOS NATIVOS
 const styles = StyleSheet.create({
     headerContainer: {
         flexDirection: 'row',
@@ -39,9 +36,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 15,
-        backgroundColor: COLORES_RESTO.fondo,
+        backgroundColor: '#0B1015', // Forzado al oscuro de la web
         borderBottomWidth: 1,
-        borderBottomColor: COLORES_RESTO.borde,
+        borderBottomColor: '#2D3748',
     },
     title: {
         color: '#FFFFFF',
@@ -49,7 +46,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     subtitle: {
-        color: COLORES_RESTO.cian,
+        color: '#4DD0E1',
         fontWeight: 'normal',
     },
     actions: {
@@ -58,10 +55,10 @@ const styles = StyleSheet.create({
         gap: 15,
     },
     bellBtn: {
-        backgroundColor: COLORES_RESTO.naranja,
+        backgroundColor: '#F56565', // Un naranja/rojo suave para la campana
         padding: 8,
         borderRadius: 8,
-        position: 'relative', // Necesario para poner el puntito rojo encima
+        position: 'relative',
     },
     notificationDot: {
         position: 'absolute',
@@ -69,12 +66,20 @@ const styles = StyleSheet.create({
         right: -2,
         width: 10,
         height: 10,
-        backgroundColor: COLORES_RESTO.rojo,
+        backgroundColor: '#FF0000',
         borderRadius: 5,
         borderWidth: 2,
-        borderColor: COLORES_RESTO.fondo,
+        borderColor: '#0B1015',
     },
     logoutBtn: {
         padding: 8,
+        borderWidth: 1,
+        borderColor: '#FF4444',
+        borderRadius: 6,
+    },
+    logoutText: {
+        color: '#FF4444',
+        fontWeight: 'bold',
+        fontSize: 12,
     }
 });
