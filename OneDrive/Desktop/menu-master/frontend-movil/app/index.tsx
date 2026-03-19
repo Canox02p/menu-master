@@ -1,30 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, Linking, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORES_RESTO } from '../src/core/theme';
 import { API_URL } from '../src/core/api';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [plataforma, setPlataforma] = useState('movil');
+    const [mostrarPassword, setMostrarPassword] = useState(false);
     const [cargando, setCargando] = useState(false);
 
     const router = useRouter();
-    const params = useLocalSearchParams(); // 🛰️ El radar para el "salto" desde la Web
+    const params = useLocalSearchParams();
 
-    // --- 1. CONEXIÓN MÁGICA CON LA WEB ---
     useEffect(() => {
-        if (params.rol) {
-            console.log("¡Acceso automático desde la Web detectado!");
-            if (params.rol === 'COCINA') {
-                router.replace({ pathname: '/cocina', params: params });
-            } else if (params.rol === 'MESERO') {
-                router.replace({ pathname: '/(tabs)', params: params });
+        const timer = setTimeout(() => {
+            if (params.rol) {
+                console.log("¡Acceso automático desde la Web detectado!");
+                if (params.rol === 'COCINA') {
+                    router.replace({ pathname: '/cocina', params: params });
+                } else if (params.rol === 'MESERO') {
+                    router.replace({ pathname: '/(tabs)', params: params });
+                }
             }
-        }
-    }, [params]);
+        }, 100);
 
-    // --- 2. LOGUEO MANUAL (Para cuando usen solo el móvil) ---
+        return () => clearTimeout(timer);
+    }, [params, router]);
+
     const handleLogin = async () => {
         if (!email || !password) return Alert.alert("Atención", "Ingresa usuario y contraseña");
 
@@ -45,10 +50,22 @@ export default function LoginScreen() {
             }
 
             const rol = data.usuario.rol;
+
+            if (plataforma === 'web') {
+                const urlWeb = `http://localhost:5173/?token=${data.token}&rol=${rol}`;
+                Linking.openURL(urlWeb).catch(() => {
+                    Alert.alert("Error", "No se pudo abrir el navegador web.");
+                });
+                setCargando(false);
+                return;
+            }
+
             if (rol === 'COCINA') {
                 router.replace({ pathname: '/cocina', params: { rol: 'COCINA' } });
             } else if (rol === 'MESERO') {
                 router.replace({ pathname: '/(tabs)', params: { rol: 'MESERO' } });
+            } else {
+                Alert.alert("Acceso Restringido", "La plataforma móvil es exclusiva para meseros y cocina.");
             }
         } catch (error) {
             Alert.alert("Error de Conexión", "No se pudo conectar con el servidor.");
@@ -59,54 +76,208 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* --- LOGO Y TÍTULO --- */}
+            <View style={styles.brandHeader}>
+                <Image
+                    source={require('../src/assets/logo_sin_letras.png')}
+                    style={styles.brandLogo}
+                    resizeMode="contain"
+                />
+                <Text style={styles.brandTitle}>Menu <Text style={styles.brandTitleAccent}>Master</Text></Text>
+            </View>
+
             <View style={styles.loginBox}>
-                <Text style={styles.title}>Menu <Text style={styles.subtitle}>Master</Text></Text>
-                <Text style={styles.instruccion}>Acceso de Empleados</Text>
 
-                <TextInput
-                    style={styles.input}
-                    placeholder="Usuario o Email"
-                    placeholderTextColor="#718096"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                />
+                {/* --- SELECTOR DE PLATAFORMA --- */}
+                <View style={styles.platformSelector}>
+                    <TouchableOpacity
+                        style={[styles.platformBtn, plataforma === 'web' && styles.platformBtnActive]}
+                        onPress={() => setPlataforma('web')}
+                    >
+                        <Ionicons name="desktop-outline" size={18} color={plataforma === 'web' ? '#12171A' : '#8C99A6'} />
+                        <Text style={[styles.platformText, plataforma === 'web' && styles.platformTextActive]}>Web</Text>
+                    </TouchableOpacity>
 
-                <TextInput
-                    style={styles.input}
-                    placeholder="Contraseña"
-                    placeholderTextColor="#718096"
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
-                />
+                    <TouchableOpacity
+                        style={[styles.platformBtn, plataforma === 'movil' && styles.platformBtnActive]}
+                        onPress={() => setPlataforma('movil')}
+                    >
+                        <Ionicons name="phone-portrait-outline" size={18} color={plataforma === 'movil' ? '#12171A' : '#8C99A6'} />
+                        <Text style={[styles.platformText, plataforma === 'movil' && styles.platformTextActive]}>Móvil</Text>
+                    </TouchableOpacity>
+                </View>
 
-                <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={cargando}>
-                    {cargando ? <ActivityIndicator color="#000" /> : <Text style={styles.btnText}>INICIAR SESIÓN</Text>}
+                <Text style={styles.loginTitle}>Iniciar Sesión</Text>
+
+                {/* --- INPUT USUARIO --- */}
+                <View style={styles.inputGroup}>
+                    <Ionicons name="person-outline" size={18} color="#8C99A6" style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Usuario o Email"
+                        placeholderTextColor="#8C99A6"
+                        value={email}
+                        onChangeText={setEmail}
+                        autoCapitalize="none"
+                    />
+                </View>
+
+                {/* --- INPUT CONTRASEÑA CON OJITO --- */}
+                <View style={styles.inputGroup}>
+                    <Ionicons name="lock-closed-outline" size={18} color="#8C99A6" style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Contraseña"
+                        placeholderTextColor="#8C99A6"
+                        secureTextEntry={!mostrarPassword}
+                        value={password}
+                        onChangeText={setPassword}
+                    />
+                    <TouchableOpacity onPress={() => setMostrarPassword(!mostrarPassword)}>
+                        <Ionicons
+                            name={mostrarPassword ? "eye-outline" : "eye-off-outline"}
+                            size={20}
+                            color="#8C99A6"
+                        />
+                    </TouchableOpacity>
+                </View>
+
+                {/* --- BOTÓN INGRESAR --- */}
+                <TouchableOpacity style={styles.btnSubmit} onPress={handleLogin} disabled={cargando}>
+                    {cargando ? (
+                        <ActivityIndicator color="#12171A" />
+                    ) : (
+                        <Text style={styles.btnSubmitText}>INGRESAR ({plataforma.toUpperCase()})</Text>
+                    )}
                 </TouchableOpacity>
 
-                {/* ❌ SE ELIMINÓ EL BOTÓN DE REGISTRO POR ORDEN DEL ADMIN */}
+                {/* --- ENLACES INFERIORES --- */}
+                <View style={styles.loginLinks}>
+                    <TouchableOpacity>
+                        <Text style={styles.linkText}>¿Olvidé mi contraseña?</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity>
+                        <Text style={styles.linkText}>Soporte técnico</Text>
+                    </TouchableOpacity>
+                </View>
+
             </View>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0B0F13', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    container: {
+        flex: 1,
+        backgroundColor: '#12171A',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20
+    },
+    brandHeader: {
+        marginBottom: 30,
+        alignItems: 'center',
+    },
+    brandLogo: {
+        width: 60,
+        height: 60,
+        marginBottom: 15,
+        tintColor: '#FFFFFF',
+    },
+    brandTitle: {
+        color: '#FFFFFF',
+        fontSize: 28,
+        fontWeight: '400',
+    },
+    brandTitleAccent: {
+        color: '#40E0D0'
+    },
     loginBox: {
         width: '100%',
         maxWidth: 400,
-        backgroundColor: '#151C24',
+        backgroundColor: '#242D32',
         padding: 30,
-        borderRadius: 15,
-        borderWidth: 1,
-        borderColor: '#2D3748',
-        elevation: 10, // Sombrita para que se vea pro
+        borderRadius: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 15,
+        elevation: 10,
     },
-    title: { color: '#FFF', fontSize: 28, fontWeight: '900', textAlign: 'center', marginBottom: 5 },
-    subtitle: { color: '#4DD0E1' },
-    instruccion: { color: '#718096', textAlign: 'center', marginBottom: 30 },
-    input: { backgroundColor: '#0B0F13', color: '#FFF', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#2D3748' },
-    btn: { backgroundColor: '#4DD0E1', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
-    btnText: { color: '#000', fontWeight: 'bold' }
+    platformSelector: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        borderRadius: 10,
+        padding: 5,
+        marginBottom: 25,
+    },
+    platformBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        paddingVertical: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 8,
+    },
+    platformBtnActive: {
+        backgroundColor: '#40E0D0',
+    },
+    platformText: {
+        color: '#8C99A6',
+        marginLeft: 8,
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    platformTextActive: {
+        color: '#12171A',
+        fontWeight: 'bold',
+    },
+    loginTitle: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        textAlign: 'center',
+        marginBottom: 25
+    },
+    inputGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#40E0D0',
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        marginBottom: 20,
+        height: 48,
+    },
+    inputIcon: {
+        marginRight: 10,
+    },
+    input: {
+        flex: 1,
+        color: '#FFFFFF',
+        fontSize: 14,
+    },
+    btnSubmit: {
+        backgroundColor: '#40E0D0',
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 10
+    },
+    btnSubmitText: {
+        color: '#12171A',
+        fontWeight: 'bold',
+        fontSize: 14,
+        letterSpacing: 0.5,
+    },
+    loginLinks: {
+        alignItems: 'center',
+        marginTop: 25,
+        gap: 12,
+    },
+    linkText: {
+        color: '#8C99A6',
+        fontSize: 13,
+        textDecorationLine: 'underline',
+    }
 });
