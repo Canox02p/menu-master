@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { usePedidosCocina } from '../features/cocina/hooks/usePedidosCocina';
-import PedidoCard from '../features/cocina/components/PedidoCard';
-import ChefHeader from '../features/cocina/components/ChefHeader';
-import ChefSettingsModal from '../features/cocina/components/ChefSettingsModal';
-import '../features/cocina/styles/CocinaDashboard.css'; // Asegúrate de crear este archivo
+import { usePedidosCocina } from '../hooks/usePedidosCocina';
+import PedidoCard from '../components/PedidoCard';
+import ChefHeader from '../components/ChefHeader';
+import ChefSettingsModal from '../components/ChefSettingsModal';
+import '../styles/CocinaDashboard.css';
 
 export default function CocinaDashboard() {
     const { pedidos, actualizarEstado, eliminar } = usePedidosCocina();
@@ -14,7 +14,6 @@ export default function CocinaDashboard() {
 
     return (
         <div id="chef-dashboard-wrapper" className="cocina-dashboard-layout">
-            {/* El Header ahora puede abrir el modal de configuración */}
             <ChefHeader onOpenSettings={() => setSettingsOpen(true)} />
 
             {pedidos.length > 0 ? (
@@ -47,7 +46,6 @@ export default function CocinaDashboard() {
                 </div>
             )}
 
-            {/* El modal se renderiza aquí */}
             <ChefSettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
         </div>
     );

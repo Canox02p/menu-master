@@ -1,27 +1,46 @@
-import { useState } from 'react';
-// Importamos los datos de ejemplo que creamos
-import { mockPedidosCocina } from '../data/mock-pedidos';
+import { useState, useEffect } from 'react';
 
 export const usePedidosCocina = () => {
-    // El estado inicial ahora contiene nuestros pedidos de ejemplo
-    const [pedidos, setPedidos] = useState(mockPedidosCocina);
+    const [pedidos, setPedidos] = useState([]);
+    const API_URL = 'http://localhost:3000/pedidos';
 
-    // Ya no necesitamos `useEffect` porque no cargamos datos de un servidor.
-
-    // Esta función ahora actualiza el estado localmente
-    const actualizarEstado = (id, nuevoEstado) => {
-        setPedidos(currentPedidos =>
-            currentPedidos.map(p =>
-                p._id === id ? { ...p, estado: nuevoEstado } : p
-            )
-        );
+    const cargarPedidos = async () => {
+        try {
+            const res = await fetch(`${API_URL}/cocina`);
+            const data = await res.json();
+            setPedidos(data);
+        } catch (err) {
+            console.error("Error cargando pedidos:", err);
+        }
     };
 
-    // Esta función ahora elimina el pedido del estado local
-    const eliminar = (id) => {
-        setPedidos(currentPedidos =>
-            currentPedidos.filter(p => p._id !== id)
-        );
+    useEffect(() => {
+        cargarPedidos();
+        const intervalo = setInterval(cargarPedidos, 5000);
+        return () => clearInterval(intervalo);
+    }, []);
+
+    const actualizarEstado = async (id, nuevoEstado) => {
+        try {
+            const res = await fetch(`${API_URL}/${id}/estado`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+            if (res.ok) cargarPedidos();
+        } catch (err) {
+            console.error("Error al actualizar:", err);
+        }
+    };
+
+    const eliminar = async (id) => {
+        if (!window.confirm("¿Cancelar este pedido?")) return;
+        try {
+            const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            if (res.ok) cargarPedidos();
+        } catch (err) {
+            console.error("Error al eliminar:", err);
+        }
     };
 
     return { pedidos, actualizarEstado, eliminar };

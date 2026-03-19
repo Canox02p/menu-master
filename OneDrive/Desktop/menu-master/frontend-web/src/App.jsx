@@ -11,12 +11,14 @@ import AdminDashboard from "./features/admin/pages/AdminDashboard";
 import { usePedidosCocina } from "./features/cocina/hooks/usePedidosCocina";
 import ChefHeader from "./features/cocina/components/ChefHeader";
 import { PedidoCard } from "./features/cocina/components/PedidoCard";
+import ChefSettingsModal from "./features/cocina/components/ChefSettingsModal";
 
 import './App.css';
 
 export default function App() {
   const [auth, setAuth] = useState({ rol: null, plataforma: 'web' });
   const [isLoading, setIsLoading] = useState(true);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -46,14 +48,17 @@ export default function App() {
   };
 
   const VistaCocina = () => (
-    <div className={`main-app-container ${auth.plataforma}`} style={{
+    <div id="chef-dashboard-wrapper" className={`main-app-container ${auth.plataforma}`} style={{
       minHeight: '100vh',
       width: '100%',
       backgroundColor: COLORES_RESTO.fondo,
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <ChefHeader onLogout={manejarLogout} />
+      <ChefHeader
+        onLogout={manejarLogout}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
       <div className="dashboard-grid">
         {pedidos.length > 0 ? (
           pedidos.map(p => (
@@ -70,6 +75,11 @@ export default function App() {
           </div>
         )}
       </div>
+
+      <ChefSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </div>
   );
 

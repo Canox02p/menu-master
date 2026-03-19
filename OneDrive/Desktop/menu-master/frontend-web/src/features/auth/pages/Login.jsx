@@ -5,24 +5,50 @@ import '../styles/Login.css';
 export default function Login({ onLogin }) {
     const [usuario, setUsuario] = useState('');
     const [password, setPassword] = useState('');
-    const [plataforma, setPlataforma] = useState('web'); // 'web' o 'movil'
+    const [plataforma, setPlataforma] = useState('web');
     const [mostrarPassword, setMostrarPassword] = useState(false);
     const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        const userLower = usuario.toLowerCase();
 
-        // Enviamos el rol y la plataforma seleccionada
-        if (userLower === 'admin' && password === '1234') {
-            onLogin('admin', plataforma);
-        } else if (userLower === 'cocinero' && password === '1234') {
-            onLogin('cocina', plataforma);
-        } else if (userLower === 'mesero' && password === '1234') {
-            onLogin('mesero', plataforma);
-        } else {
-            setError('Credenciales incorrectas. Intenta de nuevo.');
+        try {
+            // Llamada a tu API real en el puerto 3000
+            const res = await fetch('http://localhost:3000/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: usuario, password: password })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                // Pasamos el rol a minúsculas para manejarlo más fácil
+                const rol = data.usuario.rol.toLowerCase();
+
+                if (plataforma === 'movil') {
+                    // Validamos que solo los meseros usen la vista móvil
+                    if (rol === 'mesero') {
+                        // Enviamos el token seguro por la URL al puerto de React Native
+                        window.location.href = `http://localhost:8081/?token=${data.token}`;
+                    } else {
+                        setError('La plataforma móvil es exclusiva para meseros.');
+                    }
+                } else {
+                    // Guardamos el token en la web para seguridad
+                    localStorage.setItem('token', data.token);
+
+                    // Ajustamos el nombre del rol para que App.jsx lo entienda bien
+                    const rolWeb = rol === 'cocinero' ? 'cocina' : rol;
+                    onLogin(rolWeb, plataforma);
+                }
+            } else {
+                setError(data.error || 'Credenciales incorrectas. Intenta de nuevo.');
+            }
+        } catch (err) {
+            console.error("Error al iniciar sesión:", err);
+            setError('No hay conexión con el servidor. Verifica que esté encendido.');
         }
     };
 
@@ -60,7 +86,7 @@ export default function Login({ onLogin }) {
                             <User size={18} className="input-icon" />
                             <input
                                 type="text"
-                                placeholder="Usuario"
+                                placeholder="Usuario (Email)"
                                 value={usuario}
                                 onChange={(e) => setUsuario(e.target.value)}
                                 required

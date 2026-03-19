@@ -1,7 +1,9 @@
 /* Contenedor principal del dashboard de cocina */
 #chef-dashboard-wrapper {
-    --color-primario-chef: #4DD0E1; /* Color por defecto, será sobreescrito por JS */
-    background-color: #0B1014; /* Fondo oscuro principal */
+    --color-primario-chef: #4DD0E1;
+    /* Color por defecto, será sobreescrito por JS */
+    background-color: #0B1014;
+    /* Fondo oscuro principal */
     color: #FFFFFF;
     min-height: 100vh;
     display: flex;
@@ -13,7 +15,8 @@
     flex-direction: column;
     height: 100vh;
     width: 100vw;
-    overflow: hidden; /* Evita el scroll en el nivel superior */
+    overflow: hidden;
+    /* Evita el scroll en el nivel superior */
 }
 
 /* Grid principal para las columnas de pedidos */
@@ -23,25 +26,29 @@
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 20px;
     padding: 20px;
-    overflow-y: auto; /* Permite scroll si hay muchas columnas */
+    overflow-y: auto;/
 }
 
 /* Estilo de cada columna (ej. "EN ESPERA") */
 .columna-pedidos {
     display: flex;
     flex-direction: column;
-    background-color: #12181F; /* Fondo ligeramente más claro para las columnas */
+    background-color: #12181F;
+    /* Fondo ligeramente más claro para las columnas */
     border-radius: 8px;
-    overflow: hidden; /* Asegura que el contenido respete el borde redondeado */
-    max-height: calc(100vh - 100px); /* Altura máxima para la columna */
+    overflow: hidden;
+    /* Asegura que el contenido respete el borde redondeado */
+    max-height: calc(100vh - 100px);
+    /* Altura máxima para la columna */
 }
 
 .columna-header {
     padding: 12px 16px;
-    color: #000; /* Texto oscuro para el header de la columna */
+    color: #000;
+    /* Texto oscuro para el header de la columna */
     font-weight: bold;
     text-align: center;
-    border-bottom: 2px solid rgba(0,0,0,0.1);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 .columna-header h3 {
@@ -55,7 +62,8 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
-    overflow-y: auto; /* Scroll individual para cada columna */
+    overflow-y: auto;
+    /* Scroll individual para cada columna */
 }
 
 /* Mensaje cuando no hay pedidos */
@@ -63,7 +71,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    height: calc(100vh - 150px); /* Ocupa el espacio disponible */
+    height: calc(100vh - 150px);
+    /* Ocupa el espacio disponible */
     color: #666;
     font-size: 1.2rem;
 }

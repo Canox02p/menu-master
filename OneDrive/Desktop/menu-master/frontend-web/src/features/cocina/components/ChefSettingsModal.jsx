@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Check, X } from 'lucide-react';
 import './ChefSettingsModal.css';
 
-// Opciones de color (pueden ser las mismas o diferentes que las del admin)
 const OPCIONES_TEMA_CHEF = [
     { id: 'cian', nombre: 'Azul Cocina', hex: '#4DD0E1' },
     { id: 'verde', nombre: 'Verde Pedido', hex: '#48BB78' },
@@ -12,17 +11,14 @@ const OPCIONES_TEMA_CHEF = [
 ];
 
 export default function ChefSettingsModal({ isOpen, onClose }) {
-    // 🧠 Usamos una llave DIFERENTE para el color del chef: 'chef_color'
     const [colorActivo, setColorActivo] = useState(() => {
         return localStorage.getItem('chef_color') || 'cian';
     });
 
-    // 🌟 Aplicamos el color SOLO al contenedor del Chef
     useEffect(() => {
         const colorHex = OPCIONES_TEMA_CHEF.find(c => c.id === colorActivo)?.hex || '#4DD0E1';
         localStorage.setItem('chef_color', colorActivo);
 
-        // Buscamos el div principal de la cocina
         const chefWrapper = document.getElementById('chef-dashboard-wrapper');
         if (chefWrapper) {
             chefWrapper.style.setProperty('--color-primario-chef', colorHex);
