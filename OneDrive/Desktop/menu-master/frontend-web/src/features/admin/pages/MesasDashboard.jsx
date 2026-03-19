@@ -3,30 +3,48 @@ import { Plus } from 'lucide-react';
 import MesaCard from '../components/MesaCard';
 import MesaModal from '../components/MesaModal';
 import RecentOrdersTable from '../components/RecentOrdersTable';
-import { mockMesas } from '../data/mock-mesas'; // Importamos los datos de ejemplo
 import { COLORES_RESTO } from '../../../constants/theme';
 import '../styles/Mesas.css';
 
 export default function MesasDashboard() {
-    const [mesas, setMesas] = useState([]);
+    const [mesas, setMesas] = useState([]); // Ahora inicia vacío
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // FILTROS DOBLES
     const [filtroArea, setFiltroArea] = useState('TODAS');
     const [filtroEstado, setFiltroEstado] = useState('TODAS');
 
-    // Simulación de la carga de datos
-    useEffect(() => {
-        // Usamos los datos de ejemplo directamente
-        setMesas(mockMesas);
-    }, []);
-
-    const handleEliminarMesa = (id) => {
-        // Simulación de eliminación en el estado local
-        if (!window.confirm("¿Estás seguro de eliminar esta mesa permanentemente?")) return;
-        setMesas(mesas.filter(m => m._id !== id));
+    // --- 🌐 LLAMADA A TU API ---
+    const cargarMesas = async () => {
+        try {
+            const response = await fetch('http://localhost:3000/mesas');
+            const data = await response.json();
+            setMesas(data);
+        } catch (error) {
+            console.error("Error al obtener mesas de MongoDB:", error);
+        }
     };
 
+    useEffect(() => {
+        cargarMesas();
+    }, []);
+
+    const handleEliminarMesa = async (id) => {
+        if (!window.confirm("¿Estás seguro de eliminar esta mesa permanentemente?")) return;
+
+        try {
+            const response = await fetch(`http://localhost:3000/mesas/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Filtramos el estado local para que desaparezca de la vista
+                setMesas(mesas.filter(m => m._id !== id));
+            }
+        } catch (error) {
+            console.error("Error al eliminar la mesa:", error);
+        }
+    };
+
+    // Cálculos basados en los datos reales de la BD
     const ocupadas = mesas.filter(m => m.estado === 'OCUPADA').length;
     const libres = mesas.filter(m => m.estado === 'LIBRE' || m.estado === 'DISPONIBLE').length;
     const reservadas = mesas.filter(m => m.estado === 'RESERVADA').length;
@@ -39,7 +57,11 @@ export default function MesasDashboard() {
 
     return (
         <div className="mesas-layout">
-            <MesaModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onMesaAgregada={() => {}} />
+            <MesaModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onMesaAgregada={cargarMesas} // Recarga la lista cuando agregues una
+            />
 
             <div className="kpi-grid">
                 <div className="kpi-card" style={{ border: `1px solid ${COLORES_RESTO.grisTexto || '#2D3748'}` }}>
@@ -62,19 +84,20 @@ export default function MesasDashboard() {
 
             <div className="mesas-grid-container">
                 <div className="mesas-management">
-
                     <div className="management-header-modern">
                         <div className="pill-filters-container">
-
-                            {/* ÁREAS */}
                             <div className="pill-group area-group">
-                                <button className={`pill-btn ${filtroArea === 'TODAS' ? 'active-area' : ''}`} onClick={() => setFiltroArea('TODAS')}>TODAS</button>
-                                <button className={`pill-btn ${filtroArea === 'Principal' ? 'active-area' : ''}`} onClick={() => setFiltroArea('Principal')}>PRINCIPAL</button>
-                                <button className={`pill-btn ${filtroArea === 'Terraza' ? 'active-area' : ''}`} onClick={() => setFiltroArea('Terraza')}>TERRAZA</button>
-                                <button className={`pill-btn ${filtroArea === 'VIP' ? 'active-area' : ''}`} onClick={() => setFiltroArea('VIP')}>VIP</button>
+                                {['TODAS', 'Principal', 'Terraza', 'VIP'].map(area => (
+                                    <button
+                                        key={area}
+                                        className={`pill-btn ${filtroArea === area ? 'active-area' : ''}`}
+                                        onClick={() => setFiltroArea(area)}
+                                    >
+                                        {area.toUpperCase()}
+                                    </button>
+                                ))}
                             </div>
 
-                            {/* ESTADOS */}
                             <div className="pill-group status-group">
                                 <button className={`pill-btn ${filtroEstado === 'TODAS' ? 'active-status' : ''}`} onClick={() => setFiltroEstado('TODAS')}>VER TODO</button>
                                 <button className={`pill-btn ${filtroEstado === 'LIBRE' ? 'active-status' : ''}`} onClick={() => setFiltroEstado('LIBRE')}>LIBRES</button>
@@ -90,7 +113,7 @@ export default function MesasDashboard() {
 
                     <div className="mesas-cards-grid">
                         {mesasFiltradas.length === 0 ? (
-                            <p style={{ color: '#718096', marginTop: '20px' }}>No hay mesas que coincidan con estos filtros.</p>
+                            <p style={{ color: '#718096', marginTop: '20px' }}>No hay mesas disponibles.</p>
                         ) : (
                             mesasFiltradas.map(mesa => (
                                 <MesaCard key={mesa._id} mesa={mesa} onEliminar={handleEliminarMesa} />
@@ -99,7 +122,6 @@ export default function MesasDashboard() {
                     </div>
                 </div>
 
-                {/* 🔥 LA TABLA AHORA SE MUESTRA EN LA PARTE INFERIOR */}
                 <div className="mesas-bottom-section">
                     <RecentOrdersTable />
                 </div>

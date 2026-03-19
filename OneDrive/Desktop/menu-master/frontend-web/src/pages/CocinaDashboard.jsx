@@ -1,9 +1,18 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { usePedidosCocina } from '../features/cocina/hooks/usePedidosCocina';
 import PedidoCard from '../features/cocina/components/PedidoCard';
 import ChefHeader from '../features/cocina/components/ChefHeader';
 import ChefSettingsModal from '../features/cocina/components/ChefSettingsModal';
 import '../features/cocina/styles/CocinaDashboard.css';
+=======
+import React, { useState } from 'react';
+import { usePedidosCocina } from '../hooks/usePedidosCocina';
+import PedidoCard from '../components/PedidoCard';
+import ChefHeader from '../components/ChefHeader';
+import ChefSettingsModal from '../components/ChefSettingsModal';
+import '../styles/CocinaDashboard.css';
+>>>>>>> 74729bea9b73d551751e11c524d6adb0959e840f
 
 export default function CocinaDashboard() {
     // 1. Hook de datos
@@ -37,12 +46,16 @@ export default function CocinaDashboard() {
 
     return (
         <div id="chef-dashboard-wrapper" className="cocina-dashboard-layout">
+<<<<<<< HEAD
 
             {/* ENCABEZADO: Es vital pasar onOpenSettings */}
             <ChefHeader
                 onLogout={handleLogout}
                 onOpenSettings={() => setSettingsOpen(true)}
             />
+=======
+            <ChefHeader onOpenSettings={() => setSettingsOpen(true)} />
+>>>>>>> 74729bea9b73d551751e11c524d6adb0959e840f
 
             {pedidos.length > 0 ? (
                 <main className="pedidos-grid">
@@ -74,11 +87,15 @@ export default function CocinaDashboard() {
                 </div>
             )}
 
+<<<<<<< HEAD
             {/* 5. MODAL: Es fundamental pasar isOpen={isSettingsOpen} */}
             <ChefSettingsModal
                 isOpen={isSettingsOpen}
                 onClose={() => setSettingsOpen(false)}
             />
+=======
+            <ChefSettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
+>>>>>>> 74729bea9b73d551751e11c524d6adb0959e840f
         </div>
     );
 }

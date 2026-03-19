@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, CheckCircle2, Settings, LogOut, ChevronDown, AlertTriangle } from 'lucide-react';
 import './ChefHeader.css';
 
-// 1. Recibimos la nueva prop `onOpenSettings`
 export default function ChefHeader({ onLogout, onOpenSettings }) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -26,12 +25,11 @@ export default function ChefHeader({ onLogout, onOpenSettings }) {
         setShowLogoutModal(true);
     };
 
-    // 2. Creamos la función para manejar el clic en "Configuraciones"
     const handleSettingsClick = () => {
         if (onOpenSettings) {
-            onOpenSettings(); // Llama a la función para abrir el modal
+            onOpenSettings();
         }
-        setIsDropdownOpen(false); // Cierra el menú desplegable
+        setIsDropdownOpen(false);
     };
 
     const confirmLogout = () => {
