@@ -1,5 +1,5 @@
 
-const IP_COMPUTADORA = '192.168.68.108';
+const IP_COMPUTADORA = ' 192.168.68.130';
 const PUERTO = '3000';
 export const API_URL = `http://${IP_COMPUTADORA}:${PUERTO}`;
 

@@ -1,27 +1,16 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { usePedidosCocina } from '../features/cocina/hooks/usePedidosCocina';
 import PedidoCard from '../features/cocina/components/PedidoCard';
 import ChefHeader from '../features/cocina/components/ChefHeader';
 import ChefSettingsModal from '../features/cocina/components/ChefSettingsModal';
 import '../features/cocina/styles/CocinaDashboard.css';
-=======
-import React, { useState } from 'react';
-import { usePedidosCocina } from '../hooks/usePedidosCocina';
-import PedidoCard from '../components/PedidoCard';
-import ChefHeader from '../components/ChefHeader';
-import ChefSettingsModal from '../components/ChefSettingsModal';
-import '../styles/CocinaDashboard.css';
->>>>>>> 74729bea9b73d551751e11c524d6adb0959e840f
+
 
 export default function CocinaDashboard() {
-    // 1. Hook de datos
     const { pedidos, actualizarEstado, eliminar } = usePedidosCocina();
 
-    // 2. Estado para abrir/cerrar el modal
     const [isSettingsOpen, setSettingsOpen] = useState(false);
 
-    // 3. Persistencia: Carga el color al entrar a la página
     useEffect(() => {
         const colorIdGuardado = localStorage.getItem('chef_color') || 'cian';
         const colores = {
@@ -38,7 +27,6 @@ export default function CocinaDashboard() {
         }
     }, []);
 
-    // 4. Filtrado de pedidos
     const enCocina = pedidos.filter(p => p.estado === 'EN_COCINA' || p.estado === 'PENDIENTE');
     const enProceso = pedidos.filter(p => p.estado === 'EN_PROCESO' || p.estado === 'PREPARANDO');
 
@@ -46,56 +34,49 @@ export default function CocinaDashboard() {
 
     return (
         <div id="chef-dashboard-wrapper" className="cocina-dashboard-layout">
-<<<<<<< HEAD
 
             {/* ENCABEZADO: Es vital pasar onOpenSettings */}
             <ChefHeader
                 onLogout={handleLogout}
                 onOpenSettings={() => setSettingsOpen(true)}
             />
-=======
-            <ChefHeader onOpenSettings={() => setSettingsOpen(true)} />
->>>>>>> 74729bea9b73d551751e11c524d6adb0959e840f
 
-            {pedidos.length > 0 ? (
-                <main className="pedidos-grid">
-                    <section className="columna-pedidos">
-                        <div className="columna-header" style={{ backgroundColor: 'var(--color-primario-chef)' }}>
-                            <h3>EN ESPERA ({enCocina.length})</h3>
-                        </div>
-                        <div className="columna-body">
-                            {enCocina.map(p => (
-                                <PedidoCard key={p._id} pedido={p} onActualizar={actualizarEstado} onEliminar={eliminar} />
-                            ))}
-                        </div>
-                    </section>
+            {
+                pedidos.length > 0 ? (
+                    <main className="pedidos-grid">
+                        <section className="columna-pedidos">
+                            <div className="columna-header" style={{ backgroundColor: 'var(--color-primario-chef)' }}>
+                                <h3>EN ESPERA ({enCocina.length})</h3>
+                            </div>
+                            <div className="columna-body">
+                                {enCocina.map(p => (
+                                    <PedidoCard key={p._id} pedido={p} onActualizar={actualizarEstado} onEliminar={eliminar} />
+                                ))}
+                            </div>
+                        </section>
 
-                    <section className="columna-pedidos">
-                        <div className="columna-header" style={{ backgroundColor: '#48BB78' }}>
-                            <h3>PREPARANDO... ({enProceso.length})</h3>
-                        </div>
-                        <div className="columna-body">
-                            {enProceso.map(p => (
-                                <PedidoCard key={p._id} pedido={p} onActualizar={actualizarEstado} onEliminar={eliminar} />
-                            ))}
-                        </div>
-                    </section>
-                </main>
-            ) : (
-                <div className="no-pedidos-mensaje">
-                    <p>No hay pedidos pendientes en cocina 👨‍🍳</p>
-                </div>
-            )}
-
-<<<<<<< HEAD
+                        <section className="columna-pedidos">
+                            <div className="columna-header" style={{ backgroundColor: '#48BB78' }}>
+                                <h3>PREPARANDO... ({enProceso.length})</h3>
+                            </div>
+                            <div className="columna-body">
+                                {enProceso.map(p => (
+                                    <PedidoCard key={p._id} pedido={p} onActualizar={actualizarEstado} onEliminar={eliminar} />
+                                ))}
+                            </div>
+                        </section>
+                    </main>
+                ) : (
+                    <div className="no-pedidos-mensaje">
+                        <p>No hay pedidos pendientes en cocina 👨‍🍳</p>
+                    </div>
+                )
+            }
             {/* 5. MODAL: Es fundamental pasar isOpen={isSettingsOpen} */}
             <ChefSettingsModal
                 isOpen={isSettingsOpen}
                 onClose={() => setSettingsOpen(false)}
             />
-=======
-            <ChefSettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
->>>>>>> 74729bea9b73d551751e11c524d6adb0959e840f
-        </div>
+        </div >
     );
 }

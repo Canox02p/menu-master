@@ -135,7 +135,6 @@ app.delete('/pedidos/:id', async (req, res) => {
 // ==========================================
 app.get('/productos', async (req, res) => {
     try {
-        // ✨ LA MAGIA: Unimos la tabla productos con la tabla categorias
         const query = `
             SELECT 
                 p.id_producto AS id, 
@@ -155,6 +154,7 @@ app.get('/productos', async (req, res) => {
         res.status(500).json({ error: "No se pudo conectar con el inventario" });
     }
 });
+
 // ==========================================
 // 💰 7. MÓDULO DE VENTAS Y TICKETS
 // ==========================================
@@ -185,6 +185,49 @@ app.post('/ventas', async (req, res) => {
 // ==========================================
 // 📊 8. MÓDULO ADMINISTRADOR Y ESTADÍSTICAS
 // ==========================================
+
+app.get('/admin/stats-completo', async (req, res) => {
+    try {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+        const vHoy = await Venta.aggregate([
+            { $match: { fecha_venta: { $gte: hoy } } },
+            { $group: { _id: null, total: { $sum: "$monto_pagado" } } }
+        ]);
+
+        const pActivos = await Pedido.countDocuments({ estado: { $ne: 'PAGADO' } });
+
+        const vMes = await Venta.aggregate([
+            { $match: { fecha_venta: { $gte: inicioMes } } },
+            { $group: { _id: null, total: { $sum: "$monto_pagado" } } }
+        ]);
+
+        const totalMesas = await Mesa.countDocuments();
+        const ocupadas = await Mesa.countDocuments({ estado: 'OCUPADA' });
+
+        const [platilloCrack] = await db.query('SELECT nombre FROM productos ORDER BY precio DESC LIMIT 1');
+
+        const ultimos = await Pedido.find().sort({ fecha_creacion: -1 }).limit(5);
+
+        res.json({
+            kpis: {
+                ventasHoy: vHoy[0]?.total || 0,
+                pedidosActivos: pActivos,
+                ingresosMes: vMes[0]?.total || 0,
+                crack: platilloCrack[0]?.nombre || "Sin datos",
+                ocupacion: {
+                    porcentaje: totalMesas > 0 ? Math.round((ocupadas / totalMesas) * 100) : 0,
+                    ocupadas,
+                    libres: totalMesas - ocupadas
+                }
+            },
+            recientes: ultimos
+        });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/admin/corte-caja', async (req, res) => {
     try {
         const { inicio, fin, id_admin } = req.body;
