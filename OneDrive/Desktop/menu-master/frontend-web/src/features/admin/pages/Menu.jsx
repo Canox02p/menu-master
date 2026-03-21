@@ -9,14 +9,24 @@ const CategoriaCard = ({ categoria, onSelect }) => {
             <h3>{categoria.nombre}</h3>
             <p>{categoria.descripcion}</p>
             <footer>
-                <button className="btn-explorar">Explorar</button>
+                {/* */}
+                <button
+                    className="btn-explorar"
+                    style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid var(--color-primario)',
+                        color: 'var(--color-primario)'
+                    }}
+                >
+                    Explorar
+                </button>
             </footer>
         </div>
     );
 };
 
 export default function Menu() {
-    const { categorias, loading, getProductosPorCategoria } = useMenuData();
+    const { categorias, loading, getProductosPorCategoria, recargar } = useMenuData();
     const [vistaActual, setVistaActual] = useState('categorias');
     const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
 
@@ -33,10 +43,11 @@ export default function Menu() {
     if (vistaActual === 'productos') {
         const productos = getProductosPorCategoria(categoriaSeleccionada.id);
         return (
-            <ProductList 
-                categoria={categoriaSeleccionada} 
-                productos={productos} 
-                onBack={handleBackToCategorias} 
+            <ProductList
+                categoria={categoriaSeleccionada}
+                productos={productos}
+                onBack={handleBackToCategorias}
+                recargar={recargar}
             />
         );
     }
@@ -49,7 +60,7 @@ export default function Menu() {
             </div>
 
             {loading ? (
-                <p>Cargando categorías...</p>
+                <p style={{ color: 'var(--color-primario)' }}>Cargando categorías...</p>
             ) : (
                 <div className="categorias-grid">
                     {categorias.map(cat => (

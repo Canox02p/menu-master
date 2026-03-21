@@ -9,13 +9,17 @@ const OPCIONES_TEMA = [
     { id: 'verde', nombre: 'Verde Fresh', hex: '#48BB78' },
     { id: 'cian', nombre: 'Cian Master', hex: '#4DD0E1' },
     { id: 'purpura', nombre: 'Púrpura Lounge', hex: '#9F7AEA' },
-    { id: 'oro', nombre: 'Oro Gourmet', hex: '#ECC94B' }
+    { id: 'amarillo', nombre: 'Amarillo Pollito', hex: '#ECC94B' },
+    { id: 'rosa', nombre: 'Rosa Pink', hex: '#ED64A6' },
+    { id: 'cafe', nombre: 'Café Tostado', hex: '#8B4513' },
+    { id: 'azul_marino', nombre: 'Azul Oceano', hex: '#2B6CB0' }
 ];
 
 export default function Configuracion() {
-    // 🧠 1. Usamos una llave específica para el Admin
     const [colorActivo, setColorActivo] = useState(() => {
-        return localStorage.getItem('admin_color') || 'cian';
+        let guardado = localStorage.getItem('admin_color') || 'cian';
+        if (guardado === 'oro') guardado = 'amarillo';
+        return guardado;
     });
 
     const [modoOscuro, setModoOscuro] = useState(() => {
@@ -28,18 +32,17 @@ export default function Configuracion() {
         direccion: 'Av. Gastronómica 123'
     });
 
-    // 🌟 2. Inyectamos el color SOLO en el contenedor del Admin
     useEffect(() => {
-        const colorHex = OPCIONES_TEMA.find(c => c.id === colorActivo)?.hex || COLORES_RESTO.cian;
+        const colorHex = OPCIONES_TEMA.find(c => c.id === colorActivo)?.hex || '#4DD0E1';
 
         localStorage.setItem('admin_color', colorActivo);
         localStorage.setItem('admin_modoOscuro', JSON.stringify(modoOscuro));
 
-        // Buscamos el div principal del administrador (lo crearemos en el paso 2)
+        document.documentElement.style.setProperty('--color-primario', colorHex);
+
         const adminWrapper = document.getElementById('admin-wrapper');
 
         if (adminWrapper) {
-            // Pintamos solo esa zona
             adminWrapper.style.setProperty('--color-primario', colorHex);
 
             if (modoOscuro) {

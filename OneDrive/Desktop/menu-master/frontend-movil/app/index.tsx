@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, Linking, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORES_RESTO } from '../src/core/theme';
 import { API_URL } from '../src/core/api';
 
@@ -15,13 +16,16 @@ export default function LoginScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
 
+    // --- 1. CONEXIÓN MÁGICA CON LA WEB ---
     useEffect(() => {
         const timer = setTimeout(() => {
             if (params.rol) {
                 console.log("¡Acceso automático desde la Web detectado!");
-                if (params.rol === 'COCINA') {
+                const rolAsignado = params.rol.toUpperCase();
+
+                if (rolAsignado === 'COCINA' || rolAsignado === 'COCINERO') {
                     router.replace({ pathname: '/cocina', params: params });
-                } else if (params.rol === 'MESERO') {
+                } else if (rolAsignado === 'MESERO') {
                     router.replace({ pathname: '/(tabs)', params: params });
                 }
             }
@@ -30,6 +34,7 @@ export default function LoginScreen() {
         return () => clearTimeout(timer);
     }, [params, router]);
 
+    // --- 2. LOGUEO MANUAL ---
     const handleLogin = async () => {
         if (!email || !password) return Alert.alert("Atención", "Ingresa usuario y contraseña");
 
@@ -49,7 +54,9 @@ export default function LoginScreen() {
                 return;
             }
 
-            const rol = data.usuario.rol;
+            // 👈 EL TRUCO ESTÁ AQUÍ: Forzamos mayúsculas para que siempre coincida
+            const rol = data.usuario.rol.toUpperCase();
+            console.log("Rol de este usuario es:", rol);
 
             if (plataforma === 'web') {
                 const urlWeb = `http://localhost:5173/?token=${data.token}&rol=${rol}`;
@@ -60,12 +67,16 @@ export default function LoginScreen() {
                 return;
             }
 
-            if (rol === 'COCINA') {
+            // 👈 GUARDAMOS EL GAFETE EN EL CELULAR
+            await AsyncStorage.setItem('userToken', data.token);
+
+            // 👈 VALIDAMOS AMBAS PALABRAS POSIBLES
+            if (rol === 'COCINA' || rol === 'COCINERO') {
                 router.replace({ pathname: '/cocina', params: { rol: 'COCINA' } });
             } else if (rol === 'MESERO') {
                 router.replace({ pathname: '/(tabs)', params: { rol: 'MESERO' } });
             } else {
-                Alert.alert("Acceso Restringido", "La plataforma móvil es exclusiva para meseros y cocina.");
+                Alert.alert("Acceso Restringido", `El rol '${rol}' no tiene acceso móvil.`);
             }
         } catch (error) {
             Alert.alert("Error de Conexión", "No se pudo conectar con el servidor.");

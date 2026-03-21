@@ -9,7 +9,7 @@ import Configuracion from '../pages/Configuracion';
 import Menu from '../pages/Menu';
 import Inventario from '../pages/Inventario';
 import Reportes from '../pages/Reportes';
-import Personal from '../pages/Personal'; // Importamos el nuevo componente
+import Personal from '../pages/Personal';
 import { COLORES_RESTO } from "../../../constants/theme";
 import '../styles/AdminDashboard.css';
 
@@ -67,7 +67,7 @@ export default function AdminDashboard({ onLogout }) {
         if (vistaActiva === 'reportes') {
             return <Reportes />;
         }
-        if (vistaActiva === 'personal') { // <-- ¡AQUÍ ESTÁ LA MAGIA!
+        if (vistaActiva === 'personal') {
             return <Personal />;
         }
         if (vistaActiva === 'settings') {

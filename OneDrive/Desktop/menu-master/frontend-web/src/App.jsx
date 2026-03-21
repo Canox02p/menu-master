@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { COLORES_RESTO } from "./constants/theme";
-
-// --- CAPA DE AUTENTICACIÓN ---
 import Login from "./features/auth/pages/Login";
-
-// --- CAPA DE ADMINISTRACIÓN ---
 import AdminDashboard from "./features/admin/pages/AdminDashboard";
-
-// --- CAPA DE COCINA ---
 import { usePedidosCocina } from "./features/cocina/hooks/usePedidosCocina";
 import ChefHeader from "./features/cocina/components/ChefHeader";
 import { PedidoCard } from "./features/cocina/components/PedidoCard";

@@ -10,7 +10,7 @@ const PedidoSchema = new mongoose.Schema({
         default: "EN_COCINA"
     },
     productos: [{
-        id_producto: Number, // El que viene de MySQL
+        id_producto: Number,
         nombre: String,
         precio_unitario: Number,
         cantidad: Number,

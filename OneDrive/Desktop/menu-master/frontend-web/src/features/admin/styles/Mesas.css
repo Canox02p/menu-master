@@ -20,7 +20,7 @@
 }
 
 /* =========================================
-   2. KPI CARDS (Tarjetas superiores)
+   2. KPI CARDS (Tarjetas superiores) - UNIFICADAS
    ========================================= */
 .kpi-grid {
     display: grid;
@@ -30,26 +30,32 @@
 }
 
 .kpi-card {
-    background-color: #1A242D;
-    border-radius: 12px;
+    /* 👇 ACTUALIZADO: Estilo de las gráficas */
+    background-color: #151C24;
+    border: 1px solid #2D3748;
+    border-radius: 16px;
     padding: 24px;
     display: flex;
     flex-direction: column;
     gap: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .kpi-card:hover {
     transform: translateY(-3px);
+    border-color: var(--color-primario);
+    /* Brilla con el tema al pasar el mouse */
 }
 
 .kpi-card h4 {
-    color: #A0AEC0;
-    font-size: 13px;
+    color: #8B98A5;
+    /* Gris más suave para leer mejor */
+    font-size: 12px;
     font-weight: 800;
     margin: 0;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
 }
 
 .kpi-card h2 {
@@ -81,18 +87,18 @@
     background-color: #0B0F13;
     border-radius: 30px;
     padding: 4px;
-    border: 1px solid #1A242D;
+    border: 1px solid #2D3748;
 }
 
 .pill-btn {
     background: transparent;
     border: 1px solid transparent;
     color: #4A5568;
-    padding: 10px 20px;
+    padding: 8px 18px;
     border-radius: 25px;
     font-size: 11px;
     font-weight: 800;
-    letter-spacing: 1.5px;
+    letter-spacing: 1.2px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -101,12 +107,9 @@
     color: #A0AEC0;
 }
 
-.pill-btn.active-area {
-    border-color: var(--color-primario, #4DD0E1);
-    color: var(--color-primario, #4DD0E1);
-}
-
+.pill-btn.active-area,
 .pill-btn.active-status {
+    background-color: rgba(255, 255, 255, 0.05);
     border-color: var(--color-primario, #4DD0E1);
     color: var(--color-primario, #4DD0E1);
 }
@@ -115,36 +118,30 @@
     background-color: var(--color-primario, #4DD0E1);
     color: #0B0F13;
     border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-weight: bold;
+    padding: 12px 20px;
+    border-radius: 12px;
+    /* Unificado a 12px */
+    font-weight: 900;
     font-size: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
-}
-
-.btn-add-mesa:hover {
-    opacity: 0.9;
-}
-
-.btn-add-mesa:active {
-    transform: scale(0.97);
+    transition: all 0.2s;
 }
 
 /* =========================================
-   4. TARJETAS DE MESAS
+   4. TARJETAS DE MESAS - UNIFICADAS
    ========================================= */
 .mesas-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 25px;
     margin-top: 20px;
 }
 
 .mesa-card {
+    /* 👇 ACTUALIZADO: Look consistente con el Dashboard */
     background-color: #151C24;
     border-radius: 16px;
     padding: 30px 20px;
@@ -153,373 +150,97 @@
     align-items: center;
     gap: 12px;
     position: relative;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #2D3748;
+    /* Borde base gris */
+    transition: all 0.3s ease;
 }
 
 .mesa-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-}
-
-.btn-delete {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: transparent;
-    border: none;
-    color: #718096;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    transition: all 0.2s;
-    opacity: 0;
-}
-
-.mesa-card:hover .btn-delete {
-    opacity: 1;
-}
-
-.btn-delete:hover {
-    color: #FF5252;
-    background-color: rgba(255, 82, 82, 0.15);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
 .mesa-number-box {
     background-color: #0B0F13;
     width: 65px;
     height: 65px;
-    border-radius: 18px;
+    border-radius: 50%;
+    /* Círculos redondos se ven más limpios */
     display: flex;
     justify-content: center;
     align-items: center;
-    border-width: 1.5px;
+    border-width: 2px;
     border-style: solid;
 }
 
-.mesa-number-box span {
-    font-size: 24px;
-    font-weight: 800;
-}
-
-.mesa-name-container {
-    text-align: center;
-}
-
-.mesa-name {
-    color: white;
-    font-size: 14px;
-    font-weight: 800;
-    margin: 0;
-    text-transform: uppercase;
-}
-
-.mesa-area {
-    color: #718096;
-    font-size: 11px;
-    margin-top: 4px;
-    font-weight: 600;
-}
-
 .badge-estado {
-    padding: 6px 18px;
+    padding: 5px 15px;
     border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: capitalize;
-}
-
-.mesa-capacity {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    margin-top: 5px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* =========================================
-   5. MODAL DISEÑO NEÓN OSCURO
+   5. MODAL DISEÑO NEÓN OSCURO - UNIFICADO
    ========================================= */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(11, 15, 19, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-}
-
 .modal-content-modern {
-    background: #1C242B;
+    /* 👇 ACTUALIZADO: Fondo y borde de gráficas */
+    background: #151C24;
     padding: 35px;
     border-radius: 20px;
     width: 100%;
     max-width: 500px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
     border: 1px solid #2D3748;
-}
-
-.modal-header-modern {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    color: white;
-}
-
-.modal-header-modern h3 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 600;
-}
-
-.btn-close-modern {
-    background: transparent;
-    border: none;
-    color: var(--color-primario, #4DD0E1);
-    cursor: pointer;
-    transition: transform 0.2s;
-    padding: 0;
-}
-
-.btn-close-modern:hover {
-    transform: scale(1.1);
-}
-
-.modal-form-modern {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.form-row-2col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
-
-.input-group-modern {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.input-group-modern.full-width {
-    grid-column: 1 / -1;
-}
-
-.input-group-modern label {
-    color: #E2E8F0;
-    font-size: 13px;
-    font-weight: 500;
 }
 
 .input-group-modern input,
 .input-group-modern select {
-    background: #11181D;
+    background: #0B0F13;
+    /* Más profundo para el input */
     border: 1px solid #2D3748;
-    padding: 14px 15px;
-    border-radius: 12px;
+    padding: 12px 15px;
+    border-radius: 10px;
     color: white;
     font-size: 14px;
-    width: 100%;
-    box-sizing: border-box;
     transition: all 0.3s ease;
-    outline: none;
-}
-
-.input-group-modern input::placeholder {
-    color: #4A5568;
-}
-
-.input-group-modern input:focus,
-.input-group-modern select:focus {
-    border-color: var(--color-primario, #4DD0E1);
-    box-shadow: 0 0 0 1px var(--color-primario, #4DD0E1);
-}
-
-.select-wrapper {
-    position: relative;
-}
-
-.select-wrapper select {
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-}
-
-.select-wrapper::after {
-    content: '⌄';
-    font-size: 20px;
-    color: var(--color-primario, #4DD0E1);
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-60%);
-    pointer-events: none;
-}
-
-.modal-actions-modern {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.btn-cancel-modern {
-    background: transparent;
-    border: 1px solid #2D3748;
-    color: #A0AEC0;
-    padding: 14px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-cancel-modern:hover {
-    border-color: #4A5568;
-    color: white;
-    background: rgba(255, 255, 255, 0.05);
 }
 
 .btn-create-modern {
-    background-color: var(--color-primario, #9F7AEA);
+    background-color: var(--color-primario);
     border: none;
     color: #0B0F13;
     padding: 14px;
     border-radius: 12px;
-    font-weight: 800;
-    font-size: 15px;
+    font-weight: 900;
     cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
-}
-
-.btn-create-modern:hover {
-    opacity: 0.9;
-}
-
-.btn-create-modern:active {
-    transform: scale(0.97);
 }
 
 /* =========================================
-   6. TABLA DE ÚLTIMOS PEDIDOS (ANCHO COMPLETO)
+   6. TABLA DE ÚLTIMOS PEDIDOS - UNIFICADA
    ========================================= */
 .orders-table-wrapper {
-    background-color: #1A2228;
+    /* 👇 ACTUALIZADO: Identico a las gráficas */
+    background-color: #151C24;
+    border: 1px solid #2D3748;
     border-radius: 16px;
     padding: 24px;
     width: 100%;
-    border: 1px solid #2D3748;
-    box-sizing: border-box;
-}
-
-.orders-table-title {
-    color: #8B98A5;
-    font-size: 13px;
-    font-weight: 700;
-    margin-top: 0;
-    margin-bottom: 20px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-.orders-table {
-    width: 100%;
-    border-collapse: collapse;
 }
 
 .orders-table th {
     color: #8B98A5;
-    font-size: 13px;
-    font-weight: 600;
-    text-align: left;
+    font-size: 12px;
+    font-weight: 800;
     padding-bottom: 15px;
     border-bottom: 1px solid #2D3748;
-}
-
-.orders-table th:last-child {
-    text-align: right;
+    text-transform: uppercase;
 }
 
 .orders-table td {
-    padding: 16px 0;
+    padding: 18px 0;
     border-bottom: 1px solid #2D3748;
-    color: #FFFFFF;
-    font-size: 14px;
-    vertical-align: middle;
-}
-
-.orders-table tr:last-child td {
-    border-bottom: none;
-}
-
-.cell-id {
-    color: #8B98A5 !important;
-}
-
-.cell-mesa {
-    font-weight: 700;
-}
-
-.cell-total {
-    font-weight: 700;
-}
-
-.mesero-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.avatar-mesero {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background-color: #2D3748;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-
-.estado-group {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 15px;
-}
-
-.badge-table {
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border: 1px solid transparent;
-}
-
-.badge-table.preparacion {
-    color: #48BB78;
-    border-color: #48BB78;
-    background-color: transparent;
-}
-
-.badge-table.cocina {
-    color: #48BB78;
-    border-color: #48BB78;
-    background-color: transparent;
-}
-
-.badge-table.reservada {
-    color: #000000;
-    background-color: #FFFFFF;
+    color: #E2E8F0;
 }

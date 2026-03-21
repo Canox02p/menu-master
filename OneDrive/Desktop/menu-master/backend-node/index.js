@@ -51,6 +51,24 @@ app.get('/usuarios', async (req, res) => {
     res.json(usuarios);
 });
 
+app.put('/usuarios/:id', async (req, res) => {
+    try {
+        const usuario = await Usuario.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        res.json(usuario);
+    } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/usuarios/:id', async (req, res) => {
+    try {
+        await Usuario.findByIdAndDelete(req.params.id);
+        res.json({ mensaje: "Usuario eliminado correctamente" });
+    } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
 // ==========================================
 // 🪑 3. MÓDULO DE MESAS
 // ==========================================
@@ -136,22 +154,54 @@ app.delete('/pedidos/:id', async (req, res) => {
 app.get('/productos', async (req, res) => {
     try {
         const query = `
-            SELECT 
-                p.id_producto AS id, 
-                p.nombre, 
-                p.precio, 
-                c.nombre AS categoria 
+            SELECT
+                p.id_producto AS id,
+                p.nombre,
+                p.descripcion,
+                p.precio,
+                p.stock,
+                c.nombre AS categoria
             FROM productos p
             LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
         `;
 
         const [rows] = await db.query(query);
-        console.log("📦 Productos extraídos con éxito:", rows);
-
         res.json(rows);
     } catch (err) {
-        console.error("Error en MySQL:", err.message);
         res.status(500).json({ error: "No se pudo conectar con el inventario" });
+    }
+});
+
+app.put('/productos/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { nombre, descripcion, precio, stock } = req.body;
+
+        const query = `
+            UPDATE productos 
+            SET nombre = ?, descripcion = ?, precio = ?, stock = ? 
+            WHERE id_producto = ?
+        `;
+
+        await db.query(query, [nombre, descripcion, precio, stock, id]);
+        res.json({ mensaje: "Producto actualizado con éxito" });
+    } catch (err) {
+        res.status(500).json({ error: "No se pudo actualizar el producto" });
+    }
+});
+
+app.delete('/productos/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        const query = `DELETE FROM productos WHERE id_producto = ?`;
+        await db.query(query, [id]);
+
+        console.log(`✅ Producto ${id} eliminado correctamente en MySQL.`);
+        res.json({ mensaje: "Producto eliminado con éxito" });
+    } catch (err) {
+        console.error("Error al eliminar en MySQL:", err.message);
+        res.status(500).json({ error: "No se pudo eliminar el producto" });
     }
 });
 
@@ -183,7 +233,7 @@ app.post('/ventas', async (req, res) => {
 });
 
 // ==========================================
-// 📊 8. MÓDULO ADMINISTRADOR Y ESTADÍSTICAS
+// 📊 ESTADÍSTICAS COMPLETAS (DASHBOARD Y REPORTES)
 // ==========================================
 
 app.get('/admin/stats-completo', async (req, res) => {
@@ -192,30 +242,32 @@ app.get('/admin/stats-completo', async (req, res) => {
         hoy.setHours(0, 0, 0, 0);
         const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
-        const vHoy = await Venta.aggregate([
+        const vHoyStats = await Venta.aggregate([
             { $match: { fecha_venta: { $gte: hoy } } },
-            { $group: { _id: null, total: { $sum: "$monto_pagado" } } }
+            { $group: { _id: null, total: { $sum: "$monto_pagado" }, cantidad: { $sum: 1 } } }
         ]);
 
-        const pActivos = await Pedido.countDocuments({ estado: { $ne: 'PAGADO' } });
+        const ventasHoyMonto = vHoyStats[0]?.total || 0;
+        const pedidosDiaCant = vHoyStats[0]?.cantidad || 0;
+
+        const ticketPromedio = pedidosDiaCant > 0 ? (ventasHoyMonto / pedidosDiaCant) : 0;
 
         const vMes = await Venta.aggregate([
             { $match: { fecha_venta: { $gte: inicioMes } } },
             { $group: { _id: null, total: { $sum: "$monto_pagado" } } }
         ]);
 
+        const [platilloCrack] = await db.query('SELECT nombre FROM productos ORDER BY precio DESC LIMIT 1');
         const totalMesas = await Mesa.countDocuments();
         const ocupadas = await Mesa.countDocuments({ estado: 'OCUPADA' });
-
-        const [platilloCrack] = await db.query('SELECT nombre FROM productos ORDER BY precio DESC LIMIT 1');
-
         const ultimos = await Pedido.find().sort({ fecha_creacion: -1 }).limit(5);
 
         res.json({
             kpis: {
-                ventasHoy: vHoy[0]?.total || 0,
-                pedidosActivos: pActivos,
+                ventasHoy: ventasHoyMonto,
+                pedidosDia: pedidosDiaCant,
                 ingresosMes: vMes[0]?.total || 0,
+                ticketPromedio: ticketPromedio,
                 crack: platilloCrack[0]?.nombre || "Sin datos",
                 ocupacion: {
                     porcentaje: totalMesas > 0 ? Math.round((ocupadas / totalMesas) * 100) : 0,
@@ -225,31 +277,10 @@ app.get('/admin/stats-completo', async (req, res) => {
             },
             recientes: ultimos
         });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/admin/corte-caja', async (req, res) => {
-    try {
-        const { inicio, fin, id_admin } = req.body;
-        const ventas = await Venta.find({
-            fecha_venta: { $gte: new Date(inicio), $lte: new Date(fin) }
-        });
-
-        let total = 0, efectivo = 0, tarjeta = 0;
-        ventas.forEach(v => {
-            total += v.monto_pagado;
-            if (v.metodo_pago === 'EFECTIVO') efectivo += v.monto_pagado;
-            if (v.metodo_pago === 'TARJETA') tarjeta += v.monto_pagado;
-        });
-
-        const corte = new CorteCaja({
-            fecha_inicio: inicio, fecha_fin: fin, total_ventas: total,
-            total_efectivo: efectivo, total_tarjeta: tarjeta, generado_por: id_admin
-        });
-        await corte.save();
-
-        res.json(corte);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        console.error("Error en analíticas:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ==========================================

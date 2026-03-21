@@ -7,12 +7,11 @@ import { COLORES_RESTO } from '../../../constants/theme';
 import '../styles/Mesas.css';
 
 export default function MesasDashboard() {
-    const [mesas, setMesas] = useState([]); // Ahora inicia vacío
+    const [mesas, setMesas] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [filtroArea, setFiltroArea] = useState('TODAS');
     const [filtroEstado, setFiltroEstado] = useState('TODAS');
 
-    // --- 🌐 LLAMADA A TU API ---
     const cargarMesas = async () => {
         try {
             const response = await fetch('http://localhost:3000/mesas');
@@ -44,7 +43,6 @@ export default function MesasDashboard() {
         }
     };
 
-    // Cálculos basados en los datos reales de la BD
     const ocupadas = mesas.filter(m => m.estado === 'OCUPADA').length;
     const libres = mesas.filter(m => m.estado === 'LIBRE' || m.estado === 'DISPONIBLE').length;
     const reservadas = mesas.filter(m => m.estado === 'RESERVADA').length;
@@ -60,7 +58,7 @@ export default function MesasDashboard() {
             <MesaModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onMesaAgregada={cargarMesas} // Recarga la lista cuando agregues una
+                onMesaAgregada={cargarMesas}
             />
 
             <div className="kpi-grid">

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell
 } from 'recharts';
-import { COLORES_RESTO } from '../../../constants/theme';
+
 const dataLine = [
     { time: '06:00', ventas: 100 },
     { time: '10:00', ventas: 350 },
@@ -15,48 +15,42 @@ const dataLine = [
     { time: '22:00', ventas: 800 },
 ];
 
-const dataPie = [
-    { name: 'Ocupadas', value: 33 },
-    { name: 'Libres', value: 67 },
-];
-
 export default function ChartsSection() {
-    const colorPrimario = COLORES_RESTO.cian;
-    const colorSecundario = COLORES_RESTO.borde;
-    const colorTexto = COLORES_RESTO.grisTexto;
-    const colorFondoToolip = COLORES_RESTO.fondo;
-
+    const [ocupacion, setOcupacion] = useState({ ocupadas: 0, libres: 1, porcentaje: 0 });
+    useEffect(() => {
+        fetch('http://localhost:3000/admin/stats-completo')
+            .then(res => res.json())
+            .then(data => {
+                if (data.kpis && data.kpis.ocupacion) {
+                    setOcupacion(data.kpis.ocupacion);
+                }
+            })
+            .catch(err => console.error("Error cargando gráficas:", err));
+    }, []);
+    const dataPie = [
+        { name: 'Ocupadas', value: ocupacion.ocupadas },
+        { name: 'Libres', value: ocupacion.libres > 0 ? ocupacion.libres : 0.1 },
+    ];
+    const colorPrimario = 'var(--color-primario, #4DD0E1)';
+    const colorSecundario = '#2D3748';
+    const colorTexto = '#8B98A5';
+    const colorFondoToolip = '#0B1014';
     const pieColors = [colorPrimario, colorSecundario];
-
-    const themeStyle = {
-        '--color-primary': colorPrimario,
-        '--color-text-muted': colorTexto,
-        '--border-color': colorSecundario,
-        '--bg-card': COLORES_RESTO.tarjeta,
-    };
-
     return (
-        <div className="charts-grid" style={themeStyle}>
-            {/* Gráfica de Línea */}
-            <div className="chart-card line-chart-container">
-                <h4>RENDIMIENTO DIARIO (VENTAS POR HORA)</h4>
-                <div className="chart-wrapper">
+        <div className="charts-grid">
+            {/* Gráfica de Línea (Rendimiento) */}
+            <div className="chart-card line-chart-container" style={{ backgroundColor: '#151C24', border: '1px solid #2D3748', borderRadius: '16px', padding: '20px' }}>
+                <h4 style={{ color: colorTexto, fontSize: '13px', marginBottom: '20px' }}>RENDIMIENTO DIARIO (PRUEBA)</h4>
+                <div className="chart-wrapper" style={{ height: '250px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={dataLine} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            {/* Líneas de cuadrícula */}
                             <CartesianGrid strokeDasharray="3 3" stroke={colorSecundario} vertical={false} />
-
-                            {/* Ejes */}
                             <XAxis dataKey="time" stroke={colorTexto} tick={{ fill: colorTexto, fontSize: 12 }} tickLine={false} axisLine={false} />
                             <YAxis stroke={colorTexto} tick={{ fill: colorTexto, fontSize: 12 }} tickLine={false} axisLine={false} />
-
-                            {/* Tooltip (Cajita de información al pasar el mouse) */}
                             <Tooltip
-                                contentStyle={{ backgroundColor: colorFondoToolip, borderColor: colorPrimario, color: '#fff', borderRadius: '8px' }}
-                                itemStyle={{ color: colorPrimario }}
+                                contentStyle={{ backgroundColor: colorFondoToolip, borderColor: '#2D3748', color: '#fff', borderRadius: '8px' }}
+                                itemStyle={{ color: '#FFF' }}
                             />
-
-                            {/* La línea principal con efecto de resplandor */}
                             <Line
                                 type="monotone"
                                 dataKey="ventas"
@@ -64,26 +58,25 @@ export default function ChartsSection() {
                                 strokeWidth={3}
                                 dot={false}
                                 activeDot={{ r: 6, fill: colorPrimario, stroke: '#fff', strokeWidth: 2 }}
-                                /* Agregamos '66' al hex del cian para darle un 40% de opacidad a la sombra */
-                                style={{ filter: `drop-shadow(0px 4px 6px ${colorPrimario}66)` }}
                             />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* Gráfica de Dona */}
-            <div className="chart-card donut-chart-container">
-                <h4>MESAS OCUPADAS ACTUALMENTE</h4>
-                <div className="donut-wrapper">
+            {/* Gráfica de Dona (Mesas 100% Funcional) */}
+            <div className="chart-card donut-chart-container" style={{ backgroundColor: '#151C24', border: '1px solid #2D3748', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
+                <h4 style={{ color: colorTexto, fontSize: '13px', marginBottom: '10px' }}>MESAS OCUPADAS ACTUALMENTE</h4>
+
+                <div className="donut-wrapper" style={{ position: 'relative', flex: 1, minHeight: '200px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
                                 data={dataPie}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={60}
-                                outerRadius={80}
+                                innerRadius={70}
+                                outerRadius={90}
                                 paddingAngle={5}
                                 dataKey="value"
                                 stroke="none"
@@ -94,19 +87,18 @@ export default function ChartsSection() {
                             </Pie>
                         </PieChart>
                     </ResponsiveContainer>
-                    <div className="donut-center-text">
-                        <h3>33%</h3>
-                        <span>Occupancy</span>
+                    {/* Texto del centro dinámico */}
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                        <h3 style={{ margin: 0, fontSize: '24px', color: '#FFF' }}>{ocupacion.porcentaje}%</h3>
+                        <span style={{ fontSize: '12px', color: colorTexto }}>Ocupación</span>
                     </div>
                 </div>
-
-                {/* Leyenda con los colores inyectados en línea para evitar depender del CSS para los puntitos */}
-                <div className="donut-legend">
-                    <span className="legend-item">
-                        <span className="dot busy" style={{ backgroundColor: colorPrimario }}></span> Ocupadas
+                <div className="donut-legend" style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px' }}>
+                    <span style={{ color: colorTexto, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorPrimario }}></div> Ocupadas ({ocupacion.ocupadas})
                     </span>
-                    <span className="legend-item">
-                        <span className="dot free" style={{ backgroundColor: colorSecundario }}></span> Libres
+                    <span style={{ color: colorTexto, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorSecundario }}></div> Libres ({ocupacion.libres})
                     </span>
                 </div>
             </div>
