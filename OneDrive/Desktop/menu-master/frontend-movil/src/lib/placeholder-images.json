@@ -1,0 +1,46 @@
+{
+  "placeholderImages": [
+    {
+      "id": "burger",
+      "description": "Classic Beef Burger",
+      "imageUrl": "https://picsum.photos/seed/burger/400/300",
+      "imageHint": "beef burger"
+    },
+    {
+      "id": "pizza",
+      "description": "Margherita Pizza",
+      "imageUrl": "https://picsum.photos/seed/pizza/400/300",
+      "imageHint": "margherita pizza"
+    },
+    {
+      "id": "pasta",
+      "description": "Fettuccine Alfredo",
+      "imageUrl": "https://picsum.photos/seed/pasta/400/300",
+      "imageHint": "pasta alfredo"
+    },
+    {
+      "id": "salad",
+      "description": "Caesar Salad",
+      "imageUrl": "https://picsum.photos/seed/salad/400/300",
+      "imageHint": "caesar salad"
+    },
+    {
+      "id": "steak",
+      "description": "Grilled Ribeye Steak",
+      "imageUrl": "https://picsum.photos/seed/steak/400/300",
+      "imageHint": "grilled steak"
+    },
+    {
+      "id": "dessert",
+      "description": "Chocolate Lava Cake",
+      "imageUrl": "https://picsum.photos/seed/dessert/400/300",
+      "imageHint": "chocolate cake"
+    },
+    {
+      "id": "coffee",
+      "description": "Artisan Latte",
+      "imageUrl": "https://picsum.photos/seed/coffee/400/300",
+      "imageHint": "latte coffee"
+    }
+  ]
+}

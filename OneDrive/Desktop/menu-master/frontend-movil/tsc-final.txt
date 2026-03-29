@@ -1,0 +1,1 @@
+﻿src/components/pos/order-taking.tsx(85,38): error TS2304: Cannot find name 'cn'.
