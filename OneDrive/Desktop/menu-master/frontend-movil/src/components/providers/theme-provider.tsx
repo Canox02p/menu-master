@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './auth-provider';
+import { useColorScheme, vars } from 'nativewind';
 
 type Theme = 'light' | 'dark';
 
@@ -49,9 +51,10 @@ function hexToHsl(hex: string): string {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [theme, setTheme] = useState<Theme>('dark');
+  const { colorScheme, setColorScheme } = useColorScheme();
   const [primaryColor, setPrimaryColor] = useState('#67A9FF');
 
+  const theme = colorScheme || 'dark';
   const roleSuffix = user?.role ? `-${user.role.toLowerCase()}` : '';
 
   // 1. Carga inicial desde la memoria nativa
@@ -59,7 +62,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const loadSettings = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem(`pos-theme${roleSuffix}`) as Theme;
-        if (savedTheme) setTheme(savedTheme);
+        if (savedTheme) setColorScheme(savedTheme);
+        else setColorScheme('dark');
+        
         const savedColor = await AsyncStorage.getItem(`pos-primary-color${roleSuffix}`);
         if (savedColor) setPrimaryColor(savedColor);
       } catch (error) {
@@ -97,11 +102,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     saveColor();
   }, [primaryColor, user?.role]);
 
-  const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  const toggleTheme = () => setColorScheme(theme === 'light' ? 'dark' : 'light');
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, primaryColor, setPrimaryColor }}>
-      {children}
+      <View 
+        style={vars({ '--primary': hexToHsl(primaryColor), '--ring': hexToHsl(primaryColor) }) as any} 
+        className={`flex-1 bg-background ${theme === 'dark' ? 'dark' : ''}`}
+      >
+        {children}
+      </View>
     </ThemeContext.Provider>
   );
 }
