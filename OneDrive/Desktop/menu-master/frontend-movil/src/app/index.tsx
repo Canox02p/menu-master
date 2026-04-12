@@ -17,17 +17,17 @@ export default function Home() {
   const { user, login } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
-  // Lógica de pestañas por defecto según el rol (Mantenida intacta)
+  // Lógica de pestañas por defecto según el rol (SRP: Responsabilidad de redirección inicial)
   useEffect(() => {
     if (user?.role === 'WAITER') setActiveTab('tables');
     if (user?.role === 'CHEF') setActiveTab('kds');
     if (user?.role === 'ADMIN') setActiveTab('dashboard');
   }, [user]);
 
+  // --- VISTA DE INICIO DE SESIÓN ---
   if (!user) {
     return (
       <View className="flex-1 bg-[#09090b] flex items-center justify-center p-6">
-        {/* Contenedor principal con más aire (space-y-12) */}
         <View className="max-w-md w-full space-y-12 animate-in fade-in zoom-in-95 duration-700">
 
           {/* SECCIÓN DEL LOGO Y TÍTULO */}
@@ -45,7 +45,7 @@ export default function Home() {
             </View>
           </View>
 
-          {/* TARJETA DE PORTALES (Más redondeada y con fondo Zinc) */}
+          {/* TARJETA DE PORTALES */}
           <Card className="bg-zinc-900/50 border-zinc-800/60 backdrop-blur-xl rounded-[32px] overflow-hidden shadow-2xl">
             <CardContent className="p-8 space-y-6">
               <Text className="text-center text-[10px] font-bold text-zinc-500 uppercase tracking-[4px] mb-4">
@@ -121,7 +121,10 @@ export default function Home() {
         {/* MODULO EN CONSTRUCCIÓN */}
         {!['dashboard', 'menu', 'tables', 'orders', 'kds', 'settings', 'inventory', 'staff'].includes(activeTab) && (
           <View className="flex-1 flex-col items-center justify-center h-[60vh] opacity-50">
-            <LayoutDashboard color="gray" size={64} className="mb-4" />
+            {/* CORRECCIÓN: Quitamos className del icono y usamos un View de envoltura */}
+            <View className="mb-4">
+              <LayoutDashboard color="gray" size={64} />
+            </View>
             <Text className="font-headline text-xl text-gray-500">Module Under Construction</Text>
             <Text className="text-gray-500">This feature will be available in the next release.</Text>
           </View>

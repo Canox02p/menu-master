@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type UserRole = 'ADMIN' | 'WAITER' | 'CHEF' | null;
@@ -20,7 +19,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -55,7 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error removing user from AsyncStorage", error);
     }
 
-    router.replace('/');
   };
 
   return (

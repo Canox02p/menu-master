@@ -44,9 +44,10 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
                   : "hover:bg-accent/10"
               )}
             >
+              {/* CORRECCIÓN 1: Icono del menú lateral sin className */}
               <item.icon
                 size={20}
-                className={cn("w-5 h-5", activeTab === item.path ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")}
+                color={activeTab === item.path ? "#ffffff" : "#a1a1aa"}
               />
               <Text className={cn(
                 "font-medium",
@@ -69,7 +70,8 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
             className="w-full flex-row items-center gap-3 p-3 rounded-xl hover:bg-destructive/10"
             onPress={logout}
           >
-            <LogOut size={20} className="text-destructive" color="gray" />
+            {/* CORRECCIÓN 2: Icono de Logout sin className */}
+            <LogOut size={20} color="#ef4444" />
             <Text className="font-medium text-destructive">Logout</Text>
           </TouchableOpacity>
         </View>
@@ -87,7 +89,8 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
             <Text className="font-headline font-bold text-lg tracking-tight">CustoServe</Text>
           </View>
           <TouchableOpacity className="p-2" onPress={logout}>
-            <LogOut size={20} color="gray" />
+            {/* Este ya estaba bien, pero aseguramos que solo tenga size y color */}
+            <LogOut size={20} color="#ef4444" />
           </TouchableOpacity>
         </View>
 
@@ -106,7 +109,11 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
                 activeTab === item.path ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <item.icon size={24} className={activeTab === item.path ? "text-primary" : "text-muted-foreground"} />
+              {/* CORRECCIÓN 3: Icono del menú inferior sin className */}
+              <item.icon
+                size={24}
+                color={activeTab === item.path ? "#ffffff" : "#a1a1aa"}
+              />
               <Text className={cn(
                 "text-[10px] font-medium",
                 activeTab === item.path ? "text-primary" : "text-muted-foreground"

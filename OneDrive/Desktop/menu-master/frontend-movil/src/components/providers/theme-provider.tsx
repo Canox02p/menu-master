@@ -64,7 +64,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const savedTheme = await AsyncStorage.getItem(`pos-theme${roleSuffix}`) as Theme;
         if (savedTheme) setColorScheme(savedTheme);
         else setColorScheme('dark');
-        
+
         const savedColor = await AsyncStorage.getItem(`pos-primary-color${roleSuffix}`);
         if (savedColor) setPrimaryColor(savedColor);
       } catch (error) {
@@ -106,8 +106,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, primaryColor, setPrimaryColor }}>
-      <View 
-        style={vars({ '--primary': hexToHsl(primaryColor), '--ring': hexToHsl(primaryColor) }) as any} 
+      <View
+        style={vars({ '--primary': hexToHsl(primaryColor), '--ring': hexToHsl(primaryColor) }) as any}
         className={`flex-1 bg-background ${theme === 'dark' ? 'dark' : ''}`}
       >
         {children}

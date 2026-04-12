@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
 import './globals.css';
@@ -16,10 +16,10 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <View className="flex-1 font-body antialiased selection:bg-primary selection:text-primary-foreground overflow-hidden">
+    <View style={{ flex: 1, overflow: 'hidden' }}>
       <AuthProvider>
         <ThemeProvider>
-          <Slot />
+          <Stack screenOptions={{ headerShown: false }} />
           <Toaster />
         </ThemeProvider>
       </AuthProvider>

@@ -1,24 +1,58 @@
 'use client';
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, SafeAreaView } from 'react-native';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Plus, Minus, Send, ReceiptText, ChevronLeft } from 'lucide-react-native';
+import { Plus, Minus, Send, ReceiptText, ChevronLeft } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/components/providers/theme-provider';
+
+// ==========================================
+// 1. INTERFACES (Tipado Estricto)
+// ==========================================
+
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+}
+
+interface CartItem extends MenuItem {
+  qty: number;
+}
 
 interface OrderTakingProps {
   tableId: number;
   onClose: () => void;
 }
 
+interface MenuItemCardProps {
+  item: MenuItem;
+  isDark: boolean;
+  primaryColor: string;
+  widthStyle: StyleProp<ViewStyle>;
+  onAdd: (item: MenuItem) => void;
+}
+
+interface CartItemRowProps {
+  item: CartItem;
+  isDark: boolean;
+  primaryColor: string;
+  onIncrease: () => void;
+  onDecrease: () => void;
+}
+
+// ==========================================
+// 2. DATOS MOCKEADOS
+// ==========================================
+
 const MENU_CATEGORIES = ['Main', 'Appetizers', 'Drinks', 'Desserts'];
 
-const MOCK_MENU = [
+const MOCK_MENU: MenuItem[] = [
   { id: '1', name: 'Signature Burger', price: 18.5, category: 'Main' },
   { id: '2', name: 'Truffle Pasta', price: 22.0, category: 'Main' },
   { id: '3', name: 'Caesar Salad', price: 14.0, category: 'Appetizers' },
@@ -28,12 +62,124 @@ const MOCK_MENU = [
   { id: '7', name: 'Chocolate Cake', price: 9.0, category: 'Desserts' },
 ];
 
+const CHARCOAL_GRAY = "#171A1C";
+
+// ==========================================
+// 3. SUBCOMPONENTES INTERACTIVOS
+// ==========================================
+
+const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuItemCardProps) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <View style={widthStyle} className="p-2 mb-2">
+      <Pressable
+        onHoverIn={() => setIsHovered(true)}
+        onHoverOut={() => setIsHovered(false)}
+        onPressIn={() => setIsHovered(true)}
+        onPressOut={() => setIsHovered(false)}
+        onPress={() => onAdd(item)}
+      >
+        <Card
+          className={cn(
+            "border-none overflow-hidden transition-all duration-200 rounded-[24px] h-36 flex-col justify-between",
+            isDark ? "bg-zinc-900/60" : "bg-white",
+            isHovered ? "shadow-md" : "shadow-sm"
+          )}
+          style={{
+            borderWidth: 1.5,
+            borderColor: isHovered ? primaryColor : 'transparent',
+            transform: [{ scale: isHovered ? 0.97 : 1 }] // Efecto "botón" al presionarlo
+          }}
+        >
+          <CardContent className="p-5 flex-1 justify-between">
+            <Text className={cn("font-bold text-base", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={2}>
+              {item.name}
+            </Text>
+
+            <View className="flex-row justify-between items-center mt-auto">
+              <Text style={{ color: primaryColor }} className="text-lg font-headline font-bold">
+                ${item.price.toFixed(2)}
+              </Text>
+              <View
+                className="w-9 h-9 rounded-[12px] flex items-center justify-center transition-colors"
+                style={{ backgroundColor: isHovered ? primaryColor : `${primaryColor}15` }}
+              >
+                <Plus color={isHovered ? "white" : primaryColor} size={20} strokeWidth={3} />
+              </View>
+            </View>
+          </CardContent>
+        </Card>
+      </Pressable>
+    </View>
+  );
+};
+
+const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease }: CartItemRowProps) => {
+  return (
+    <View className={cn(
+      "flex-row items-center justify-between p-3.5 rounded-2xl mb-3",
+      isDark ? "bg-zinc-900/60 border border-zinc-800" : "bg-white border border-zinc-100 shadow-sm"
+    )}>
+      <View className="flex-1 pr-2">
+        <Text className={cn("font-bold text-sm mb-1", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={{ color: primaryColor }} className="text-xs font-bold">
+          ${(item.price * item.qty).toFixed(2)}
+        </Text>
+      </View>
+
+      <View className={cn("flex-row items-center gap-3 p-1 rounded-xl", isDark ? "bg-zinc-950/50" : "bg-zinc-50")}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onDecrease}
+          className={cn("w-8 h-8 rounded-lg items-center justify-center", isDark ? "bg-zinc-800" : "bg-white shadow-sm")}
+        >
+          <Minus color={isDark ? "#d4d4d8" : "#52525b"} size={16} strokeWidth={3} />
+        </TouchableOpacity>
+
+        <Text className={cn("font-bold text-sm w-4 text-center", isDark ? "text-white" : "text-zinc-900")}>
+          {item.qty}
+        </Text>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onIncrease}
+          style={{ backgroundColor: primaryColor }}
+          className="w-8 h-8 rounded-lg items-center justify-center shadow-sm"
+        >
+          <Plus color="white" size={16} strokeWidth={3} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+// ==========================================
+// 4. COMPONENTE PRINCIPAL (Overlay/Modal)
+// ==========================================
+
 export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
-  const [cart, setCart] = useState<{id: string, name: string, price: number, qty: number}[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('Main');
+  const { theme, primaryColor } = useTheme();
+  const isDark = theme === 'dark';
+  const { width } = useWindowDimensions();
   const { toast } = useToast();
 
-  const addToCart = (item: any) => {
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('Main');
+
+  // Cálculos Responsivos
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768 && width < 1024;
+
+  const getCardWidth = (): StyleProp<ViewStyle> => {
+    if (isDesktop) return { width: '33.33%' };
+    if (isTablet) return { width: '50%' };
+    return { width: '50%' }; // 2 columnas incluso en celular para el menú
+  };
+
+  const addToCart = (item: MenuItem) => {
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
@@ -50,122 +196,174 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
   const handleSendOrder = () => {
-    // Note: useToast is not fully compatible out of the box with React Native without standard adaptations
+    // Aquí iría la lógica de enviar al backend
     onClose();
   };
 
   return (
-    <View className="absolute z-[100] bg-background justify-between left-0 right-0 top-0 bottom-0 h-full w-full">
-      <View className="flex-col h-full">
-        <View className="p-4 border-b border-border flex-row items-center justify-between bg-card/50">
+    <SafeAreaView
+      className="absolute z-[100] top-0 bottom-0 left-0 right-0 h-full w-full"
+      style={{ backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}
+    >
+      <View className="flex-col h-full w-full max-w-[1600px] mx-auto">
+
+        {/* TOP HEADER (Botón volver y Mesa) */}
+        <View className={cn(
+          "p-4 border-b flex-row items-center justify-between",
+          isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"
+        )}>
           <View className="flex-row items-center gap-4">
-            <Button variant="ghost" size="icon" onPress={onClose} className="rounded-xl">
-              <ChevronLeft className="w-6 h-6 text-foreground" color="#888" size={24} />
-            </Button>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={onClose}
+              className={cn("w-10 h-10 rounded-xl items-center justify-center", isDark ? "bg-zinc-800" : "bg-zinc-100")}
+            >
+              <ChevronLeft color={isDark ? "#d4d4d8" : "#52525b"} size={24} />
+            </TouchableOpacity>
             <View>
-              <Text className="text-xl font-headline font-bold text-foreground">Table #{tableId}</Text>
-              <Text className="text-xs text-muted-foreground">New Order Entry</Text>
+              <Text className={cn("text-xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
+                Table #{tableId}
+              </Text>
+              <Text className="text-xs font-medium text-zinc-500 tracking-wide uppercase">New Order Entry</Text>
             </View>
           </View>
-          <View className="flex-row items-center gap-2">
-             <Badge variant="outline" className="rounded-full px-3 py-1" label={`${cart.length} Items Selected`} />
-          </View>
+          <Badge
+            variant="outline"
+            className={cn("rounded-full px-4 py-1.5", isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-100")}
+            label={`${cart.length} Items`}
+          />
         </View>
 
+        {/* CONTENIDO PRINCIPAL (Dividido en Menú y Ticket) */}
         <View className="flex-1 flex-col md:flex-row">
-          <View className="flex-1 flex-col bg-accent/5 p-4 md:p-6 pb-24 md:pb-6">
+
+          {/* LADO IZQUIERDO: MENÚ */}
+          <View className="flex-1 flex-col p-4">
+
+            {/* Categorías (Scroll Horizontal) */}
             <View className="mb-4">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible">
-                {MENU_CATEGORIES.map(cat => (
-                  <Button 
-                    key={cat} 
-                    variant={selectedCategory === cat ? 'default' : 'outline'}
-                    className="rounded-full px-6 mr-2 mb-2"
-                    onPress={() => setSelectedCategory(cat)}
-                  >
-                    <Text className={cn("font-medium", selectedCategory === cat ? "text-white" : "text-foreground")}>{cat}</Text>
-                  </Button>
-                ))}
+                {MENU_CATEGORIES.map(cat => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedCategory(cat)}
+                      style={{ backgroundColor: isSelected ? primaryColor : (isDark ? '#27272a' : 'white') }}
+                      className={cn(
+                        "rounded-full px-6 py-3 mr-3 shadow-sm transition-all",
+                        !isSelected && (isDark ? "border border-zinc-700" : "border border-zinc-200")
+                      )}
+                    >
+                      <Text className={cn(
+                        "font-bold",
+                        isSelected ? "text-white" : (isDark ? "text-zinc-300" : "text-zinc-600")
+                      )}>
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             </View>
 
-            <ScrollView className="flex-1 pr-0 md:pr-4" contentContainerStyle={{ paddingBottom: 60 }}>
-              <View className="flex-row flex-wrap justify-between gap-4">
+            {/* Grid de Platillos */}
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              <View className="flex-row flex-wrap -mx-2">
                 {MOCK_MENU.filter(i => i.category === selectedCategory).map(item => (
-                  <TouchableOpacity 
+                  <MenuItemCard
                     key={item.id}
-                    onPress={() => addToCart(item)}
-                    className="bg-card p-4 flex-col rounded-2xl justify-between h-32 shadow-sm w-full sm:w-[48%] lg:w-[31%]"
-                  >
-                    <Text className="font-bold text-foreground">{item.name}</Text>
-                    <View className="flex-row justify-between items-center mt-auto">
-                      <Text className="text-lg font-headline font-bold text-primary">${item.price.toFixed(2)}</Text>
-                      <View className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Plus className="w-5 h-5 text-primary" color="#67A9FF" size={20} />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
+                    item={item}
+                    isDark={isDark}
+                    primaryColor={primaryColor}
+                    widthStyle={getCardWidth()}
+                    onAdd={addToCart}
+                  />
                 ))}
               </View>
             </ScrollView>
           </View>
 
-          <View className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-border bg-card flex-col p-6 shadow-2xl h-80 md:h-auto">
-            <View className="flex-row items-center gap-2 mb-6">
-              <ReceiptText className="w-5 h-5 text-muted-foreground" color="#888" size={20} />
-              <Text className="font-headline font-bold text-lg text-foreground">Order Summary</Text>
+          {/* LADO DERECHO: TICKET DE ORDEN */}
+          <View className={cn(
+            "w-full md:w-[400px] border-t md:border-t-0 md:border-l flex-col shadow-2xl h-80 md:h-auto",
+            isDark ? "bg-zinc-950 border-zinc-800" : "bg-zinc-50 border-zinc-200"
+          )}>
+
+            {/* Título del Ticket */}
+            <View className={cn("p-6 pb-4 border-b", isDark ? "border-zinc-800" : "border-zinc-200")}>
+              <View className="flex-row items-center gap-3">
+                <ReceiptText color={primaryColor} size={24} />
+                <Text className={cn("font-headline font-bold text-xl", isDark ? "text-white" : "text-zinc-900")}>
+                  Order Summary
+                </Text>
+              </View>
             </View>
 
-            <ScrollView className="flex-1 -mx-2 px-2" contentContainerStyle={{flexGrow: 1}}>
+            {/* Lista de Items en el carrito */}
+            <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
               {cart.length === 0 ? (
-                <View className="flex-col items-center justify-center h-full opacity-50 space-y-4">
-                  <ReceiptText className="w-12 h-12 text-muted-foreground mb-4" color="#888" size={48} />
-                  <Text className="text-muted-foreground">No items added yet</Text>
+                <View className="flex-col items-center justify-center h-full opacity-60 space-y-4 py-10">
+                  <View className={cn("w-20 h-20 rounded-full items-center justify-center mb-2", isDark ? "bg-zinc-800" : "bg-zinc-200")}>
+                    <ReceiptText color={isDark ? "#52525b" : "#a1a1aa"} size={36} />
+                  </View>
+                  <Text className={cn("font-bold text-base", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                    No items added yet
+                  </Text>
+                  <Text className={cn("text-xs text-center px-8", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                    Select items from the menu to start building the order.
+                  </Text>
                 </View>
               ) : (
-                <View className="space-y-4">
+                <View>
                   {cart.map(item => (
-                    <View key={item.id} className="flex-row items-center justify-between p-3 rounded-xl bg-accent/5 border border-border mb-3">
-                      <View className="flex-1">
-                        <Text className="font-bold text-sm text-foreground">{item.name}</Text>
-                        <Text className="text-xs text-primary font-bold mt-1">${(item.price * item.qty).toFixed(2)}</Text>
-                      </View>
-                      <View className="flex-row items-center gap-3">
-                        <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onPress={() => removeFromCart(item.id)}>
-                          <Minus className="w-4 h-4 text-foreground" color="#888" size={16} />
-                        </Button>
-                        <Text className="font-bold text-sm w-4 text-center text-foreground">{item.qty}</Text>
-                        <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onPress={() => addToCart(item)}>
-                          <Plus className="w-4 h-4 text-foreground" color="#888" size={16} />
-                        </Button>
-                      </View>
-                    </View>
+                    <CartItemRow
+                      key={item.id}
+                      item={item}
+                      isDark={isDark}
+                      primaryColor={primaryColor}
+                      onIncrease={() => addToCart(item)}
+                      onDecrease={() => removeFromCart(item.id)}
+                    />
                   ))}
                 </View>
               )}
             </ScrollView>
 
-            <View className="pt-6 mt-6 border-t border-border space-y-4">
+            {/* Footer: Totales y Botón Enviar */}
+            <View className={cn("p-6 border-t space-y-4", isDark ? "bg-zinc-950 border-zinc-800" : "bg-white border-zinc-200")}>
               <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-sm font-medium text-muted-foreground">Subtotal</Text>
-                <Text className="text-sm font-medium text-muted-foreground">${total.toFixed(2)}</Text>
+                <Text className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Subtotal</Text>
+                <Text className={cn("text-base font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                  ${total.toFixed(2)}
+                </Text>
               </View>
               <View className="flex-row justify-between items-center mb-6">
-                <Text className="text-2xl font-headline font-bold text-foreground">Total</Text>
-                <Text className="text-2xl font-headline font-bold text-foreground">${total.toFixed(2)}</Text>
+                <Text className={cn("text-2xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
+                  Total
+                </Text>
+                <Text style={{ color: primaryColor }} className="text-3xl font-headline font-bold">
+                  ${total.toFixed(2)}
+                </Text>
               </View>
-              <Button 
-                className="w-full h-14 rounded-2xl flex-row justify-center items-center shadow-xl shadow-primary/20"
+              <TouchableOpacity
+                activeOpacity={0.8}
                 disabled={cart.length === 0}
                 onPress={handleSendOrder}
+                style={{ backgroundColor: cart.length === 0 ? (isDark ? '#3f3f46' : '#e4e4e7') : primaryColor }}
+                className="w-full h-14 rounded-[20px] flex-row justify-center items-center shadow-lg"
               >
-                <Send className="w-6 h-6 text-primary-foreground mr-2" color="white" size={24} />
-                <Text className="text-lg font-bold text-primary-foreground">Send to Kitchen</Text>
-              </Button>
+                <Send color={cart.length === 0 ? (isDark ? '#a1a1aa' : '#a1a1aa') : "white"} size={20} className="mr-3" />
+                <Text className={cn("text-lg font-bold tracking-wide", cart.length === 0 ? (isDark ? "text-zinc-400" : "text-zinc-400") : "text-white")}>
+                  Send to Kitchen
+                </Text>
+              </TouchableOpacity>
             </View>
+
           </View>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
