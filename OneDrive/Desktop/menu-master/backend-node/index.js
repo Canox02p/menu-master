@@ -3,8 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const db = require('./config/relacional');
-
 const pedidoController = require('./controllers/PedidoController');
 
 const Usuario = require('./models/Usuario');
@@ -20,10 +18,13 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+
+const PHP_API = process.env.PHP_API_URL || 'http://menumaster.free.nf/productos.php';
+
 // --- 🍃 CONEXIÓN A MONGODB ---
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log(' BD No Relacional (MongoDB) Conectada'))
-    .catch(err => console.error(' Error de conexión MongoDB:', err));
+    .then(() => console.log('🟢 BD No Relacional (MongoDB) Conectada'))
+    .catch(err => console.error('❌ Error de conexión MongoDB:', err));
 
 // ==========================================
 // 🔐 1. MÓDULO DE AUTENTICACIÓN
@@ -53,11 +54,7 @@ app.get('/usuarios', async (req, res) => {
 
 app.put('/usuarios/:id', async (req, res) => {
     try {
-        const usuario = await Usuario.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        );
+        const usuario = await Usuario.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(usuario);
     } catch (err) { res.status(400).json({ error: err.message }); }
 });
@@ -98,9 +95,7 @@ app.delete('/mesas/:id', async (req, res) => {
     try {
         await Mesa.findByIdAndDelete(req.params.id);
         res.json({ mensaje: "Mesa eliminada correctamente de la base de datos" });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
+    } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 // ==========================================
@@ -129,7 +124,6 @@ app.patch('/pedidos/:id/estado', async (req, res) => {
             { estado: req.body.estado, fecha_actualizacion: Date.now() },
             { new: true }
         );
-
         if (req.body.estado === 'LISTO') {
             const alerta = new Notificacion({
                 tipo: 'PEDIDO_LISTO',
@@ -149,42 +143,28 @@ app.delete('/pedidos/:id', async (req, res) => {
 });
 
 // ==========================================
-// 📦 6. MÓDULO DE INVENTARIO (MySQL)
+// 📦 6. MÓDULO DE INVENTARIO
+// ✅ Consume PHP API de InfinityFree (MySQL)
 // ==========================================
 app.get('/productos', async (req, res) => {
     try {
-        const query = `
-            SELECT
-                p.id_producto AS id,
-                p.nombre,
-                p.descripcion,
-                p.precio,
-                p.stock,
-                c.nombre AS categoria
-            FROM productos p
-            LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
-        `;
-
-        const [rows] = await db.query(query);
-        res.json(rows);
+        const response = await fetch(PHP_API);
+        const data = await response.json();
+        res.json(data);
     } catch (err) {
-        res.status(500).json({ error: "No se pudo conectar con el inventario" });
+        res.status(500).json({ error: "No se pudo conectar con el inventario PHP" });
     }
 });
 
 app.put('/productos/:id', async (req, res) => {
     try {
-        const id = req.params.id;
-        const { nombre, descripcion, precio, stock } = req.body;
-
-        const query = `
-            UPDATE productos 
-            SET nombre = ?, descripcion = ?, precio = ?, stock = ? 
-            WHERE id_producto = ?
-        `;
-
-        await db.query(query, [nombre, descripcion, precio, stock, id]);
-        res.json({ mensaje: "Producto actualizado con éxito" });
+        const response = await fetch(`${PHP_API}?id=${req.params.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(req.body)
+        });
+        const data = await response.json();
+        res.json(data);
     } catch (err) {
         res.status(500).json({ error: "No se pudo actualizar el producto" });
     }
@@ -192,15 +172,12 @@ app.put('/productos/:id', async (req, res) => {
 
 app.delete('/productos/:id', async (req, res) => {
     try {
-        const id = req.params.id;
-
-        const query = `DELETE FROM productos WHERE id_producto = ?`;
-        await db.query(query, [id]);
-
-        console.log(`✅ Producto ${id} eliminado correctamente en MySQL.`);
-        res.json({ mensaje: "Producto eliminado con éxito" });
+        const response = await fetch(`${PHP_API}?id=${req.params.id}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        res.json(data);
     } catch (err) {
-        console.error("Error al eliminar en MySQL:", err.message);
         res.status(500).json({ error: "No se pudo eliminar el producto" });
     }
 });
@@ -233,9 +210,8 @@ app.post('/ventas', async (req, res) => {
 });
 
 // ==========================================
-// 📊 ESTADÍSTICAS COMPLETAS (DASHBOARD Y REPORTES)
+// 📊 8. ESTADÍSTICAS COMPLETAS
 // ==========================================
-
 app.get('/admin/stats-completo', async (req, res) => {
     try {
         const hoy = new Date();
@@ -249,7 +225,6 @@ app.get('/admin/stats-completo', async (req, res) => {
 
         const ventasHoyMonto = vHoyStats[0]?.total || 0;
         const pedidosDiaCant = vHoyStats[0]?.cantidad || 0;
-
         const ticketPromedio = pedidosDiaCant > 0 ? (ventasHoyMonto / pedidosDiaCant) : 0;
 
         const vMes = await Venta.aggregate([
@@ -257,7 +232,18 @@ app.get('/admin/stats-completo', async (req, res) => {
             { $group: { _id: null, total: { $sum: "$monto_pagado" } } }
         ]);
 
-        const [platilloCrack] = await db.query('SELECT nombre FROM productos ORDER BY precio DESC LIMIT 1');
+        // ✅ Producto más caro via PHP API
+        let crack = "Sin datos";
+        try {
+            const phpRes = await fetch(PHP_API);
+            const productos = await phpRes.json();
+            if (productos.length > 0) {
+                crack = productos.sort((a, b) => b.precio - a.precio)[0].nombre;
+            }
+        } catch (e) {
+            console.warn("⚠️ No se pudo obtener producto destacado de PHP API");
+        }
+
         const totalMesas = await Mesa.countDocuments();
         const ocupadas = await Mesa.countDocuments({ estado: 'OCUPADA' });
         const ultimos = await Pedido.find().sort({ fecha_creacion: -1 }).limit(5);
@@ -267,8 +253,8 @@ app.get('/admin/stats-completo', async (req, res) => {
                 ventasHoy: ventasHoyMonto,
                 pedidosDia: pedidosDiaCant,
                 ingresosMes: vMes[0]?.total || 0,
-                ticketPromedio: ticketPromedio,
-                crack: platilloCrack[0]?.nombre || "Sin datos",
+                ticketPromedio,
+                crack,
                 ocupacion: {
                     porcentaje: totalMesas > 0 ? Math.round((ocupadas / totalMesas) * 100) : 0,
                     ocupadas,
@@ -296,5 +282,5 @@ app.get('/notificaciones/:id_usuario', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(` Servidor POS corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor POS corriendo en http://localhost:${PORT}`);
 });
