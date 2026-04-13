@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, Send, ReceiptText, ChevronLeft } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+import { useAuth } from '@/components/providers/auth-provider';
+import { api } from '@/lib/api'; // Importamos tu API
 
 // ==========================================
 // 1. INTERFACES (Tipado Estricto)
@@ -26,7 +27,8 @@ interface CartItem extends MenuItem {
 }
 
 interface OrderTakingProps {
-  tableId: number;
+  tableId: string; // <-- AHORA ES STRING (ID de Mongo)
+  tableNumber: number; // <-- AHORA RECIBE EL NÚMERO VISUAL
   onClose: () => void;
 }
 
@@ -46,26 +48,10 @@ interface CartItemRowProps {
   onDecrease: () => void;
 }
 
-// ==========================================
-// 2. DATOS MOCKEADOS
-// ==========================================
-
-const MENU_CATEGORIES = ['Main', 'Appetizers', 'Drinks', 'Desserts'];
-
-const MOCK_MENU: MenuItem[] = [
-  { id: '1', name: 'Signature Burger', price: 18.5, category: 'Main' },
-  { id: '2', name: 'Truffle Pasta', price: 22.0, category: 'Main' },
-  { id: '3', name: 'Caesar Salad', price: 14.0, category: 'Appetizers' },
-  { id: '4', name: 'Lobster Risotto', price: 32.0, category: 'Main' },
-  { id: '5', name: 'Margarita Pizza', price: 16.5, category: 'Main' },
-  { id: '6', name: 'Artisan Latte', price: 5.5, category: 'Drinks' },
-  { id: '7', name: 'Chocolate Cake', price: 9.0, category: 'Desserts' },
-];
-
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 3. SUBCOMPONENTES INTERACTIVOS
+// 2. SUBCOMPONENTES INTERACTIVOS
 // ==========================================
 
 const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuItemCardProps) => {
@@ -89,7 +75,7 @@ const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuIte
           style={{
             borderWidth: 1.5,
             borderColor: isHovered ? primaryColor : 'transparent',
-            transform: [{ scale: isHovered ? 0.97 : 1 }] // Efecto "botón" al presionarlo
+            transform: [{ scale: isHovered ? 0.97 : 1 }]
           }}
         >
           <CardContent className="p-5 flex-1 justify-between">
@@ -105,6 +91,7 @@ const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuIte
                 className="w-9 h-9 rounded-[12px] flex items-center justify-center transition-colors"
                 style={{ backgroundColor: isHovered ? primaryColor : `${primaryColor}15` }}
               >
+                {/* LIMPIEZA: Sin className */}
                 <Plus color={isHovered ? "white" : primaryColor} size={20} strokeWidth={3} />
               </View>
             </View>
@@ -136,6 +123,7 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease }: Car
           onPress={onDecrease}
           className={cn("w-8 h-8 rounded-lg items-center justify-center", isDark ? "bg-zinc-800" : "bg-white shadow-sm")}
         >
+          {/* LIMPIEZA: Sin className */}
           <Minus color={isDark ? "#d4d4d8" : "#52525b"} size={16} strokeWidth={3} />
         </TouchableOpacity>
 
@@ -149,6 +137,7 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease }: Car
           style={{ backgroundColor: primaryColor }}
           className="w-8 h-8 rounded-lg items-center justify-center shadow-sm"
         >
+          {/* LIMPIEZA: Sin className */}
           <Plus color="white" size={16} strokeWidth={3} />
         </TouchableOpacity>
       </View>
@@ -157,26 +146,62 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease }: Car
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL (Overlay/Modal)
+// 3. COMPONENTE PRINCIPAL (Overlay/Modal)
 // ==========================================
 
-export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
+export function OrderTaking({ tableId, tableNumber, onClose }: OrderTakingProps) {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
   const { toast } = useToast();
+  const { user } = useAuth(); // Necesitamos el usuario para el ID del mesero
 
+  // ESTADOS REALES
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<string[]>(['All']);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('Main');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Cálculos Responsivos
+  // FETCH DEL MENÚ DESDE MYSQL (VÍA TU API)
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.productos.getAll();
+
+        // Mapeo adaptado a la UI
+        const mappedItems: MenuItem[] = data.map((p: any) => ({
+          id: p.id_producto?.toString() || p.id?.toString() || Math.random().toString(),
+          name: p.nombre,
+          price: Number(p.precio) || 0,
+          category: p.categoria || 'General'
+        }));
+
+        setMenuItems(mappedItems);
+
+        // Extraer categorías únicas dinámicamente
+        const uniqueCategories = Array.from(new Set(mappedItems.map(i => i.category)));
+        setCategories(['All', ...uniqueCategories]);
+      } catch (error) {
+        console.error("Error cargando el menú:", error);
+        toast({ title: "Error", description: "No se pudo cargar el menú", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMenu();
+  }, []);
+
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
   const getCardWidth = (): StyleProp<ViewStyle> => {
     if (isDesktop) return { width: '33.33%' };
     if (isTablet) return { width: '50%' };
-    return { width: '50%' }; // 2 columnas incluso en celular para el menú
+    return { width: '50%' };
   };
 
   const addToCart = (item: MenuItem) => {
@@ -195,10 +220,38 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
 
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
-  const handleSendOrder = () => {
-    // Aquí iría la lógica de enviar al backend
-    onClose();
+  // ENVÍO REAL A MONGODB
+  const handleSendOrder = async () => {
+    if (cart.length === 0) return;
+
+    try {
+      setIsSubmitting(true);
+
+      const payload = {
+        id_mesa: tableId,
+        id_mesero: user?.id || 'mesero_123',
+        productos: cart.map(item => ({
+          id_producto: item.id,
+          cantidad: item.qty,
+          precio_unitario: item.price
+        }))
+      };
+
+      await api.pedidos.crear(payload);
+
+      toast({ title: "¡Éxito!", description: "Pedido enviado a cocina." });
+      onClose(); // Cerramos el modal
+    } catch (error) {
+      console.error("Error al enviar el pedido:", error);
+      toast({ title: "Error", description: "No se pudo enviar el pedido.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const displayedMenu = selectedCategory === 'All'
+    ? menuItems
+    : menuItems.filter(i => i.category === selectedCategory);
 
   return (
     <SafeAreaView
@@ -207,7 +260,7 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
     >
       <View className="flex-col h-full w-full max-w-[1600px] mx-auto">
 
-        {/* TOP HEADER (Botón volver y Mesa) */}
+        {/* TOP HEADER */}
         <View className={cn(
           "p-4 border-b flex-row items-center justify-between",
           isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"
@@ -218,11 +271,12 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
               onPress={onClose}
               className={cn("w-10 h-10 rounded-xl items-center justify-center", isDark ? "bg-zinc-800" : "bg-zinc-100")}
             >
+              {/* LIMPIEZA: Sin className */}
               <ChevronLeft color={isDark ? "#d4d4d8" : "#52525b"} size={24} />
             </TouchableOpacity>
             <View>
               <Text className={cn("text-xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                Table #{tableId}
+                Table #{tableNumber}
               </Text>
               <Text className="text-xs font-medium text-zinc-500 tracking-wide uppercase">New Order Entry</Text>
             </View>
@@ -234,16 +288,16 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
           />
         </View>
 
-        {/* CONTENIDO PRINCIPAL (Dividido en Menú y Ticket) */}
+        {/* CONTENIDO PRINCIPAL */}
         <View className="flex-1 flex-col md:flex-row">
 
           {/* LADO IZQUIERDO: MENÚ */}
           <View className="flex-1 flex-col p-4">
 
-            {/* Categorías (Scroll Horizontal) */}
+            {/* Categorías */}
             <View className="mb-4">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible">
-                {MENU_CATEGORIES.map(cat => {
+                {categories.map(cat => {
                   const isSelected = selectedCategory === cat;
                   return (
                     <TouchableOpacity
@@ -270,18 +324,25 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
 
             {/* Grid de Platillos */}
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              <View className="flex-row flex-wrap -mx-2">
-                {MOCK_MENU.filter(i => i.category === selectedCategory).map(item => (
-                  <MenuItemCard
-                    key={item.id}
-                    item={item}
-                    isDark={isDark}
-                    primaryColor={primaryColor}
-                    widthStyle={getCardWidth()}
-                    onAdd={addToCart}
-                  />
-                ))}
-              </View>
+              {isLoading ? (
+                <View className="py-20 items-center justify-center">
+                  <ActivityIndicator size="large" color={primaryColor} />
+                  <Text className="text-zinc-500 mt-4">Cargando menú desde la base de datos...</Text>
+                </View>
+              ) : (
+                <View className="flex-row flex-wrap -mx-2">
+                  {displayedMenu.map(item => (
+                    <MenuItemCard
+                      key={item.id}
+                      item={item}
+                      isDark={isDark}
+                      primaryColor={primaryColor}
+                      widthStyle={getCardWidth()}
+                      onAdd={addToCart}
+                    />
+                  ))}
+                </View>
+              )}
             </ScrollView>
           </View>
 
@@ -291,9 +352,9 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
             isDark ? "bg-zinc-950 border-zinc-800" : "bg-zinc-50 border-zinc-200"
           )}>
 
-            {/* Título del Ticket */}
             <View className={cn("p-6 pb-4 border-b", isDark ? "border-zinc-800" : "border-zinc-200")}>
               <View className="flex-row items-center gap-3">
+                {/* LIMPIEZA: Sin className */}
                 <ReceiptText color={primaryColor} size={24} />
                 <Text className={cn("font-headline font-bold text-xl", isDark ? "text-white" : "text-zinc-900")}>
                   Order Summary
@@ -301,18 +362,15 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
               </View>
             </View>
 
-            {/* Lista de Items en el carrito */}
             <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
               {cart.length === 0 ? (
                 <View className="flex-col items-center justify-center h-full opacity-60 space-y-4 py-10">
                   <View className={cn("w-20 h-20 rounded-full items-center justify-center mb-2", isDark ? "bg-zinc-800" : "bg-zinc-200")}>
+                    {/* LIMPIEZA: Sin className */}
                     <ReceiptText color={isDark ? "#52525b" : "#a1a1aa"} size={36} />
                   </View>
                   <Text className={cn("font-bold text-base", isDark ? "text-zinc-400" : "text-zinc-500")}>
                     No items added yet
-                  </Text>
-                  <Text className={cn("text-xs text-center px-8", isDark ? "text-zinc-600" : "text-zinc-400")}>
-                    Select items from the menu to start building the order.
                   </Text>
                 </View>
               ) : (
@@ -331,7 +389,6 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
               )}
             </ScrollView>
 
-            {/* Footer: Totales y Botón Enviar */}
             <View className={cn("p-6 border-t space-y-4", isDark ? "bg-zinc-950 border-zinc-800" : "bg-white border-zinc-200")}>
               <View className="flex-row justify-between items-center mb-2">
                 <Text className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Subtotal</Text>
@@ -347,17 +404,27 @@ export function OrderTaking({ tableId, onClose }: OrderTakingProps) {
                   ${total.toFixed(2)}
                 </Text>
               </View>
+
               <TouchableOpacity
                 activeOpacity={0.8}
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || isSubmitting}
                 onPress={handleSendOrder}
                 style={{ backgroundColor: cart.length === 0 ? (isDark ? '#3f3f46' : '#e4e4e7') : primaryColor }}
                 className="w-full h-14 rounded-[20px] flex-row justify-center items-center shadow-lg"
               >
-                <Send color={cart.length === 0 ? (isDark ? '#a1a1aa' : '#a1a1aa') : "white"} size={20} className="mr-3" />
-                <Text className={cn("text-lg font-bold tracking-wide", cart.length === 0 ? (isDark ? "text-zinc-400" : "text-zinc-400") : "text-white")}>
-                  Send to Kitchen
-                </Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <View className="mr-2">
+                      {/* LIMPIEZA: Sin className */}
+                      <Send color={cart.length === 0 ? (isDark ? '#a1a1aa' : '#a1a1aa') : "white"} size={20} />
+                    </View>
+                    <Text className={cn("text-lg font-bold tracking-wide", cart.length === 0 ? (isDark ? "text-zinc-400" : "text-zinc-400") : "text-white")}>
+                      Send to Kitchen
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
 

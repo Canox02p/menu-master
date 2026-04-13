@@ -19,10 +19,11 @@ export const api = {
             const res = await fetch(`${BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password_hash }),
+                // CORRECCIÓN: El backend espera la propiedad "password", no "password_hash"
+                body: JSON.stringify({ email, password: password_hash }),
             });
             if (!res.ok) throw new Error('Credenciales incorrectas');
-            return res.json(); // Retorna { user, token }
+            return res.json();
         },
     },
 
@@ -52,10 +53,38 @@ export const api = {
             });
             return res.json();
         },
+        // Necesario para el KDS del Chef
         getCocina: async () => {
             const res = await fetch(`${BASE_URL}/pedidos/cocina`, { headers: await getHeaders() });
             return res.json();
         },
+        // Necesario para que el mesero vea sus órdenes activas y las cobre
+        getActivos: async () => {
+            const res = await fetch(`${BASE_URL}/pedidos/activos`, { headers: await getHeaders() });
+            return res.json();
+        },
+        // NUEVO: Necesario para que el Chef marque la orden como 'LISTO'
+        updateEstado: async (id: string, estado: string) => {
+            const res = await fetch(`${BASE_URL}/pedidos/${id}/estado`, {
+                method: 'PATCH',
+                headers: await getHeaders(),
+                body: JSON.stringify({ estado }),
+            });
+            return res.json();
+        },
+    },
+
+    // --- MÓDULO DE VENTAS (MongoDB) ---
+    // Necesario para cobrar y liberar la mesa
+    ventas: {
+        crear: async (data: object) => {
+            const res = await fetch(`${BASE_URL}/ventas`, {
+                method: 'POST',
+                headers: await getHeaders(),
+                body: JSON.stringify(data),
+            });
+            return res.json();
+        }
     },
 
     // --- MÓDULO DE INVENTARIO (MySQL via PHP) ---
@@ -72,6 +101,14 @@ export const api = {
             });
             return res.json();
         },
+        // Para borrar platillos desde el Menu Management
+        delete: async (id: string) => {
+            const res = await fetch(`${BASE_URL}/productos/${id}`, {
+                method: 'DELETE',
+                headers: await getHeaders()
+            });
+            return res.json();
+        }
     },
 
     // --- ADMINISTRACIÓN Y USUARIOS ---

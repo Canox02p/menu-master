@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserPlus, Shield, Star, Calendar, Phone, Mail } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+import { api } from '@/lib/api'; // Conexión a tu backend
 
 // ==========================================
 // 1. INTERFACES (Tipado Fuerte)
 // ==========================================
 
-type StaffRole = 'ADMIN' | 'WAITER' | 'CHEF';
+type StaffRole = 'ADMIN' | 'WAITER' | 'CHEF' | string;
 type StaffStatus = 'On Shift' | 'Off Duty' | 'Break';
 
 interface StaffMember {
@@ -36,22 +36,10 @@ interface StaffCardProps {
   onSettingsPress: (id: string) => void;
 }
 
-// ==========================================
-// 2. DATOS MOCKEADOS
-// ==========================================
-
-const staffMembers: StaffMember[] = [
-  { id: '1', name: 'Alex Admin', role: 'ADMIN', status: 'On Shift', email: 'alex@custoserve.com', phone: '+1 234 567 890', joined: 'Jan 2023', performance: 4.8 },
-  { id: '2', name: 'Will Waiter', role: 'WAITER', status: 'On Shift', email: 'will@custoserve.com', phone: '+1 234 567 891', joined: 'Mar 2023', performance: 4.5 },
-  { id: '3', name: 'Charlie Chef', role: 'CHEF', status: 'Off Duty', email: 'charlie@custoserve.com', phone: '+1 234 567 892', joined: 'Feb 2023', performance: 4.9 },
-  { id: '4', name: 'Elena Sommelier', role: 'WAITER', status: 'On Shift', email: 'elena@custoserve.com', phone: '+1 234 567 893', joined: 'Jun 2023', performance: 4.7 },
-  { id: '5', name: 'Marco Sous Chef', role: 'CHEF', status: 'Break', email: 'marco@custoserve.com', phone: '+1 234 567 894', joined: 'Jul 2023', performance: 4.6 },
-];
-
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 3. SUBCOMPONENTES INTERACTIVOS
+// 2. SUBCOMPONENTES INTERACTIVOS
 // ==========================================
 
 const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress, onSettingsPress }: StaffCardProps) => {
@@ -64,7 +52,7 @@ const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress,
     'Off Duty': { bg: isDark ? 'bg-zinc-800' : 'bg-zinc-200', text: isDark ? 'text-zinc-400' : 'text-zinc-500' }
   };
 
-  const currentStatus = statusColors[member.status];
+  const currentStatus = statusColors[member.status as keyof typeof statusColors] || statusColors['Off Duty'];
 
   return (
     <View style={widthStyle} className="p-2 mb-2">
@@ -91,9 +79,9 @@ const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress,
             {/* CABECERA DE LA TARJETA (Avatar y Estado) */}
             <View className="flex-row justify-between items-start mb-5">
               <Avatar className={cn("w-16 h-16 rounded-[18px] border-2", isDark ? "border-zinc-800" : "border-zinc-100")}>
-                <AvatarImage source={{ uri: `https://picsum.photos/seed/${member.id}/100/100` }} />
+                <AvatarImage source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random` }} />
                 <AvatarFallback className={isDark ? "bg-zinc-800" : "bg-zinc-100"}>
-                  <Text style={{ color: primaryColor }} className="font-headline font-bold text-xl">{member.name[0]}</Text>
+                  <Text style={{ color: primaryColor }} className="font-headline font-bold text-xl">{member.name.charAt(0)}</Text>
                 </AvatarFallback>
               </Avatar>
               <View className={cn("px-3 py-1.5 rounded-full", currentStatus.bg)}>
@@ -105,7 +93,7 @@ const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress,
 
             {/* INFO DEL USUARIO */}
             <View className="space-y-1.5 mb-5">
-              <Text className={cn("text-xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
+              <Text className={cn("text-xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")} numberOfLines={1}>
                 {member.name}
               </Text>
               <View className="flex-row items-center gap-1.5">
@@ -134,7 +122,7 @@ const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress,
                 </View>
                 <View className="flex-row items-center gap-2">
                   <Calendar color={isDark ? "#a1a1aa" : "#71717a"} size={14} />
-                  <Text className={cn("text-xs font-medium", isDark ? "text-zinc-500" : "text-zinc-500")}>Since {member.joined}</Text>
+                  <Text className={cn("text-xs font-medium", isDark ? "text-zinc-500" : "text-zinc-500")}>Desde {member.joined}</Text>
                 </View>
               </View>
             </View>
@@ -149,7 +137,7 @@ const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress,
                   isDark ? "border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                 )}
               >
-                <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Schedules</Text>
+                <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Horarios</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -160,7 +148,7 @@ const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress,
                   isDark ? "border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                 )}
               >
-                <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Settings</Text>
+                <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Ajustes</Text>
               </TouchableOpacity>
             </View>
 
@@ -172,13 +160,48 @@ const StaffCard = ({ member, isDark, primaryColor, widthStyle, onSchedulesPress,
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
 
 export function StaffManagement() {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
+
+  // Estados reales
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Carga de usuarios desde MongoDB
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.usuarios.getAll();
+
+        // Mapeo adaptando los datos de la base de datos a la UI
+        const mappedStaff: StaffMember[] = data.map((u: any) => ({
+          id: u._id,
+          name: u.nombre || 'Sin Nombre',
+          role: (u.rol || 'EMPLEADO').toUpperCase(),
+          email: u.email || 'sin@correo.com',
+          // Valores por defecto (fallbacks) ya que Mongo no los tiene aún
+          status: 'On Shift',
+          phone: '+52 000 000 0000',
+          joined: '2026',
+          performance: 5.0
+        }));
+
+        setStaff(mappedStaff);
+      } catch (error) {
+        console.error("Error al cargar personal:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStaff();
+  }, []);
 
   // Grid Responsivo
   const isDesktop = width >= 1024;
@@ -203,32 +226,39 @@ export function StaffManagement() {
           <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
             <View>
               <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                Team Directory
+                Directorio del Equipo
               </Text>
-              <Text className="text-zinc-500">Manage roles, permissions, and shift schedules.</Text>
+              <Text className="text-zinc-500">Administra roles y personal desde MongoDB.</Text>
             </View>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={{ backgroundColor: primaryColor }}
-              className="rounded-2xl flex-row items-center gap-2 px-6 py-3 shadow-lg shadow-primary/30 mt-2 md:mt-0 w-full md:w-auto justify-center"
-            >
-              <UserPlus color="white" size={20} />
-              <Text className="text-white font-bold tracking-wide">Add Member</Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center gap-4 mt-2 md:mt-0 w-full md:w-auto">
+              {isLoading && <ActivityIndicator color={primaryColor} />}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={{ backgroundColor: primaryColor }}
+                className="rounded-2xl flex-row items-center gap-2 px-6 py-3 shadow-lg shadow-primary/30 flex-1 md:flex-none justify-center"
+              >
+                <UserPlus color="white" size={20} />
+                <Text className="text-white font-bold tracking-wide">Añadir Miembro</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* GRID DEL EQUIPO */}
           <View className="flex-row flex-wrap -mx-2">
-            {staffMembers.map((member) => (
+            {!isLoading && staff.length === 0 && (
+              <Text className="text-zinc-500 text-center w-full py-10">No hay personal registrado en la base de datos.</Text>
+            )}
+
+            {staff.map((member) => (
               <StaffCard
                 key={member.id}
                 member={member}
                 isDark={isDark}
                 primaryColor={primaryColor}
                 widthStyle={getCardWidth()}
-                onSchedulesPress={(id) => console.log(`Open schedules for ${id}`)}
-                onSettingsPress={(id) => console.log(`Open settings for ${id}`)}
+                onSchedulesPress={(id) => console.log(`Abrir horarios para ${id}`)}
+                onSettingsPress={(id) => console.log(`Abrir ajustes para ${id}`)}
               />
             ))}
           </View>

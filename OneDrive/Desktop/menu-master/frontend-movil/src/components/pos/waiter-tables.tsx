@@ -1,25 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Clock, Plus, ChevronRight } from 'lucide-react-native';
+import { Users, Clock, Plus } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
 import { OrderTaking } from './order-taking';
+import { api } from '@/lib/api'; // Importamos la API real
 
 // ==========================================
 // 1. INTERFACES (Tipado)
 // ==========================================
 
 interface TableData {
-  id: number;
+  _id: string; // ID real de MongoDB
+  numero_mesa: number; // Número visual de la mesa
   status: 'Occupied' | 'Available';
   capacity: number;
-  time: string;
-  total: number;
 }
 
 interface TableCardProps {
@@ -31,25 +31,10 @@ interface TableCardProps {
   widthStyle: StyleProp<ViewStyle>;
 }
 
-// ==========================================
-// 2. DATOS MOCKEADOS
-// ==========================================
-
-const tables: TableData[] = Array.from({ length: 16 }, (_, i) => {
-  const isOccupied = Math.random() > 0.6;
-  return {
-    id: i + 1,
-    status: isOccupied ? 'Occupied' : 'Available', // Corregido el string raro
-    capacity: [2, 4, 6, 8][Math.floor(Math.random() * 4)],
-    time: isOccupied ? '45m' : '-',
-    total: isOccupied ? Math.floor(Math.random() * 150) + 20 : 0,
-  };
-});
-
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 3. SUBCOMPONENTES (SRP & Interacciones)
+// 2. SUBCOMPONENTES (SRP & Interacciones)
 // ==========================================
 
 const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyle }: TableCardProps) => {
@@ -76,10 +61,9 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
               : (isDark ? "bg-zinc-900/40 border-dashed border-zinc-700" : "bg-card/50 border-dashed border-muted")
           )}
           style={{
-            // Iluminamos el borde si está seleccionado o en hover
             borderWidth: isActive ? 2 : 1,
             borderColor: isActive ? primaryColor : (isOccupied ? 'transparent' : undefined),
-            transform: [{ scale: isActive ? 0.98 : 1 }] // Pequeño efecto de presión
+            transform: [{ scale: isActive ? 0.98 : 1 }]
           }}
         >
           {isOccupied && (
@@ -87,12 +71,13 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
               className="absolute top-0 right-0 w-16 h-16 rounded-bl-[32px] items-end pr-4 pt-4"
               style={{ backgroundColor: `${primaryColor}15` }}
             >
-              <Users className="w-5 h-5" color={primaryColor} size={20} />
+              {/* LIMPIEZA NATIVEWIND: Sin className */}
+              <Users color={primaryColor} size={20} />
             </View>
           )}
 
           <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-            #{table.id}
+            #{table.numero_mesa}
           </Text>
 
           <View>
@@ -101,17 +86,15 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
             </Text>
 
             {isOccupied ? (
-              <View className="space-y-1.5">
+              <View className="space-y-1.5 mt-2">
                 <View className="flex-row items-center gap-1.5 mb-1">
-                  <Clock className="w-3 h-3" color={primaryColor} size={14} />
-                  <Text style={{ color: primaryColor }} className="text-[11px] font-bold">{table.time}</Text>
+                  {/* LIMPIEZA NATIVEWIND: Sin className */}
+                  <Clock color={primaryColor} size={14} />
+                  <Text style={{ color: primaryColor }} className="text-[11px] font-bold">Activa</Text>
                 </View>
-                <Text className={cn("text-base font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                  ${table.total.toFixed(2)}
-                </Text>
               </View>
             ) : (
-              <View className="flex-row items-center gap-1 py-1">
+              <View className="flex-row items-center gap-1 py-1 mt-2">
                 <View className="w-2 h-2 rounded-full bg-emerald-500" />
                 <Text className="text-xs text-emerald-500 font-bold">Ready</Text>
               </View>
@@ -124,7 +107,7 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
 
 export function WaiterTables() {
@@ -132,10 +115,39 @@ export function WaiterTables() {
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
 
-  const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  // Estados Reales
+  const [tables, setTables] = useState<TableData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
   const [showOrderTaking, setShowOrderTaking] = useState(false);
 
-  // Grid responsivo exacto nativo
+  // Carga de datos desde MongoDB
+  const fetchTables = async () => {
+    try {
+      setIsLoading(true);
+      const data = await api.mesas.getAll();
+
+      // Mapeamos los datos de MongoDB a la interfaz UI
+      const mappedTables: TableData[] = data.map((t: any) => ({
+        _id: t._id,
+        numero_mesa: t.numero_mesa,
+        status: t.estado === 'LIBRE' ? 'Available' : 'Occupied',
+        capacity: t.capacidad
+      }));
+
+      // Ordenamos las mesas por número
+      setTables(mappedTables.sort((a, b) => a.numero_mesa - b.numero_mesa));
+    } catch (error) {
+      console.error("Error al cargar las mesas:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTables();
+  }, []);
+
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
@@ -160,22 +172,26 @@ export function WaiterTables() {
               <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
                 Floor Plan
               </Text>
-              <Text className="text-zinc-500">Select a table to start or manage an order.</Text>
+              <Text className="text-zinc-500">Selecciona una mesa para gestionar un pedido.</Text>
             </View>
-            <View className="flex-row gap-2 mt-2 md:mt-0">
-              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 px-3 py-1 mr-2" label="Available" />
+            <View className="flex-row items-center gap-3 mt-2 md:mt-0">
+              {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
+              <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/20 px-3 py-1" label="Available" />
               <Badge variant="outline" className="bg-rose-500/10 border-rose-500/20 px-3 py-1" label="Occupied" />
             </View>
           </View>
 
           {/* GRID DE MESAS */}
           <View className="flex-row flex-wrap -mx-2">
+            {!isLoading && tables.length === 0 && (
+              <Text className="text-zinc-500 p-4 w-full text-center">No hay mesas configuradas en la base de datos.</Text>
+            )}
             {tables.map((table) => (
               <TableCard
-                key={table.id}
+                key={table._id}
                 table={table}
-                isSelected={selectedTable === table.id}
-                onPress={() => setSelectedTable(table.id)}
+                isSelected={selectedTable?._id === table._id}
+                onPress={() => setSelectedTable(table)}
                 isDark={isDark}
                 primaryColor={primaryColor}
                 widthStyle={getCardWidth()}
@@ -198,12 +214,14 @@ export function WaiterTables() {
                 <View className="flex-row items-center gap-4">
                   <View className="w-14 h-14 rounded-2xl bg-white/20 items-center justify-center">
                     <Text className="text-2xl font-headline font-bold text-white max-w-full text-center">
-                      {selectedTable}
+                      {selectedTable.numero_mesa}
                     </Text>
                   </View>
                   <View>
-                    <Text className="font-bold text-lg text-white">Table #{selectedTable}</Text>
-                    <Text className="text-xs text-white/70 font-medium tracking-wider">MAIN DINING</Text>
+                    <Text className="font-bold text-lg text-white">Mesa #{selectedTable.numero_mesa}</Text>
+                    <Text className="text-xs text-white/70 font-medium tracking-wider uppercase">
+                      {selectedTable.status === 'Available' ? 'LIBRE' : 'OCUPADA'}
+                    </Text>
                   </View>
                 </View>
                 <View className="flex-row gap-2">
@@ -212,15 +230,20 @@ export function WaiterTables() {
                     className="rounded-xl items-center justify-center hover:bg-white/10"
                     onPress={() => setSelectedTable(null)}
                   >
-                    <Text className="text-white font-medium">Close</Text>
+                    <Text className="text-white font-medium">Cerrar</Text>
                   </Button>
-                  <Button
-                    className="rounded-xl bg-white items-center justify-center flex-row px-5 py-6 gap-1 shadow-lg shadow-black/10 active:scale-95 transition-transform"
-                    onPress={() => setShowOrderTaking(true)}
-                  >
-                    <Plus color={primaryColor} size={18} strokeWidth={3} />
-                    <Text style={{ color: primaryColor }} className="font-bold text-base ml-1">Order</Text>
-                  </Button>
+
+                  {/* Solo permitimos tomar orden si la mesa está libre */}
+                  {selectedTable.status === 'Available' && (
+                    <Button
+                      className="rounded-xl bg-white items-center justify-center flex-row px-5 py-6 gap-1 shadow-lg shadow-black/10 active:scale-95 transition-transform"
+                      onPress={() => setShowOrderTaking(true)}
+                    >
+                      {/* LIMPIEZA NATIVEWIND: Sin className */}
+                      <Plus color={primaryColor} size={18} strokeWidth={3} />
+                      <Text style={{ color: primaryColor }} className="font-bold text-base ml-1">Orden</Text>
+                    </Button>
+                  )}
                 </View>
               </View>
             </CardContent>
@@ -228,13 +251,15 @@ export function WaiterTables() {
         </View>
       )}
 
-      {/* VISTA DE ORDENES (Cubre la pantalla si se activa) */}
+      {/* VISTA DE TOMA DE ORDENES (Le pasamos el objeto mesa completo) */}
       {selectedTable && showOrderTaking && (
         <OrderTaking
-          tableId={selectedTable}
+          tableId={selectedTable._id} // ID de Mongo para el backend
+          tableNumber={selectedTable.numero_mesa} // Número visual
           onClose={() => {
             setShowOrderTaking(false);
             setSelectedTable(null);
+            fetchTables(); // Recargamos para actualizar el estado a OCUPADA
           }}
         />
       )}

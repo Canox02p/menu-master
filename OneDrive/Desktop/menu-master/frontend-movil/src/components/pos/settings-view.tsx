@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TextInput, useWindowDimensions, Platform, TouchableOpacity, Pressable } from 'react-native';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/providers/theme-provider';
 import { Moon, Sun, Palette, Smartphone, ShieldCheck, Database, Users, Check } from 'lucide-react-native';
+import { useToast } from '@/hooks/use-toast';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { cn } from '@/lib/utils';
 
 // ==========================================
@@ -29,7 +31,7 @@ interface SystemToggleProps {
 }
 
 const colorPresets: ColorPreset[] = [
-  { name: 'Classic Blue', hex: '#3b82f6' }, // Ajusté a un azul más vibrante
+  { name: 'Classic Blue', hex: '#3b82f6' },
   { name: 'Emerald', hex: '#10B981' },
   { name: 'Rose', hex: '#F43F5E' },
   { name: 'Amber', hex: '#F59E0B' },
@@ -72,6 +74,7 @@ export function SettingsView() {
   const { theme, toggleTheme, primaryColor, setPrimaryColor } = useTheme();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
+  const { toast } = useToast();
 
   // Estados locales para los toggles del sistema
   const [autoPrint, setAutoPrint] = useState(true);
@@ -81,6 +84,44 @@ export function SettingsView() {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
   const isLargeScreen = isDesktop || isTablet;
+
+  // 1. CARGAR AJUSTES GUARDADOS AL INICIAR
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const savedAutoPrint = await AsyncStorage.getItem('pos-autoPrint');
+        const savedCloudSync = await AsyncStorage.getItem('pos-cloudSync');
+        const savedGuestWifi = await AsyncStorage.getItem('pos-guestWifi');
+
+        if (savedAutoPrint !== null) setAutoPrint(savedAutoPrint === 'true');
+        if (savedCloudSync !== null) setCloudSync(savedCloudSync === 'true');
+        if (savedGuestWifi !== null) setGuestWifi(savedGuestWifi === 'true');
+      } catch (error) {
+        console.error('Error loading settings', error);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  // 2. FUNCIÓN PARA GUARDAR AJUSTES
+  const handleSaveSettings = async () => {
+    try {
+      await AsyncStorage.setItem('pos-autoPrint', String(autoPrint));
+      await AsyncStorage.setItem('pos-cloudSync', String(cloudSync));
+      await AsyncStorage.setItem('pos-guestWifi', String(guestWifi));
+
+      toast({
+        title: "Ajustes Guardados",
+        description: "Tus preferencias del sistema se han actualizado correctamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los ajustes.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}>
@@ -99,16 +140,14 @@ export function SettingsView() {
             <Text className="text-zinc-500">Customize the look, feel, and behavior of your POS.</Text>
           </View>
 
-          {/* CONTENEDOR DE TARJETAS (A dos columnas en pantallas grandes) */}
+          {/* CONTENEDOR DE TARJETAS */}
           <View
             style={{
               flexDirection: isLargeScreen ? 'row' : 'column',
               gap: 24
             }}
           >
-            {/* ---------------------------------------------------- */}
-            {/* TARJETA 1: APARIENCIA                               */}
-            {/* ---------------------------------------------------- */}
+            {/* TARJETA 1: APARIENCIA */}
             <Card className={cn(
               "border-none flex-1 rounded-[32px] overflow-hidden",
               isDark ? "bg-zinc-900/40" : "bg-white shadow-sm"
@@ -154,7 +193,6 @@ export function SettingsView() {
                 <View>
                   <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Brand Color</Text>
 
-                  {/* Selector de Presets */}
                   <View className="flex-row flex-wrap gap-3 mb-5">
                     {colorPresets.map((color) => {
                       const isActive = primaryColor.toLowerCase() === color.hex.toLowerCase();
@@ -175,7 +213,6 @@ export function SettingsView() {
                     })}
                   </View>
 
-                  {/* Input Custom Hex */}
                   <View className={cn("p-4 rounded-2xl border flex-row items-center gap-4", isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-zinc-50 border-zinc-200")}>
                     <View className="w-8 h-8 rounded-lg shadow-inner" style={{ backgroundColor: primaryColor }} />
                     <View className="flex-1">
@@ -194,9 +231,7 @@ export function SettingsView() {
               </CardContent>
             </Card>
 
-            {/* ---------------------------------------------------- */}
-            {/* TARJETA 2: CONTROL DEL SISTEMA                      */}
-            {/* ---------------------------------------------------- */}
+            {/* TARJETA 2: CONTROL DEL SISTEMA */}
             <Card className={cn(
               "border-none flex-1 rounded-[32px] overflow-hidden",
               isDark ? "bg-zinc-900/40" : "bg-white shadow-sm"
@@ -253,6 +288,7 @@ export function SettingsView() {
                 <View className="pt-6 mt-4">
                   <TouchableOpacity
                     activeOpacity={0.8}
+                    onPress={handleSaveSettings}
                     style={{ backgroundColor: primaryColor }}
                     className="w-full rounded-[16px] h-14 flex-row justify-center items-center shadow-lg shadow-primary/30"
                   >

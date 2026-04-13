@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+import { api } from '@/lib/api'; // API real
 
 // ==========================================
 // 1. INTERFACES (Tipado Estricto)
 // ==========================================
 
 interface KDSOrderItem {
+  id_producto?: string;
   name: string;
   qty: number;
   status: 'Preparing' | 'Completed';
@@ -21,7 +23,7 @@ interface KDSOrderItem {
 
 interface KDSOrder {
   id: string;
-  table: number;
+  table: string; // Mongo devuelve ID o string
   time: string;
   items: KDSOrderItem[];
   urgency: 'high' | 'normal';
@@ -36,46 +38,10 @@ interface OrderTicketProps {
   onCompleteOrder: (orderId: string) => void;
 }
 
-// ==========================================
-// 2. DATOS MOCKEADOS
-// ==========================================
-
-const initialOrders: KDSOrder[] = [
-  {
-    id: '101',
-    table: 4,
-    time: '12m ago',
-    items: [
-      { name: 'Signature Burger', qty: 2, status: 'Preparing', mods: 'No onions' },
-      { name: 'Caesar Salad', qty: 1, status: 'Completed', mods: '' }
-    ],
-    urgency: 'high'
-  },
-  {
-    id: '102',
-    table: 12,
-    time: '8m ago',
-    items: [
-      { name: 'Truffle Pasta', qty: 1, status: 'Preparing', mods: 'Extra sauce' },
-      { name: 'Margarita Pizza', qty: 1, status: 'Preparing', mods: '' }
-    ],
-    urgency: 'normal'
-  },
-  {
-    id: '103',
-    table: 2,
-    time: '2m ago',
-    items: [
-      { name: 'Lobster Risotto', qty: 2, status: 'Preparing', mods: '' }
-    ],
-    urgency: 'normal'
-  }
-];
-
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 3. SUBCOMPONENTES (SRP & Interacciones)
+// 2. SUBCOMPONENTES (SRP & Interacciones)
 // ==========================================
 
 const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, onCompleteOrder }: OrderTicketProps) => {
@@ -96,7 +62,7 @@ const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, 
             "border-none overflow-hidden transition-all duration-300 rounded-[24px] flex-1 flex flex-col",
             isDark ? "bg-zinc-900/40" : "bg-white",
             isHovered ? "shadow-md" : "shadow-sm",
-            isUrgent && (isDark ? "bg-red-950/20" : "bg-red-50/50") // Fondo sutil si es urgente
+            isUrgent && (isDark ? "bg-red-950/20" : "bg-red-50/50")
           )}
           style={{
             borderWidth: isUrgent ? 2 : 1.5,
@@ -113,23 +79,25 @@ const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, 
             <View className="flex-row items-center gap-3">
               <View
                 className={cn(
-                  "w-12 h-12 rounded-[14px] flex items-center justify-center shadow-sm",
+                  "w-12 h-12 rounded-[14px] flex items-center justify-center shadow-sm px-1",
                   isUrgent ? "bg-red-500" : (isDark ? "bg-zinc-800" : "bg-white")
                 )}
                 style={!isUrgent ? { backgroundColor: `${primaryColor}15` } : {}}
               >
                 <Text
                   style={!isUrgent ? { color: primaryColor } : { color: 'white' }}
-                  className="font-headline font-bold text-lg"
+                  className="font-headline font-bold text-xs text-center"
+                  numberOfLines={2}
                 >
                   T{order.table}
                 </Text>
               </View>
               <View>
                 <CardTitle className={cn("text-base font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                  #{order.id}
+                  #{order.id.slice(-4)}
                 </CardTitle>
                 <View className="flex-row items-center gap-1.5 mt-0.5">
+                  {/* LIMPIEZA NATIVEWIND */}
                   <Clock color={isUrgent ? "#ef4444" : (isDark ? "#a1a1aa" : "#71717a")} size={12} />
                   <Text className={cn("text-[11px] font-bold", isUrgent ? "text-red-500" : "text-zinc-500")}>
                     {order.time}
@@ -174,15 +142,8 @@ const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, 
                         {item.name}
                       </Text>
                     </View>
-                    {item.mods ? (
-                      <View className="flex-row items-center gap-1.5 ml-8 mt-1.5">
-                        <AlertCircle color="#f87171" size={12} />
-                        <Text className="text-[10px] text-red-500 font-bold uppercase tracking-wider">{item.mods}</Text>
-                      </View>
-                    ) : null}
                   </View>
 
-                  {/* BOTÓN CHECK (Para marcar platillo listo) */}
                   <TouchableOpacity
                     activeOpacity={0.6}
                     onPress={() => onCompleteItem(order.id, item.name)}
@@ -192,6 +153,7 @@ const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, 
                       isCompleted ? "bg-emerald-500" : (isDark ? "bg-zinc-700" : "bg-zinc-100")
                     )}
                   >
+                    {/* LIMPIEZA NATIVEWIND */}
                     <CheckCircle2 color={isCompleted ? "white" : (isDark ? "#52525b" : "#d4d4d8")} size={22} />
                   </TouchableOpacity>
                 </View>
@@ -217,17 +179,19 @@ const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, 
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
 
 export function ChefKDS() {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
+  const { toast } = useToast();
 
-  const [orders, setOrders] = useState<KDSOrder[]>(initialOrders);
+  const [orders, setOrders] = useState<KDSOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Responsividad exacta (1 col en móvil, 2 en tablet, 3 en desktop)
+  // Responsividad exacta
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
@@ -237,21 +201,78 @@ export function ChefKDS() {
     return { width: '100%' };
   };
 
+  // Cargar órdenes y resolver nombres con MySQL
+  const fetchKDSData = async () => {
+    try {
+      // 1. Obtener el diccionario de productos
+      const productosData = await api.productos.getAll();
+      const productDict: Record<string, string> = {};
+      productosData.forEach((p: any) => {
+        const id = p.id_producto?.toString() || p.id?.toString();
+        productDict[id] = p.nombre;
+      });
+
+      // 2. Obtener pedidos de Mongo
+      const pedidosData = await api.pedidos.getCocina();
+
+      // 3. Mapear y combinar
+      const mappedOrders: KDSOrder[] = pedidosData.map((p: any) => {
+        const fecha = new Date(p.fecha_creacion || Date.now());
+        const diffMins = Math.floor((Date.now() - fecha.getTime()) / 60000);
+
+        return {
+          id: p._id,
+          table: p.id_mesa?.numero_mesa?.toString() || p.id_mesa?.toString().slice(-4) || '?',
+          time: diffMins > 0 ? `${diffMins}m ago` : 'Just now',
+          items: (p.productos || []).map((prod: any) => ({
+            id_producto: prod.id_producto,
+            name: productDict[prod.id_producto] || `Platillo #${prod.id_producto?.slice(-4)}`,
+            qty: prod.cantidad,
+            status: 'Preparing',
+            mods: ''
+          })),
+          urgency: diffMins >= 15 ? 'high' : 'normal' // Si pasan de 15 mins se pone rojo
+        };
+      });
+
+      setOrders(mappedOrders);
+    } catch (error) {
+      console.error("Error cargando KDS:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKDSData();
+    // Auto-recarga cada 10 segundos (Polling)
+    const interval = setInterval(fetchKDSData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const completeItem = (orderId: string, itemName: string) => {
+    // Estado puramente visual para que el chef tache cosas
     setOrders(orders.map(o => {
       if (o.id === orderId) {
-        return {
-          ...o,
-          items: o.items.map(i => i.name === itemName ? { ...i, status: 'Completed' } : i)
-        };
+        return { ...o, items: o.items.map(i => i.name === itemName ? { ...i, status: 'Completed' } : i) };
       }
       return o;
     }));
   };
 
-  const completeOrder = (orderId: string) => {
-    // Aquí podrías mover la orden al historial, por ahora la removemos de la vista activa
-    setOrders(orders.filter(o => o.id !== orderId));
+  const completeOrder = async (orderId: string) => {
+    try {
+      // Optimistic UI: lo quitamos de la pantalla antes de la respuesta
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+
+      // Enviamos actualización a MongoDB (Cambia estado a LISTO y crea Notificación)
+      await api.pedidos.updateEstado(orderId, 'LISTO');
+
+      toast({ title: "¡Orden Lista!", description: "Se ha notificado al mesero." });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar el estado.", variant: "destructive" });
+      fetchKDSData(); // Revertimos si falla
+    }
   };
 
   return (
@@ -265,11 +286,14 @@ export function ChefKDS() {
 
           {/* HEADER DEL KDS */}
           <View className="flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 px-2">
-            <View>
-              <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                Kitchen Display
-              </Text>
-              <Text className="text-zinc-500">Monitor and prepare incoming dish requests.</Text>
+            <View className="flex-row items-center gap-4">
+              <View>
+                <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
+                  Kitchen Display
+                </Text>
+                <Text className="text-zinc-500">Monitor en tiempo real de MongoDB.</Text>
+              </View>
+              {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
             </View>
 
             {/* ESTADÍSTICAS RÁPIDAS */}
@@ -281,15 +305,6 @@ export function ChefKDS() {
                 <Text className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Pending</Text>
                 <Text className={cn("text-2xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
                   {orders.length}
-                </Text>
-              </View>
-
-              <View className={cn("h-10 w-[1px]", isDark ? "bg-zinc-800" : "bg-zinc-200")} />
-
-              <View className="items-center">
-                <Text className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Avg Speed</Text>
-                <Text style={{ color: primaryColor }} className="text-2xl font-headline font-bold">
-                  18m
                 </Text>
               </View>
             </View>
@@ -310,9 +325,12 @@ export function ChefKDS() {
             ))}
 
             {/* MENSAJE SI NO HAY ÓRDENES */}
-            {orders.length === 0 && (
+            {!isLoading && orders.length === 0 && (
               <View className="w-full py-20 items-center justify-center">
-                <CheckCircle2 color={primaryColor} size={64} className="mb-4 opacity-50" />
+                {/* LIMPIEZA NATIVEWIND: Se movieron las clases al contenedor View */}
+                <View className="mb-4 opacity-50">
+                  <CheckCircle2 color={primaryColor} size={64} />
+                </View>
                 <Text className={cn("text-2xl font-headline font-bold mb-2", isDark ? "text-white" : "text-zinc-900")}>All caught up!</Text>
                 <Text className="text-zinc-500">The kitchen is clear. Great job team.</Text>
               </View>

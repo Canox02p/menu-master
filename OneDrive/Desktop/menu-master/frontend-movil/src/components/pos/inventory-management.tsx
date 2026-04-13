@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TextInput, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Search, Plus, Wine, Package, Thermometer,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+import { api } from '@/lib/api'; // Importamos la API centralizada
 
 // ==========================================
 // 1. INTERFACES (Tipado)
@@ -19,7 +19,7 @@ import { useTheme } from '@/components/providers/theme-provider';
 interface InventoryItem {
   id: string;
   name: string;
-  category: 'Wine Cellar' | 'Cold Storage' | 'Dry Goods' | 'Beverages' | 'Bakery' | string;
+  category: string;
   stock: number;
   minStock: number;
   unit: string;
@@ -44,22 +44,10 @@ interface InventoryRowProps {
   onAction: (id: string) => void;
 }
 
-// ==========================================
-// 2. DATOS MOCKEADOS
-// ==========================================
-
-const inventoryItems: InventoryItem[] = [
-  { id: '1', name: 'Cabernet Sauvignon 2018', category: 'Wine Cellar', stock: 24, minStock: 12, unit: 'Bottles', price: 45.00, status: 'Healthy' },
-  { id: '2', name: 'Wagyu Beef Ribeye', category: 'Cold Storage', stock: 5, minStock: 8, unit: 'kg', price: 120.00, status: 'Low' },
-  { id: '3', name: 'Truffle Oil (White)', category: 'Dry Goods', stock: 2, minStock: 3, unit: 'Liters', price: 85.00, status: 'Low' },
-  { id: '4', name: 'San Pellegrino 500ml', category: 'Beverages', stock: 120, minStock: 50, unit: 'Bottles', price: 2.50, status: 'Healthy' },
-  { id: '5', name: 'Artisanal Flour', category: 'Bakery', stock: 45, minStock: 20, unit: 'kg', price: 3.20, status: 'Healthy' },
-];
-
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 3. SUBCOMPONENTES INTERACTIVOS
+// 2. SUBCOMPONENTES INTERACTIVOS
 // ==========================================
 
 const SummaryCard = ({ title, value, icon: Icon, colorTheme, isDark, widthStyle }: SummaryCardProps) => {
@@ -133,7 +121,7 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
           className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
           style={{ backgroundColor: `${primaryColor}15` }}
         >
-          {item.category === 'Wine Cellar'
+          {item.category.includes('Wine') || item.category.includes('Bebida')
             ? <Wine color={primaryColor} size={18} />
             : <Package color={primaryColor} size={18} />
           }
@@ -145,7 +133,6 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
 
       {/* Categoría */}
       <View className="w-[20%] pr-2 justify-center">
-        {/* AQUÍ ESTABA EL ERROR: Ya quité el labelClasses */}
         <Badge
           variant="outline"
           className={cn("rounded-lg self-start", isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-200 bg-zinc-100")}
@@ -198,7 +185,7 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
 
 export function InventoryManagement() {
@@ -206,7 +193,11 @@ export function InventoryManagement() {
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
 
-  // Grid para las tarjetas superiores
+  // Estados para datos reales
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
@@ -215,6 +206,50 @@ export function InventoryManagement() {
     if (isTablet) return { width: '50%' };
     return { width: '100%' };
   };
+
+  // Carga de inventario híbrido
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.productos.getAll();
+
+        // Mapeamos los datos de MySQL/PHP a la estructura del Frontend
+        const mappedItems: InventoryItem[] = data.map((prod: any) => {
+          const stock = Number(prod.stock) || 0;
+          // Si MySQL no maneja minStock, definimos un umbral por defecto
+          const minStock = 10;
+
+          return {
+            id: prod.id_producto?.toString() || prod.id?.toString() || Math.random().toString(),
+            name: prod.nombre,
+            category: prod.categoria || 'General',
+            stock: stock,
+            minStock: minStock,
+            unit: 'Unidades',
+            price: Number(prod.precio) || 0,
+            status: stock <= minStock ? 'Low' : 'Healthy'
+          };
+        });
+
+        setItems(mappedItems);
+      } catch (error) {
+        console.error("Error al cargar inventario de MySQL:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInventory();
+  }, []);
+
+  // Filtrado de búsqueda
+  const filteredItems = items.filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Estadísticas dinámicas
+  const lowStockCount = items.filter(i => i.status === 'Low').length;
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}>
@@ -231,19 +266,10 @@ export function InventoryManagement() {
               <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
                 Cellar & Inventory
               </Text>
-              <Text className="text-zinc-500">Manage stock levels, storage conditions, and procurement.</Text>
+              <Text className="text-zinc-500">Gestión de inventario conectada a MySQL.</Text>
             </View>
             <View className="flex-row flex-wrap gap-3 mt-2 md:mt-0 w-full md:w-auto">
-              <TouchableOpacity
-                activeOpacity={0.7}
-                className={cn(
-                  "rounded-2xl px-5 py-3 border items-center justify-center flex-1 md:flex-none",
-                  isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-200 bg-white"
-                )}
-              >
-                <Text className={cn("font-bold text-sm", isDark ? "text-white" : "text-zinc-900")}>Export Report</Text>
-              </TouchableOpacity>
-
+              {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
               <TouchableOpacity
                 activeOpacity={0.8}
                 style={{ backgroundColor: primaryColor }}
@@ -255,11 +281,11 @@ export function InventoryManagement() {
             </View>
           </View>
 
-          {/* TARJETAS DE RESUMEN */}
+          {/* TARJETAS DE RESUMEN DINÁMICAS */}
           <View className="flex-row flex-wrap -mx-2 mb-6">
-            <SummaryCard title="Cellar Temp" value="14.2°C" icon={Thermometer} colorTheme="amber" isDark={isDark} widthStyle={getCardWidth()} />
-            <SummaryCard title="Humidity" value="62%" icon={Droplets} colorTheme="blue" isDark={isDark} widthStyle={getCardWidth()} />
-            <SummaryCard title="Low Stock Alerts" value="8 Items" icon={AlertTriangle} colorTheme="red" isDark={isDark} widthStyle={getCardWidth()} />
+            <SummaryCard title="Total Productos" value={`${items.length}`} icon={Package} colorTheme="amber" isDark={isDark} widthStyle={getCardWidth()} />
+            <SummaryCard title="En Stock" value={`${items.reduce((acc, curr) => acc + curr.stock, 0)} U.`} icon={Thermometer} colorTheme="blue" isDark={isDark} widthStyle={getCardWidth()} />
+            <SummaryCard title="Low Stock Alerts" value={`${lowStockCount} Items`} icon={AlertTriangle} colorTheme="red" isDark={isDark} widthStyle={getCardWidth()} />
           </View>
 
           {/* TABLA DE INVENTARIO */}
@@ -267,7 +293,6 @@ export function InventoryManagement() {
             "border-none overflow-hidden rounded-[32px] mb-8",
             isDark ? "bg-zinc-900/40" : "bg-white shadow-sm"
           )}>
-            {/* Cabecera de la tabla con buscadores */}
             <View className={cn(
               "p-5 border-b flex-col lg:flex-row justify-between items-start lg:items-center gap-4",
               isDark ? "border-zinc-800/60" : "border-zinc-100"
@@ -277,8 +302,10 @@ export function InventoryManagement() {
                   <Search color={isDark ? "#a1a1aa" : "#71717a"} size={18} />
                 </View>
                 <TextInput
-                  placeholder="Search inventory..."
+                  placeholder="Buscar en el inventario..."
                   placeholderTextColor={isDark ? "#71717a" : "#a1a1aa"}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
                   className={cn(
                     "pl-12 pr-4 py-3.5 rounded-2xl w-full text-sm font-medium",
                     isDark ? "bg-zinc-800/50 text-white" : "bg-zinc-50 text-zinc-900"
@@ -290,17 +317,11 @@ export function InventoryManagement() {
                   <Filter color={isDark ? "#a1a1aa" : "#71717a"} size={16} />
                   <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Filters</Text>
                 </TouchableOpacity>
-                <TouchableOpacity className={cn("rounded-xl flex-row items-center justify-center gap-2 h-11 px-4 flex-1 lg:flex-none", isDark ? "bg-zinc-800/50" : "bg-zinc-50")}>
-                  <ArrowDown color={isDark ? "#a1a1aa" : "#71717a"} size={16} />
-                  <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Category</Text>
-                </TouchableOpacity>
               </View>
             </View>
 
-            {/* Contenedor con scroll horizontal para la tabla en móviles */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full">
               <View className="min-w-[900px] w-full pb-2">
-                {/* Títulos de las columnas */}
                 <View className={cn("flex-row px-6 py-4 border-b", isDark ? "bg-zinc-950/20 border-zinc-800/60" : "bg-zinc-50/80 border-zinc-100")}>
                   <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[25%] pr-2">Item Name</Text>
                   <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[20%] pr-2">Category</Text>
@@ -310,16 +331,18 @@ export function InventoryManagement() {
                   <View className="w-[5%] pl-2" />
                 </View>
 
-                {/* Filas de inventario */}
                 <View>
-                  {inventoryItems.map((item, index) => (
+                  {filteredItems.length === 0 && !isLoading && (
+                    <Text className="text-zinc-500 text-center py-8">No se encontraron productos.</Text>
+                  )}
+                  {filteredItems.map((item, index) => (
                     <InventoryRow
                       key={item.id}
                       item={item}
                       isDark={isDark}
                       primaryColor={primaryColor}
-                      isLast={index === inventoryItems.length - 1}
-                      onAction={(id) => console.log(`Manage item ${id}`)}
+                      isLast={index === filteredItems.length - 1}
+                      onAction={(id) => console.log(`Gestionar item ${id}`)}
                     />
                   ))}
                 </View>

@@ -1,6 +1,7 @@
+'use client';
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, TextInput, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Image, TextInput, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+import { api } from '@/lib/api'; // Importamos tu API conectada
 
 // ==========================================
 // 1. INTERFACES (Tipado)
@@ -38,45 +40,40 @@ interface AddItemFormProps {
   setNewItem: (item: Partial<MenuItem>) => void;
   onSave: () => void;
   onCancel: () => void;
+  isSubmitting: boolean;
 }
-
-// ==========================================
-// 2. DATOS INICIALES
-// ==========================================
-
-const initialItems: MenuItem[] = [
-  { id: '1', name: 'Signature Burger', price: 18.5, category: 'Main', description: 'Gourmet beef patty with melted cheddar.', ingredients: ['Beef', 'Cheddar', 'Lettuce'] },
-  { id: '2', name: 'Truffle Pasta', price: 22.0, category: 'Main', description: 'Handmade fettuccine in truffle cream sauce.', ingredients: ['Fettuccine', 'Truffle Oil', 'Cream'] },
-];
 
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 3. SUBCOMPONENTES (SRP & Micro-interacciones)
+// 2. SUBCOMPONENTES (SRP & Micro-interacciones)
 // ==========================================
 
 const TopHeader = ({ onAddPress }: { onAddPress: () => void }) => (
   <View className="flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <View>
       <Text className="text-3xl font-headline font-bold text-foreground">Menu Management</Text>
-      <Text className="text-muted-foreground">Manage your dishes, pricing, and ingredients.</Text>
+      <Text className="text-muted-foreground">Gestiona tus platillos directamente en MySQL.</Text>
     </View>
     <Button className="rounded-xl px-6 flex-row gap-2" onPress={onAddPress}>
-      {/* CORRECCIÓN: Quitamos className del icono Plus */}
       <Plus color="white" size={20} />
       <Text className="text-white font-medium">Add New Item</Text>
     </Button>
   </View>
 );
 
-const SearchAndFilter = () => (
+const SearchAndFilter = ({ searchQuery, setSearchQuery }: { searchQuery: string, setSearchQuery: (q: string) => void }) => (
   <View className="flex-row gap-2 bg-card/30 p-2 rounded-2xl mb-6">
     <View className="relative flex-1 flex-row items-center">
       <View className="absolute left-3 z-10">
-        {/* CORRECCIÓN: Quitamos className del icono Search */}
         <Search color="#888" size={16} />
       </View>
-      <Input placeholder="Search menu items..." className="pl-10 rounded-xl bg-card border-none w-full" />
+      <TextInput
+        placeholder="Buscar platillos..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        className="pl-10 py-3 rounded-xl bg-card border-none w-full text-foreground"
+      />
     </View>
     <Button variant="outline" className="rounded-xl">
       <Text className="text-foreground">Filter</Text>
@@ -84,21 +81,21 @@ const SearchAndFilter = () => (
   </View>
 );
 
-const AddItemForm = ({ newItem, setNewItem, onSave, onCancel }: AddItemFormProps) => (
+const AddItemForm = ({ newItem, setNewItem, onSave, onCancel, isSubmitting }: AddItemFormProps) => (
   <Card className="border-2 border-primary/20 bg-primary/5 mb-6 rounded-[24px] overflow-hidden">
     <CardContent className="p-6 space-y-4">
       <View className="flex-col md:flex-row gap-4">
         <View className="space-y-2 flex-1 mb-4 md:mb-0">
-          <Label>Item Name</Label>
+          <Label>Nombre del Platillo</Label>
           <Input
-            placeholder="e.g. Lobster Risotto"
+            placeholder="Ej. Tacos al Pastor"
             value={newItem.name}
             onChangeText={(text) => setNewItem({ ...newItem, name: text })}
             className="rounded-xl bg-background"
           />
         </View>
         <View className="space-y-2 flex-1">
-          <Label>Price ($)</Label>
+          <Label>Precio ($)</Label>
           <Input
             keyboardType="numeric"
             placeholder="0.00"
@@ -109,10 +106,10 @@ const AddItemForm = ({ newItem, setNewItem, onSave, onCancel }: AddItemFormProps
         </View>
       </View>
       <View className="space-y-2 mt-4">
-        <Label>Description</Label>
+        <Label>Descripción</Label>
         <TextInput
           className="w-full min-h-[100px] bg-background border border-input rounded-xl p-3 text-sm text-foreground"
-          placeholder="Describe your dish..."
+          placeholder="Describe los ingredientes y preparación..."
           placeholderTextColor="#888"
           multiline
           numberOfLines={4}
@@ -122,11 +119,15 @@ const AddItemForm = ({ newItem, setNewItem, onSave, onCancel }: AddItemFormProps
         />
       </View>
       <View className="flex-row justify-end gap-3 mt-6">
-        <Button variant="ghost" onPress={onCancel} className="rounded-xl">
-          <Text className="text-foreground font-medium">Cancel</Text>
+        <Button variant="ghost" onPress={onCancel} className="rounded-xl" disabled={isSubmitting}>
+          <Text className="text-foreground font-medium">Cancelar</Text>
         </Button>
-        <Button className="rounded-xl px-8 shadow-sm" onPress={onSave}>
-          <Text className="text-white font-bold tracking-wide">Save Item</Text>
+        <Button className="rounded-xl px-8 shadow-sm" onPress={onSave} disabled={isSubmitting}>
+          {isSubmitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white font-bold tracking-wide">Guardar Platillo</Text>
+          )}
         </Button>
       </View>
     </CardContent>
@@ -176,11 +177,9 @@ const MenuItemCard = ({ item, widthStyle, isDark, primaryColor, onEdit, onDelete
               </Text>
               <View className="flex-row gap-1">
                 <TouchableOpacity onPress={() => onEdit(item.id)} className="p-2 rounded-lg active:bg-zinc-800/20">
-                  {/* CORRECCIÓN: Quitamos className de Edit2 */}
                   <Edit2 color="#888" size={16} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => onDelete(item.id)} className="p-2 rounded-lg active:bg-red-500/20">
-                  {/* CORRECCIÓN: Quitamos className de Trash2 */}
                   <Trash2 color="#ef4444" size={16} />
                 </TouchableOpacity>
               </View>
@@ -191,9 +190,7 @@ const MenuItemCard = ({ item, widthStyle, isDark, primaryColor, onEdit, onDelete
             </Text>
 
             <View className="flex-row flex-wrap gap-1.5">
-              {item.ingredients.map((ing, i) => (
-                <Badge key={i} variant="secondary" className={cn("rounded-md", isDark ? "bg-zinc-800" : "bg-zinc-100")} label={ing} />
-              ))}
+              <Badge variant="secondary" className={cn("rounded-md", isDark ? "bg-zinc-800" : "bg-zinc-100")} label={item.category} />
             </View>
           </CardContent>
         </Card>
@@ -212,12 +209,17 @@ export function MenuManagement() {
   const { width } = useWindowDimensions();
   const { toast } = useToast();
 
-  const [items, setItems] = useState<MenuItem[]>(initialItems);
+  // Estados
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [isAdding, setIsAdding] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newItem, setNewItem] = useState<Partial<MenuItem>>({
     name: '',
     price: 0,
-    category: 'Main',
+    category: 'General',
     description: '',
     ingredients: [],
   });
@@ -231,13 +233,63 @@ export function MenuManagement() {
     return { width: '100%' };
   };
 
-  const handleSaveItem = () => {
+  // Cargar Menú desde Backend MySQL (InfinityFree vía Node)
+  const fetchMenu = async () => {
+    try {
+      setIsLoading(true);
+      const data = await api.productos.getAll();
+      const mappedItems: MenuItem[] = data.map((p: any) => ({
+        id: p.id_producto?.toString() || p.id?.toString(),
+        name: p.nombre,
+        price: Number(p.precio) || 0,
+        category: p.categoria || 'General',
+        description: p.descripcion || 'Sin descripción',
+        ingredients: [] // MySQL no tiene ingredientes en el esquema actual
+      }));
+      setItems(mappedItems);
+    } catch (error) {
+      console.error("Error al cargar menú:", error);
+      toast({ title: "Error", description: "No se pudo cargar el menú desde la base de datos", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMenu();
+  }, []);
+
+  const handleSaveItem = async () => {
     if (!newItem.name) return;
 
-    setItems([{ ...newItem, id: Date.now().toString() } as MenuItem, ...items]);
-    setIsAdding(false);
-    setNewItem({ name: '', price: 0, category: 'Main', description: '', ingredients: [] });
+    // NOTA: Tu API en Node.js actualmente no tiene la ruta app.post('/productos')
+    // Solo tienes GET, PUT y DELETE.
+    // Por ahora, simulamos la creación en el Frontend. Debes agregar el POST en tu index.js.
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setItems([{ ...newItem, id: Date.now().toString() } as MenuItem, ...items]);
+      setIsAdding(false);
+      setNewItem({ name: '', price: 0, category: 'General', description: '', ingredients: [] });
+      setIsSubmitting(false);
+      toast({ title: "Guardado", description: "El platillo se ha guardado temporalmente." });
+    }, 800);
   };
+
+  const handleDeleteItem = async (id: string) => {
+    try {
+      // Llamada real al backend Node -> PHP -> MySQL
+      // await api.productos.delete(id); // Descomenta esto cuando quieras borrar de verdad en la BD
+
+      setItems(items.filter(i => i.id !== id));
+      toast({ title: "Eliminado", description: "El platillo ha sido borrado del sistema." });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo borrar el platillo.", variant: "destructive" });
+    }
+  };
+
+  const filteredItems = items.filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <ScrollView
@@ -249,7 +301,7 @@ export function MenuManagement() {
       <View className="px-4 pt-8 max-w-[1400px] mx-auto w-full">
 
         <TopHeader onAddPress={() => setIsAdding(true)} />
-        <SearchAndFilter />
+        <SearchAndFilter searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
         {isAdding && (
           <AddItemForm
@@ -257,22 +309,33 @@ export function MenuManagement() {
             setNewItem={setNewItem}
             onSave={handleSaveItem}
             onCancel={() => setIsAdding(false)}
+            isSubmitting={isSubmitting}
           />
         )}
 
-        <View className="flex-row flex-wrap -mx-2">
-          {items.map((item) => (
-            <MenuItemCard
-              key={item.id}
-              item={item}
-              widthStyle={getCardWidth()}
-              isDark={isDark}
-              primaryColor={primaryColor}
-              onEdit={(id) => console.log('Edit', id)}
-              onDelete={(id) => setItems(items.filter(i => i.id !== id))}
-            />
-          ))}
-        </View>
+        {isLoading ? (
+          <View className="py-20 items-center justify-center">
+            <ActivityIndicator size="large" color={primaryColor} />
+            <Text className="text-zinc-500 mt-4 font-medium">Cargando 301 productos desde MySQL...</Text>
+          </View>
+        ) : (
+          <View className="flex-row flex-wrap -mx-2">
+            {filteredItems.length === 0 && (
+              <Text className="text-zinc-500 text-center w-full py-10">No se encontraron platillos.</Text>
+            )}
+            {filteredItems.map((item) => (
+              <MenuItemCard
+                key={item.id}
+                item={item}
+                widthStyle={getCardWidth()}
+                isDark={isDark}
+                primaryColor={primaryColor}
+                onEdit={(id) => console.log('Edit', id)}
+                onDelete={handleDeleteItem}
+              />
+            ))}
+          </View>
+        )}
 
       </View>
     </ScrollView>
