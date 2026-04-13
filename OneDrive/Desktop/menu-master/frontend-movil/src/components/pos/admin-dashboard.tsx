@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, useWindowDimensions, Platform, StyleProp, ViewStyle, Pressable, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, useWindowDimensions, Platform, StyleProp, ViewStyle, Pressable, SafeAreaView, StatusBar, ActivityIndicator } from 'react-native';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { TrendingUp, Users, DollarSign, Clock, LucideIcon } from 'lucide-react-native';
+import { TrendingUp, Users, DollarSign, Clock, LucideIcon, Star } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+// Importación corregida: ahora traemos el objeto 'api' completo
+import { api } from '@/lib/api';
 
 // ==========================================
 // 1. INTERFACES (Tipado Fuerte)
@@ -22,10 +24,10 @@ interface StatData {
   trend: 'up' | 'down' | 'neutral';
 }
 
-interface PopularItem {
-  name: string;
-  orders: number;
-  trend: number;
+interface RecentOrder {
+  id: string;
+  mesa: string;
+  estado: string;
 }
 
 interface StatCardProps {
@@ -41,16 +43,16 @@ interface WeeklyChartProps {
   primaryColor: string;
 }
 
-interface PopularItemsListProps {
-  items: PopularItem[];
+interface RecentOrdersListProps {
+  items: RecentOrder[];
   isDark: boolean;
   primaryColor: string;
 }
 
-// ==========================================
-// 2. DATOS (Mocks)
-// ==========================================
-const CHART_DATA: ChartData[] = [
+const CHARCOAL_GRAY = "#171A1C";
+
+// Datos simulados para la gráfica
+const MOCK_CHART_DATA: ChartData[] = [
   { name: 'LUN', sales: 3800 },
   { name: 'MAR', sales: 3000 },
   { name: 'MIÉ', sales: 2100 },
@@ -60,24 +62,8 @@ const CHART_DATA: ChartData[] = [
   { name: 'DOM', sales: 3200 },
 ];
 
-const STATS_DATA: StatData[] = [
-  { label: 'Ingresos Totales', value: '$24,560', change: '+12.5%', icon: DollarSign, trend: 'up' },
-  { label: 'Mesas Activas', value: '18/25', change: '72% cap.', icon: Users, trend: 'neutral' },
-  { label: 'Pedido Promedio', value: '$42.50', change: '-2.1%', icon: Clock, trend: 'down' },
-  { label: 'Artículos Vend.', value: '1,240', change: '+18.4%', icon: TrendingUp, trend: 'up' },
-];
-
-const POPULAR_ITEMS: PopularItem[] = [
-  { name: 'Hamburguesa de la casa', orders: 154, trend: 15 },
-  { name: 'Pasta con trufa', orders: 128, trend: 8 },
-  { name: 'Pizza Margarita', orders: 110, trend: -5 },
-  { name: 'Ensalada César', orders: 94, trend: 20 },
-];
-
-const CHARCOAL_GRAY = "#171A1C";
-
 // ==========================================
-// 3. SUBCOMPONENTES INTERACTIVOS
+// 2. SUBCOMPONENTES INTERACTIVOS
 // ==========================================
 
 const StatCard = ({ stat, isDark, primaryColor, widthStyle }: StatCardProps) => {
@@ -106,6 +92,7 @@ const StatCard = ({ stat, isDark, primaryColor, widthStyle }: StatCardProps) => 
           <CardContent className="p-5">
             <View className="flex-row justify-between items-start">
               <View style={{ backgroundColor: `${primaryColor}20` }} className="p-3 rounded-2xl">
+                {/* LIMPIEZA NATIVEWIND: Icono sin className, solo color y size */}
                 <stat.icon size={22} color={primaryColor} />
               </View>
               <View className={cn(
@@ -138,7 +125,6 @@ const StatCard = ({ stat, isDark, primaryColor, widthStyle }: StatCardProps) => 
 const WeeklyChart = ({ data, isDark, primaryColor }: WeeklyChartProps) => {
   const maxAxis = 4000;
   const gridLines = [4000, 3000, 2000, 1000, 0];
-
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(4);
 
@@ -146,7 +132,7 @@ const WeeklyChart = ({ data, isDark, primaryColor }: WeeklyChartProps) => {
     <Card className={cn("border-zinc-800/40 rounded-[32px] p-2 flex-1", isDark ? "bg-zinc-900/40" : "bg-white border-zinc-200")}>
       <CardHeader className="pb-2">
         <CardTitle><Text className={cn("font-bold text-xl", isDark ? "text-white" : "text-zinc-900")}>Ingresos Semanales</Text></CardTitle>
-        <CardDescription><Text className="text-zinc-500 text-xs">Selecciona un día o pasa el cursor para ver detalles.</Text></CardDescription>
+        <CardDescription><Text className="text-zinc-500 text-xs">Datos simulados (Próximamente en API)</Text></CardDescription>
       </CardHeader>
       <CardContent className="pt-8 pb-4">
         <View className="flex-row h-[240px] w-full">
@@ -164,10 +150,7 @@ const WeeklyChart = ({ data, isDark, primaryColor }: WeeklyChartProps) => {
             <View className="flex-1 flex-row items-end justify-between px-1 pb-8">
               {data.map((entry: ChartData, index: number) => {
                 const heightPercent = Math.max((entry.sales / maxAxis) * 100, 5);
-
-                const isHovered = hoveredIndex === index;
-                const isSelected = selectedIndex === index;
-                const isActive = isHovered || isSelected;
+                const isActive = hoveredIndex === index || selectedIndex === index;
 
                 return (
                   <Pressable
@@ -177,27 +160,12 @@ const WeeklyChart = ({ data, isDark, primaryColor }: WeeklyChartProps) => {
                     onHoverOut={() => setHoveredIndex(null)}
                     onPress={() => setSelectedIndex(index)}
                   >
-                    {isHovered && (
-                      <View
-                        className="absolute -top-12 px-3 py-2 rounded-xl z-50 shadow-lg items-center justify-center min-w-[70px]"
-                        style={{ backgroundColor: isDark ? '#3f3f46' : '#18181b' }}
-                      >
-                        <Text className="text-white text-xs font-bold">{entry.name}</Text>
-                        <Text className="text-zinc-300 text-[10px]">${entry.sales}</Text>
-                        <View
-                          className="absolute -bottom-1 w-2 h-2 rotate-45"
-                          style={{ backgroundColor: isDark ? '#3f3f46' : '#18181b' }}
-                        />
-                      </View>
-                    )}
-
                     <View
                       style={{
                         height: `${heightPercent}%`,
                         width: '75%',
                         backgroundColor: isActive ? primaryColor : `${primaryColor}40`,
                         borderRadius: 9999,
-                        transform: [{ scaleY: isHovered ? 1.03 : 1 }, { translateY: isHovered ? -2 : 0 }]
                       }}
                       className="transition-all duration-300"
                     />
@@ -218,44 +186,47 @@ const WeeklyChart = ({ data, isDark, primaryColor }: WeeklyChartProps) => {
   );
 };
 
-const PopularItemsList = ({ items, isDark, primaryColor }: PopularItemsListProps) => {
+const RecentOrdersList = ({ items, isDark, primaryColor }: RecentOrdersListProps) => {
   const [isHoveredBtn, setIsHoveredBtn] = useState(false);
 
   return (
     <Card className={cn("border-zinc-800/40 rounded-[32px] p-2 flex-1", isDark ? "bg-zinc-900/40" : "bg-white border-zinc-200")}>
       <CardHeader>
-        <CardTitle><Text className={cn("font-bold text-xl", isDark ? "text-white" : "text-zinc-900")}>Populares</Text></CardTitle>
-        <CardDescription><Text className="text-zinc-500 text-xs">Lo más pedido este mes.</Text></CardDescription>
+        <CardTitle><Text className={cn("font-bold text-xl", isDark ? "text-white" : "text-zinc-900")}>Actividad Reciente</Text></CardTitle>
+        <CardDescription><Text className="text-zinc-500 text-xs">Últimos pedidos del día.</Text></CardDescription>
       </CardHeader>
       <CardContent>
         <View className="space-y-1">
-          {items.map((item: PopularItem, i: number) => (
+          {items.length === 0 && (
+            <Text className="text-zinc-500 text-center py-4">No hay pedidos recientes</Text>
+          )}
+          {items.map((item: RecentOrder, i: number) => (
             <View key={i} className="flex-row items-center justify-between py-3 border-b border-zinc-800/20 last:border-0">
               <View className="flex-row items-center gap-4">
                 <View style={{ backgroundColor: `${primaryColor}15` }} className="w-9 h-9 rounded-xl items-center justify-center">
-                  <Text style={{ color: primaryColor }} className="text-xs font-black">#{i + 1}</Text>
+                  {/* LIMPIEZA NATIVEWIND: Icono sin className */}
+                  <Star color={primaryColor} size={16} />
                 </View>
                 <View>
-                  <Text className={cn("font-bold text-sm", isDark ? "text-white" : "text-zinc-900")}>{item.name}</Text>
-                  <Text className="text-[10px] text-zinc-500 font-medium">{item.orders} pedidos</Text>
+                  <Text className={cn("font-bold text-sm", isDark ? "text-white" : "text-zinc-900")}>Pedido {item.id.slice(-4)}</Text>
+                  <Text className="text-[10px] text-zinc-500 font-medium">{item.mesa}</Text>
                 </View>
               </View>
-              <Text className={cn("text-xs font-black", item.trend > 0 ? "text-emerald-500" : "text-rose-500")}>
-                {item.trend > 0 ? '+' : ''}{item.trend}%
+              <Text className={cn(
+                "text-[10px] font-black px-2 py-1 rounded-md",
+                item.estado === 'PAGADO' ? "bg-emerald-500/20 text-emerald-500" : "bg-blue-500/20 text-blue-500"
+              )}>
+                {item.estado}
               </Text>
             </View>
           ))}
-
           <Pressable
             onHoverIn={() => setIsHoveredBtn(true)}
             onHoverOut={() => setIsHoveredBtn(false)}
             onPressIn={() => setIsHoveredBtn(true)}
             onPressOut={() => setIsHoveredBtn(false)}
-            style={{
-              backgroundColor: primaryColor,
-              transform: [{ scale: isHoveredBtn ? 0.98 : 1 }]
-            }}
-            className="w-full mt-6 p-4 rounded-2xl items-center shadow-lg shadow-black/20 transition-transform"
+            style={{ backgroundColor: primaryColor, transform: [{ scale: isHoveredBtn ? 0.98 : 1 }] }}
+            className="w-full mt-6 p-4 rounded-2xl items-center shadow-lg transition-transform"
           >
             <Text className="text-white font-bold tracking-wide">Ver Todos los Reportes</Text>
           </Pressable>
@@ -266,14 +237,17 @@ const PopularItemsList = ({ items, isDark, primaryColor }: PopularItemsListProps
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL (Layout)
+// 3. COMPONENTE PRINCIPAL (Layout)
 // ==========================================
 
 export function AdminDashboard() {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
-
   const { width } = useWindowDimensions();
+
+  const [statsData, setStatsData] = useState<StatData[]>([]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
@@ -284,37 +258,88 @@ export function AdminDashboard() {
     return { width: '100%' };
   };
 
+  // FETCH DE DATOS REALES (Uso correcto de la API refactorizada)
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        // Llamada a tu API real
+        const response = await api.stats.getCompleto();
+
+        const kpis = response.kpis;
+        setStatsData([
+          {
+            label: 'Ingresos de Hoy',
+            value: `$${kpis.ventasHoy.toFixed(2)}`,
+            change: `Mes: $${kpis.ingresosMes.toFixed(2)}`,
+            icon: DollarSign,
+            trend: 'up'
+          },
+          {
+            label: 'Ocupación de Mesas',
+            value: `${kpis.ocupacion.ocupadas} Mesas`,
+            change: `${kpis.ocupacion.porcentaje}% cap.`,
+            icon: Users,
+            trend: kpis.ocupacion.porcentaje > 50 ? 'up' : 'neutral'
+          },
+          {
+            label: 'Ticket Promedio',
+            value: `$${kpis.ticketPromedio.toFixed(2)}`,
+            change: 'Diario',
+            icon: Clock,
+            trend: 'neutral'
+          },
+          {
+            label: 'Pedidos Hoy',
+            value: `${kpis.pedidosDia}`,
+            change: kpis.crack !== "Sin datos" ? `Top: ${kpis.crack.substring(0, 10)}.` : 'Sin datos PHP',
+            icon: TrendingUp,
+            trend: 'up'
+          },
+        ]);
+
+        const mappedOrders = response.recientes.map((p: any) => ({
+          id: p._id,
+          mesa: p.id_mesa?.numero_mesa ? `Mesa ${p.id_mesa.numero_mesa}` : 'Mesa N/A',
+          estado: p.estado
+        }));
+        setRecentOrders(mappedOrders);
+
+      } catch (error) {
+        console.error("Error al cargar estadísticas reales:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   return (
-    // Se añade SafeAreaView como contenedor principal
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}>
-      {/* Se añade StatusBar para respetar los iconos del celular */}
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor="transparent"
-        translucent
-      />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 24 : 0 }}
       >
-        <View
-          className="px-4 pb-12 max-w-[1400px] mx-auto w-full"
-          // Aquí aplicamos el empuje dinámico para Android (StatusBar.currentHeight) o iOS
-          style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 : 32 }}
-        >
+        <View className="px-4 pb-12 max-w-[1400px] mx-auto w-full" style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 : 32 }}>
 
-          <View className="mb-8 px-2">
-            <Text className={cn("text-3xl font-headline font-bold mb-1 tracking-tight", isDark ? "text-white" : "text-zinc-900")}>
-              Descripción General Operativa
-            </Text>
-            <Text className="text-zinc-500 text-sm">
-              Métricas de rendimiento en tiempo real para su restaurante.
-            </Text>
+          <View className="mb-8 px-2 flex-row justify-between items-center">
+            <View>
+              <Text className={cn("text-3xl font-headline font-bold mb-1 tracking-tight", isDark ? "text-white" : "text-zinc-900")}>
+                Dashboard Administrativo
+              </Text>
+              <Text className="text-zinc-500 text-sm">
+                Métricas en tiempo real desde MongoDB y MySQL.
+              </Text>
+            </View>
+            {isLoading && <ActivityIndicator color={primaryColor} />}
           </View>
 
+          {/* Tarjetas Superiores */}
           <View className="flex-row flex-wrap mb-4 -mx-2">
-            {STATS_DATA.map((stat: StatData, i: number) => (
+            {!isLoading && statsData.map((stat: StatData, i: number) => (
               <StatCard
                 key={i}
                 stat={stat}
@@ -325,22 +350,17 @@ export function AdminDashboard() {
             ))}
           </View>
 
-          <View
-            className="px-2"
-            style={{
-              flexDirection: isDesktop ? 'row' : 'column',
-              gap: 24
-            }}
-          >
+          {/* Gráficas y Listas */}
+          <View className="px-2" style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 24 }}>
             <View style={{ flex: isDesktop ? 1.6 : 1 }}>
-              <WeeklyChart data={CHART_DATA} isDark={isDark} primaryColor={primaryColor} />
+              <WeeklyChart data={MOCK_CHART_DATA} isDark={isDark} primaryColor={primaryColor} />
             </View>
 
             <View style={{ flex: isDesktop ? 1 : 1 }}>
-              <PopularItemsList items={POPULAR_ITEMS} isDark={isDark} primaryColor={primaryColor} />
+              <RecentOrdersList items={recentOrders} isDark={isDark} primaryColor={primaryColor} />
             </View>
-
           </View>
+
         </View>
       </ScrollView>
     </SafeAreaView>
