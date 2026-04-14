@@ -37,49 +37,81 @@ export default function Home() {
   const [name, setName] = useState('');
   const [role, setRole] = useState<'ADMIN' | 'WAITER' | 'CHEF'>('WAITER');
 
-  // Lógica de pestañas por defecto según el rol del usuario (Redirección Inteligente)
+  // Lógica de redirección inicial
   useEffect(() => {
     if (user?.role === 'WAITER') setActiveTab('tables');
     else if (user?.role === 'CHEF') setActiveTab('kds');
     else if (user?.role === 'ADMIN') setActiveTab('dashboard');
   }, [user]);
 
-  // MANEJADOR DE AUTENTICACIÓN (LOGIN / REGISTRO)
-  const handleAuth = async () => {
-    if (!email || !password || (mode === 'register' && !name)) {
-      return toast({ title: "Campos vacíos", description: "Por favor, llena todos los datos.", variant: "destructive" });
+  // VALIDACIONES EXHAUSTIVAS
+  const validateForm = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email.trim() || !password.trim()) {
+      toast({ title: "Campos incompletos", description: "El correo y contraseña son obligatorios.", variant: "destructive" });
+      return false;
     }
 
+    if (!emailRegex.test(email.trim())) {
+      toast({ title: "Correo inválido", description: "Por favor ingresa un formato de correo válido.", variant: "destructive" });
+      return false;
+    }
+
+    if (password.trim().length < 4) {
+      toast({ title: "Contraseña muy corta", description: "La contraseña debe tener al menos 4 caracteres.", variant: "destructive" });
+      return false;
+    }
+
+    if (mode === 'register' && !name.trim()) {
+      toast({ title: "Nombre requerido", description: "Por favor ingresa el nombre del empleado.", variant: "destructive" });
+      return false;
+    }
+
+    return true;
+  };
+
+  // MANEJADOR DE AUTENTICACIÓN
+  const handleAuth = async () => {
+    if (!validateForm()) return;
+
     setIsLoading(true);
+    const cleanEmail = email.trim().toLowerCase();
 
     try {
       if (mode === 'login') {
-        // Ejecuta la función de tu auth-provider.tsx
-        await login(email, password);
+        // En el login delegamos a tu AuthProvider, pero aseguramos de mandar el email limpio
+        await login(cleanEmail, password.trim());
         toast({ title: "Bienvenido", description: "Acceso concedido exitosamente." });
       } else {
-        // Lógica de Registro (Llama a tu backend Node.js)
+        // REGISTRO CON MANEJO DE ERRORES REAL
         const res = await fetch(`${BASE_URL}/usuarios`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            nombre: name,
-            email: email.toLowerCase(),
-            password_hash: password,
+            nombre: name.trim(),
+            email: cleanEmail,
+            password_hash: password.trim(),
             rol: role
           })
         });
 
-        if (!res.ok) throw new Error('Error al crear la cuenta');
+        // Extraemos el error exacto que manda Node.js (MongoDB)
+        const data = await res.json();
 
-        toast({ title: "Cuenta creada", description: "Ahora puedes iniciar sesión con tus datos." });
-        setMode('login'); // Regresa al modo login para que entre
-        setPassword(''); // Limpia la contraseña por seguridad
+        if (!res.ok) {
+          throw new Error(data.error || 'Error desconocido al crear la cuenta en el servidor.');
+        }
+
+        toast({ title: "Cuenta creada", description: "El usuario ha sido registrado en la base de datos." });
+        setMode('login');
+        setPassword('');
       }
     } catch (error: any) {
+      console.error("Error Auth:", error);
       toast({
-        title: mode === 'login' ? "Error de Acceso" : "Error de Registro",
-        description: error.message || "Verifica tus datos o tu conexión.",
+        title: mode === 'login' ? "Error de Acceso" : "Fallo en Registro",
+        description: error.message || "Verifica tu conexión a internet.",
         variant: "destructive"
       });
     } finally {
@@ -97,7 +129,6 @@ export default function Home() {
         <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <View className="max-w-md w-full space-y-8 animate-in fade-in zoom-in-95 duration-700">
 
-            {/* SECCIÓN DEL LOGO Y TÍTULO */}
             <View className="text-center space-y-4 mb-4">
               <View className="w-20 h-20 bg-primary rounded-[24px] mx-auto flex items-center justify-center shadow-2xl shadow-primary/40">
                 <Text className="text-primary-foreground font-headline font-bold text-4xl">C</Text>
@@ -112,11 +143,9 @@ export default function Home() {
               </View>
             </View>
 
-            {/* TARJETA DEL FORMULARIO */}
             <Card className="bg-zinc-900/50 border-zinc-800/60 backdrop-blur-xl rounded-[32px] overflow-hidden shadow-2xl">
               <CardContent className="p-8 space-y-5">
 
-                {/* CAMPO: NOMBRE (Solo Registro) */}
                 {mode === 'register' && (
                   <View className="space-y-2">
                     <Label className="text-zinc-400">Nombre Completo</Label>
@@ -129,7 +158,6 @@ export default function Home() {
                   </View>
                 )}
 
-                {/* CAMPO: EMAIL */}
                 <View className="space-y-2">
                   <Label className="text-zinc-400">Correo Electrónico</Label>
                   <Input
@@ -138,11 +166,11 @@ export default function Home() {
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoCorrect={false}
                     className="bg-zinc-800/50 border-zinc-700 text-white rounded-xl"
                   />
                 </View>
 
-                {/* CAMPO: CONTRASEÑA */}
                 <View className="space-y-2">
                   <Label className="text-zinc-400">Contraseña</Label>
                   <Input
@@ -154,12 +182,10 @@ export default function Home() {
                   />
                 </View>
 
-                {/* SELECTOR DE ROL (Solo Registro) */}
                 {mode === 'register' && (
                   <View className="space-y-3 pt-2">
                     <Label className="text-zinc-400">Rol del Empleado</Label>
                     <View className="flex-row gap-2">
-                      {/* Opcion Admin */}
                       <TouchableOpacity
                         onPress={() => setRole('ADMIN')}
                         className={cn("flex-1 p-3 rounded-xl border items-center gap-2", role === 'ADMIN' ? "bg-blue-500/20 border-blue-500" : "bg-zinc-800/50 border-zinc-700")}
@@ -168,7 +194,6 @@ export default function Home() {
                         <Text className={cn("text-xs font-bold", role === 'ADMIN' ? "text-blue-500" : "text-zinc-400")}>Admin</Text>
                       </TouchableOpacity>
 
-                      {/* Opcion Mesero */}
                       <TouchableOpacity
                         onPress={() => setRole('WAITER')}
                         className={cn("flex-1 p-3 rounded-xl border items-center gap-2", role === 'WAITER' ? "bg-orange-500/20 border-orange-500" : "bg-zinc-800/50 border-zinc-700")}
@@ -177,7 +202,6 @@ export default function Home() {
                         <Text className={cn("text-xs font-bold", role === 'WAITER' ? "text-orange-500" : "text-zinc-400")}>Mesero</Text>
                       </TouchableOpacity>
 
-                      {/* Opcion Chef */}
                       <TouchableOpacity
                         onPress={() => setRole('CHEF')}
                         className={cn("flex-1 p-3 rounded-xl border items-center gap-2", role === 'CHEF' ? "bg-emerald-500/20 border-emerald-500" : "bg-zinc-800/50 border-zinc-700")}
@@ -189,7 +213,6 @@ export default function Home() {
                   </View>
                 )}
 
-                {/* BOTÓN PRINCIPAL DE ACCIÓN */}
                 <Button
                   onPress={handleAuth}
                   disabled={isLoading}
@@ -204,10 +227,9 @@ export default function Home() {
                   )}
                 </Button>
 
-                {/* BOTÓN PARA ALTERNAR MODO */}
                 <TouchableOpacity onPress={() => {
                   setMode(mode === 'login' ? 'register' : 'login');
-                  setPassword(''); // Limpiamos password al cambiar
+                  setPassword('');
                 }} className="pt-2">
                   <Text className="text-zinc-500 text-center font-medium text-sm">
                     {mode === 'login' ? '¿No tienes cuenta? Registra un usuario' : '¿Ya tienes cuenta? Inicia sesión'}
@@ -217,7 +239,6 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* FOOTER */}
             <Text className="text-center text-zinc-600 text-[10px] font-medium tracking-widest mt-6">
               © 2026 MENU MASTER SYSTEMS.
             </Text>
@@ -240,14 +261,13 @@ export default function Home() {
         {activeTab === 'kds' && <ChefKDS />}
         {activeTab === 'settings' && <SettingsView />}
 
-        {/* MODULO EN CONSTRUCCIÓN */}
         {!['dashboard', 'menu', 'tables', 'orders', 'kds', 'settings', 'inventory', 'staff'].includes(activeTab) && (
           <View className="flex-1 flex-col items-center justify-center h-[60vh] opacity-50">
             <View className="mb-4">
               <LayoutDashboard color="gray" size={64} />
             </View>
-            <Text className="font-headline text-xl text-gray-500">Module Under Construction</Text>
-            <Text className="text-gray-500">This feature will be available in the next release.</Text>
+            <Text className="font-headline text-xl text-gray-500">Módulo en Construcción</Text>
+            <Text className="text-gray-500">Esta función estará disponible en la próxima versión.</Text>
           </View>
         )}
       </View>

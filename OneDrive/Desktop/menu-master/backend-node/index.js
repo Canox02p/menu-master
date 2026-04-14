@@ -18,8 +18,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-
-const PHP_API = process.env.PHP_API_URL || 'http://menumaster.free.nf/productos.php';
+// ✅ ACTUALIZADO: Tu dominio real de Hostinger
+const PHP_API = process.env.PHP_API_URL || 'https://mediumvioletred-jellyfish-327811.hostingersite.com/productos.php';
 
 // --- 🍃 CONEXIÓN A MONGODB ---
 mongoose.connect(process.env.MONGO_URI)
@@ -144,7 +144,7 @@ app.delete('/pedidos/:id', async (req, res) => {
 
 // ==========================================
 // 📦 6. MÓDULO DE INVENTARIO
-// ✅ Consume PHP API de InfinityFree (MySQL)
+// ✅ Consume PHP API de Hostinger (MySQL)
 // ==========================================
 app.get('/productos', async (req, res) => {
     try {
@@ -153,6 +153,20 @@ app.get('/productos', async (req, res) => {
         res.json(data);
     } catch (err) {
         res.status(500).json({ error: "No se pudo conectar con el inventario PHP" });
+    }
+});
+
+app.post('/productos', async (req, res) => {
+    try {
+        const response = await fetch(PHP_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(req.body)
+        });
+        const data = await response.json();
+        res.status(201).json(data);
+    } catch (err) {
+        res.status(500).json({ error: "No se pudo crear el producto en MySQL" });
     }
 });
 
@@ -232,7 +246,6 @@ app.get('/admin/stats-completo', async (req, res) => {
             { $group: { _id: null, total: { $sum: "$monto_pagado" } } }
         ]);
 
-        // ✅ Producto más caro via PHP API
         let crack = "Sin datos";
         try {
             const phpRes = await fetch(PHP_API);

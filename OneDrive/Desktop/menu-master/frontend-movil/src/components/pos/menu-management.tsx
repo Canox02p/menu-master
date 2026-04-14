@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
-import { api } from '@/lib/api'; // Importamos tu API conectada
+import { api } from '@/lib/api'; // Conexión real a tu API
 
 // ==========================================
 // 1. INTERFACES (Tipado)
@@ -44,7 +44,6 @@ interface AddItemFormProps {
 }
 
 const CHARCOAL_GRAY = "#171A1C";
-
 // ==========================================
 // 2. SUBCOMPONENTES (SRP & Micro-interacciones)
 // ==========================================
@@ -53,7 +52,7 @@ const TopHeader = ({ onAddPress }: { onAddPress: () => void }) => (
   <View className="flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <View>
       <Text className="text-3xl font-headline font-bold text-foreground">Menu Management</Text>
-      <Text className="text-muted-foreground">Gestiona tus platillos directamente en MySQL.</Text>
+      <Text className="text-muted-foreground">Gestiona tus platillos directamente en MySQL (Hostinger).</Text>
     </View>
     <Button className="rounded-xl px-6 flex-row gap-2" onPress={onAddPress}>
       <Plus color="white" size={20} />
@@ -200,7 +199,7 @@ const MenuItemCard = ({ item, widthStyle, isDark, primaryColor, onEdit, onDelete
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL (Layout)
+// 3. COMPONENTE PRINCIPAL (Layout)
 // ==========================================
 
 export function MenuManagement() {
@@ -233,7 +232,7 @@ export function MenuManagement() {
     return { width: '100%' };
   };
 
-  // Cargar Menú desde Backend MySQL (InfinityFree vía Node)
+  // Cargar Menú desde Backend MySQL (Vía API Node -> Hostinger)
   const fetchMenu = async () => {
     try {
       setIsLoading(true);
@@ -259,26 +258,39 @@ export function MenuManagement() {
     fetchMenu();
   }, []);
 
+  // Guardar en la base de datos real
   const handleSaveItem = async () => {
     if (!newItem.name) return;
-
-    // NOTA: Tu API en Node.js actualmente no tiene la ruta app.post('/productos')
-    // Solo tienes GET, PUT y DELETE.
-    // Por ahora, simulamos la creación en el Frontend. Debes agregar el POST en tu index.js.
     setIsSubmitting(true);
-    setTimeout(() => {
-      setItems([{ ...newItem, id: Date.now().toString() } as MenuItem, ...items]);
+    try {
+      // Usamos el POST que agregamos a api.ts
+      await api.productos.create({
+        nombre: newItem.name,
+        precio: newItem.price,
+        descripcion: newItem.description,
+        stock: 100, // Valor por defecto
+        id_categoria: 1 // General
+      });
+
+      toast({ title: "Guardado", description: "El platillo se ha guardado en MySQL." });
+
+      // Limpiamos el form y recargamos para ver el nuevo platillo
       setIsAdding(false);
       setNewItem({ name: '', price: 0, category: 'General', description: '', ingredients: [] });
+      fetchMenu();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "No se pudo crear el platillo.", variant: "destructive" });
+    } finally {
       setIsSubmitting(false);
-      toast({ title: "Guardado", description: "El platillo se ha guardado temporalmente." });
-    }, 800);
+    }
   };
 
+  // Borrar de la base de datos real
   const handleDeleteItem = async (id: string) => {
     try {
       // Llamada real al backend Node -> PHP -> MySQL
-      // await api.productos.delete(id); // Descomenta esto cuando quieras borrar de verdad en la BD
+      await api.productos.delete(id);
 
       setItems(items.filter(i => i.id !== id));
       toast({ title: "Eliminado", description: "El platillo ha sido borrado del sistema." });
@@ -316,7 +328,7 @@ export function MenuManagement() {
         {isLoading ? (
           <View className="py-20 items-center justify-center">
             <ActivityIndicator size="large" color={primaryColor} />
-            <Text className="text-zinc-500 mt-4 font-medium">Cargando 301 productos desde MySQL...</Text>
+            <Text className="text-zinc-500 mt-4 font-medium">Cargando catálogo desde MySQL...</Text>
           </View>
         ) : (
           <View className="flex-row flex-wrap -mx-2">

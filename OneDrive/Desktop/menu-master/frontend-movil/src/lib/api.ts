@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = 'https://menu-master-api.onrender.com';
 
-// Función auxiliar para obtener headers con token (Principio de Responsabilidad Única)
+// Función auxiliar para obtener headers con token
 const getHeaders = async () => {
     const token = await AsyncStorage.getItem('userToken');
     return {
@@ -19,7 +19,6 @@ export const api = {
             const res = await fetch(`${BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // CORRECCIÓN: El backend espera la propiedad "password", no "password_hash"
                 body: JSON.stringify({ email, password: password_hash }),
             });
             if (!res.ok) throw new Error('Credenciales incorrectas');
@@ -53,17 +52,14 @@ export const api = {
             });
             return res.json();
         },
-        // Necesario para el KDS del Chef
         getCocina: async () => {
             const res = await fetch(`${BASE_URL}/pedidos/cocina`, { headers: await getHeaders() });
             return res.json();
         },
-        // Necesario para que el mesero vea sus órdenes activas y las cobre
         getActivos: async () => {
             const res = await fetch(`${BASE_URL}/pedidos/activos`, { headers: await getHeaders() });
             return res.json();
         },
-        // NUEVO: Necesario para que el Chef marque la orden como 'LISTO'
         updateEstado: async (id: string, estado: string) => {
             const res = await fetch(`${BASE_URL}/pedidos/${id}/estado`, {
                 method: 'PATCH',
@@ -75,7 +71,6 @@ export const api = {
     },
 
     // --- MÓDULO DE VENTAS (MongoDB) ---
-    // Necesario para cobrar y liberar la mesa
     ventas: {
         crear: async (data: object) => {
             const res = await fetch(`${BASE_URL}/ventas`, {
@@ -93,6 +88,14 @@ export const api = {
             const res = await fetch(`${BASE_URL}/productos`, { headers: await getHeaders() });
             return res.json();
         },
+        create: async (data: object) => {
+            const res = await fetch(`${BASE_URL}/productos`, {
+                method: 'POST',
+                headers: await getHeaders(),
+                body: JSON.stringify(data),
+            });
+            return res.json();
+        },
         update: async (id: string, data: object) => {
             const res = await fetch(`${BASE_URL}/productos/${id}`, {
                 method: 'PUT',
@@ -101,7 +104,6 @@ export const api = {
             });
             return res.json();
         },
-        // Para borrar platillos desde el Menu Management
         delete: async (id: string) => {
             const res = await fetch(`${BASE_URL}/productos/${id}`, {
                 method: 'DELETE',
