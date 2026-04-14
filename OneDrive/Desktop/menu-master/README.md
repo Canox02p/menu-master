@@ -6,7 +6,7 @@
 Este proyecto destaca por una arquitectura de **Dual-Backend** y **Multi-Base de Datos**, cumpliendo con los requisitos técnicos de AWOS:
 
 * **Frontend:** Angular + Ionic (Aplicación Híbrida para Cliente Web y Móvil).
-* **Backend 1:** REST API en PHP hospedada en **InfinityFree**.
+* **Backend 1:** REST API en PHP hospedada en **Hostinger**.
     * **BD Relacional:** MySQL (Gestión de Inventario > 200 productos normalizados).
 * **Backend 2:** REST API en Node.js hospedada en **Render**.
     * **BD No Relacional:** MongoDB (Gestión de Usuarios y Ventas).
