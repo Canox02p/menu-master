@@ -11,6 +11,7 @@ import { WaiterOrders } from '@/components/pos/waiter-orders';
 import { ChefKDS } from '@/components/pos/chef-kds';
 import { SettingsView } from '@/components/pos/settings-view';
 import { InventoryManagement } from '@/components/pos/inventory-management';
+import { ReportsView } from '@/components/pos/reports-view';
 import { StaffManagement } from '@/components/pos/staff-management';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -350,8 +351,9 @@ export default function Home() {
         {activeTab === 'orders' && <WaiterOrders />}
         {activeTab === 'kds' && <ChefKDS />}
         {activeTab === 'settings' && <SettingsView />}
+        {activeTab === 'reports' && <ReportsView />}
 
-        {!['dashboard', 'menu', 'tables', 'orders', 'kds', 'settings', 'inventory', 'staff'].includes(activeTab) && (
+        {!['dashboard', 'menu', 'tables', 'orders', 'kds', 'settings', 'inventory', 'staff', 'reports'].includes(activeTab) && (
           <View className="flex-1 flex-col items-center justify-center h-[60vh] opacity-50">
             <View className="mb-4">
               <LayoutDashboard color="gray" size={64} />
