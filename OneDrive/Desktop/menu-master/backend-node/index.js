@@ -27,13 +27,38 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.error('❌ Error de conexión MongoDB:', err));
 
 // ==========================================
-// 🔐 1. MÓDULO DE AUTENTICACIÓN
+// 🔐 1. MÓDULO DE AUTENTICACIÓN Y REGISTRO SaaS
 // ==========================================
 app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
     const usuario = await Usuario.findOne({ email, password_hash: password });
     if (!usuario) return res.status(401).json({ error: "Credenciales inválidas" });
-    res.json({ mensaje: "Login exitoso", usuario });
+
+    // Aquí puedes incluir la generación de JWT en el futuro
+    res.json({ mensaje: "Login exitoso", usuario, token: "jwt-temporal-hasta-que-lo-implementes" });
+});
+
+// NUEVA RUTA: Solo para dueños que registran su restaurante
+app.post('/auth/register-company', async (req, res) => {
+    try {
+        const { nombreRestaurante, nombreDueno, correo, password } = req.body;
+
+        const existe = await Usuario.findOne({ email: correo });
+        if (existe) return res.status(400).json({ error: "Este correo ya está registrado." });
+
+        const nuevoAdmin = new Usuario({
+            nombre: nombreDueno,
+            email: correo,
+            password_hash: password,
+            roles: ["ADMIN"], // Por defecto, quien registra la empresa es ADMIN
+            restaurante_nombre: nombreRestaurante
+        });
+
+        await nuevoAdmin.save();
+        res.status(201).json({ mensaje: "Restaurante registrado con éxito", usuario: nuevoAdmin });
+    } catch (error) {
+        res.status(500).json({ error: "Error al registrar la empresa: " + error.message });
+    }
 });
 
 // ==========================================

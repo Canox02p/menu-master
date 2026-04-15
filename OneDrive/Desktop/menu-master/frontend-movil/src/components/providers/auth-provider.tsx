@@ -1,15 +1,16 @@
-// src/components/providers/auth-provider.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/lib/api';
 
-export type UserRole = 'ADMIN' | 'WAITER' | 'CHEF' | null;
+// Usamos los roles exactos que devuelve tu backend
+export type UserRole = 'ADMIN' | 'MESERO' | 'COCINERO';
 
 interface User {
   id: string;
   name: string;
-  role: UserRole;
+  roles: UserRole[]; // AHORA ES UN ARREGLO
   email: string;
+  restaurante_nombre?: string;
 }
 
 interface AuthContextType {
@@ -39,13 +40,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password_hash: string) => {
     try {
+      // Ajusta 'api.auth.login' si tu API devuelve algo diferente, 
+      // pero asumiendo que devuelve { usuario: {...}, token: "..." }
       const data = await api.auth.login(email, password_hash);
 
       const newUser: User = {
-        id: data.user.id,
-        name: data.user.nombre,
-        role: data.user.rol as UserRole,
-        email: data.user.email
+        id: data.usuario._id || data.usuario.id,
+        name: data.usuario.nombre,
+        roles: data.usuario.roles, // Extraemos el arreglo
+        email: data.usuario.email,
+        restaurante_nombre: data.usuario.restaurante_nombre
       };
 
       await AsyncStorage.setItem('userToken', data.token);

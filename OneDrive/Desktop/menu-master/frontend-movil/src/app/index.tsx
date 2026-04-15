@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useAuth } from '@/components/providers/auth-provider';
 import { AppLayout } from '@/components/layout/app-layout';
 import { AdminDashboard } from '@/components/pos/admin-dashboard';
@@ -17,8 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { LayoutDashboard, ShieldCheck, UtensilsCrossed, ChefHat } from 'lucide-react-native';
-import { cn } from '@/lib/utils';
+import { LayoutDashboard, Eye, EyeOff, CheckCircle2 } from 'lucide-react-native';
 
 const BASE_URL = 'https://menu-master-api.onrender.com';
 
@@ -27,45 +26,73 @@ export default function Home() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
-  // ESTADOS DEL FORMULARIO
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  // ESTADOS DEL FORMULARIO SaaS
+  const [mode, setMode] = useState<'login' | 'register' | 'recovery' | 'success'>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // CAMPOS
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<'ADMIN' | 'WAITER' | 'CHEF'>('WAITER');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [restaurantName, setRestaurantName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
 
-  // Lógica de redirección inicial
+  // Lógica de redirección por prioridad (Multi-rol)
   useEffect(() => {
-    if (user?.role === 'WAITER') setActiveTab('tables');
-    else if (user?.role === 'CHEF') setActiveTab('kds');
-    else if (user?.role === 'ADMIN') setActiveTab('dashboard');
+    if (user?.roles) {
+      if (user.roles.includes('ADMIN')) setActiveTab('dashboard');
+      else if (user.roles.includes('COCINERO')) setActiveTab('kds');
+      else setActiveTab('tables'); // Por defecto mesero
+    }
   }, [user]);
 
   // VALIDACIONES EXHAUSTIVAS
   const validateForm = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanEmail = email.trim();
 
-    if (!email.trim() || !password.trim()) {
-      toast({ title: "Campos incompletos", description: "El correo y contraseña son obligatorios.", variant: "destructive" });
+    if (!cleanEmail) {
+      toast({ title: "Campo requerido", description: "El correo es obligatorio.", variant: "destructive" });
       return false;
     }
 
-    if (!emailRegex.test(email.trim())) {
-      toast({ title: "Correo inválido", description: "Por favor ingresa un formato de correo válido.", variant: "destructive" });
+    if (!emailRegex.test(cleanEmail)) {
+      toast({ title: "Correo inválido", description: "Formato de correo no válido.", variant: "destructive" });
       return false;
     }
 
-    if (password.trim().length < 4) {
-      toast({ title: "Contraseña muy corta", description: "La contraseña debe tener al menos 4 caracteres.", variant: "destructive" });
-      return false;
+    if (mode === 'login') {
+      if (!password.trim()) {
+        toast({ title: "Campo requerido", description: "La contraseña es obligatoria.", variant: "destructive" });
+        return false;
+      }
     }
 
-    if (mode === 'register' && !name.trim()) {
-      toast({ title: "Nombre requerido", description: "Por favor ingresa el nombre del empleado.", variant: "destructive" });
-      return false;
+    if (mode === 'register') {
+      if (!restaurantName.trim() || !ownerName.trim() || !password.trim() || !confirmPassword.trim()) {
+        toast({ title: "Campos incompletos", description: "Todos los campos son obligatorios para registrar la empresa.", variant: "destructive" });
+        return false;
+      }
+      if (password.trim().length < 6) {
+        toast({ title: "Contraseña débil", description: "Debe tener al menos 6 caracteres.", variant: "destructive" });
+        return false;
+      }
+      if (password !== confirmPassword) {
+        toast({ title: "Error", description: "Las contraseñas no coinciden.", variant: "destructive" });
+        return false;
+      }
+    }
+
+    if (mode === 'recovery') {
+      if (!password.trim() || !confirmPassword.trim()) {
+        toast({ title: "Campos incompletos", description: "Ingresa tu nueva contraseña y confírmala.", variant: "destructive" });
+        return false;
+      }
+      if (password !== confirmPassword) {
+        toast({ title: "Error", description: "Las contraseñas no coinciden.", variant: "destructive" });
+        return false;
+      }
     }
 
     return true;
@@ -80,37 +107,47 @@ export default function Home() {
 
     try {
       if (mode === 'login') {
-        // En el login delegamos a tu AuthProvider, pero aseguramos de mandar el email limpio
         await login(cleanEmail, password.trim());
         toast({ title: "Bienvenido", description: "Acceso concedido exitosamente." });
-      } else {
-        // REGISTRO CON MANEJO DE ERRORES REAL
-        const res = await fetch(`${BASE_URL}/usuarios`, {
+
+      } else if (mode === 'register') {
+        const res = await fetch(`${BASE_URL}/auth/register-company`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            nombre: name.trim(),
-            email: cleanEmail,
-            password_hash: password.trim(),
-            rol: role
+            nombreRestaurante: restaurantName.trim(),
+            nombreDueno: ownerName.trim(),
+            correo: cleanEmail,
+            password: password.trim(),
           })
         });
 
-        // Extraemos el error exacto que manda Node.js (MongoDB)
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al registrar la empresa.');
 
-        if (!res.ok) {
-          throw new Error(data.error || 'Error desconocido al crear la cuenta en el servidor.');
-        }
+        setMode('success'); // Pantalla de confirmación
+        setPassword('');
+        setConfirmPassword('');
 
-        toast({ title: "Cuenta creada", description: "El usuario ha sido registrado en la base de datos." });
+      } else if (mode === 'recovery') {
+        // Asumiendo que crearás una ruta PUT/POST /auth/recover-password en Node.js
+        const res = await fetch(`${BASE_URL}/auth/recover-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ correo: cleanEmail, nuevaPassword: password.trim() })
+        });
+
+        if (!res.ok) throw new Error('Error al actualizar contraseña.');
+
+        toast({ title: "¡Actualizada!", description: "Tu contraseña ha sido cambiada." });
         setMode('login');
         setPassword('');
+        setConfirmPassword('');
       }
+
     } catch (error: any) {
-      console.error("Error Auth:", error);
       toast({
-        title: mode === 'login' ? "Error de Acceso" : "Fallo en Registro",
+        title: "Error",
         description: error.message || "Verifica tu conexión a internet.",
         variant: "destructive"
       });
@@ -119,7 +156,29 @@ export default function Home() {
     }
   };
 
-  // --- VISTA DE INICIO DE SESIÓN / REGISTRO ---
+  // --- VISTA DE ÉXITO AL REGISTRAR ---
+  if (mode === 'success' && !user) {
+    return (
+      <View className="flex-1 bg-[#09090b] items-center justify-center p-6">
+        <View className="items-center space-y-6 max-w-sm">
+          <CheckCircle2 color="#3b82f6" size={80} />
+          <Text className="text-3xl font-bold text-white text-center">¡Cuenta Creada!</Text>
+          <Text className="text-zinc-400 text-center text-lg">
+            Tu restaurante <Text className="font-bold text-white">{restaurantName}</Text> ha sido registrado con éxito.
+            Ya puedes iniciar sesión para configurar tu menú y empleados.
+          </Text>
+          <Button
+            onPress={() => setMode('login')}
+            className="w-full rounded-xl py-6 mt-4"
+          >
+            <Text className="text-white font-bold text-base">Ir a Iniciar Sesión</Text>
+          </Button>
+        </View>
+      </View>
+    );
+  }
+
+  // --- VISTA DE INICIO DE SESIÓN / REGISTRO / RECUPERACIÓN ---
   if (!user) {
     return (
       <KeyboardAvoidingView
@@ -138,7 +197,9 @@ export default function Home() {
                   Menu Master
                 </Text>
                 <Text className="text-zinc-500 font-medium text-center mt-2 text-base">
-                  {mode === 'login' ? 'Ingresa a tu portal de trabajo' : 'Crea una nueva cuenta de empleado'}
+                  {mode === 'login' ? 'Ingresa a tu portal de trabajo' :
+                    mode === 'register' ? 'Registra tu restaurante' :
+                      'Recupera tu acceso'}
                 </Text>
               </View>
             </View>
@@ -146,18 +207,31 @@ export default function Home() {
             <Card className="bg-zinc-900/50 border-zinc-800/60 backdrop-blur-xl rounded-[32px] overflow-hidden shadow-2xl">
               <CardContent className="p-8 space-y-5">
 
+                {/* CAMPOS EXCLUSIVOS DE REGISTRO */}
                 {mode === 'register' && (
-                  <View className="space-y-2">
-                    <Label className="text-zinc-400">Nombre Completo</Label>
-                    <Input
-                      placeholder="Ej. Uriel Cano"
-                      value={name}
-                      onChangeText={setName}
-                      className="bg-zinc-800/50 border-zinc-700 text-white rounded-xl"
-                    />
-                  </View>
+                  <>
+                    <View className="space-y-2">
+                      <Label className="text-zinc-400">Nombre del Restaurante</Label>
+                      <Input
+                        placeholder="Ej. Taquería Los Primos"
+                        value={restaurantName}
+                        onChangeText={setRestaurantName}
+                        className="bg-zinc-800/50 border-zinc-700 text-white rounded-xl"
+                      />
+                    </View>
+                    <View className="space-y-2">
+                      <Label className="text-zinc-400">Nombre del Dueño (Admin)</Label>
+                      <Input
+                        placeholder="Ej. Juan Pérez"
+                        value={ownerName}
+                        onChangeText={setOwnerName}
+                        className="bg-zinc-800/50 border-zinc-700 text-white rounded-xl"
+                      />
+                    </View>
+                  </>
                 )}
 
+                {/* CORREO (COMÚN A TODOS) */}
                 <View className="space-y-2">
                   <Label className="text-zinc-400">Correo Electrónico</Label>
                   <Input
@@ -171,44 +245,47 @@ export default function Home() {
                   />
                 </View>
 
+                {/* CONTRASEÑA CON OJITO */}
                 <View className="space-y-2">
-                  <Label className="text-zinc-400">Contraseña</Label>
-                  <Input
-                    placeholder="••••••••"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    className="bg-zinc-800/50 border-zinc-700 text-white rounded-xl"
-                  />
+                  <View className="flex-row justify-between items-center">
+                    <Label className="text-zinc-400">
+                      {mode === 'recovery' ? 'Nueva Contraseña' : 'Contraseña'}
+                    </Label>
+                    {mode === 'login' && (
+                      <TouchableOpacity onPress={() => setMode('recovery')}>
+                        <Text className="text-blue-500 text-xs font-bold">¿Olvidaste tu contraseña?</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <View className="relative justify-center">
+                    <Input
+                      placeholder="••••••••"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      className="bg-zinc-800/50 border-zinc-700 text-white rounded-xl pr-12"
+                    />
+                    <TouchableOpacity
+                      className="absolute right-4"
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff color="#71717a" size={20} /> : <Eye color="#71717a" size={20} />}
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
-                {mode === 'register' && (
-                  <View className="space-y-3 pt-2">
-                    <Label className="text-zinc-400">Rol del Empleado</Label>
-                    <View className="flex-row gap-2">
-                      <TouchableOpacity
-                        onPress={() => setRole('ADMIN')}
-                        className={cn("flex-1 p-3 rounded-xl border items-center gap-2", role === 'ADMIN' ? "bg-blue-500/20 border-blue-500" : "bg-zinc-800/50 border-zinc-700")}
-                      >
-                        <ShieldCheck color={role === 'ADMIN' ? "#3b82f6" : "#71717a"} size={20} />
-                        <Text className={cn("text-xs font-bold", role === 'ADMIN' ? "text-blue-500" : "text-zinc-400")}>Admin</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => setRole('WAITER')}
-                        className={cn("flex-1 p-3 rounded-xl border items-center gap-2", role === 'WAITER' ? "bg-orange-500/20 border-orange-500" : "bg-zinc-800/50 border-zinc-700")}
-                      >
-                        <UtensilsCrossed color={role === 'WAITER' ? "#f97316" : "#71717a"} size={20} />
-                        <Text className={cn("text-xs font-bold", role === 'WAITER' ? "text-orange-500" : "text-zinc-400")}>Mesero</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => setRole('CHEF')}
-                        className={cn("flex-1 p-3 rounded-xl border items-center gap-2", role === 'CHEF' ? "bg-emerald-500/20 border-emerald-500" : "bg-zinc-800/50 border-zinc-700")}
-                      >
-                        <ChefHat color={role === 'CHEF' ? "#10b981" : "#71717a"} size={20} />
-                        <Text className={cn("text-xs font-bold", role === 'CHEF' ? "text-emerald-500" : "text-zinc-400")}>Cocina</Text>
-                      </TouchableOpacity>
+                {/* CONFIRMAR CONTRASEÑA */}
+                {(mode === 'register' || mode === 'recovery') && (
+                  <View className="space-y-2">
+                    <Label className="text-zinc-400">Confirmar Contraseña</Label>
+                    <View className="relative justify-center">
+                      <Input
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry={!showPassword}
+                        className="bg-zinc-800/50 border-zinc-700 text-white rounded-xl pr-12"
+                      />
                     </View>
                   </View>
                 )}
@@ -222,19 +299,29 @@ export default function Home() {
                     <ActivityIndicator color="white" />
                   ) : (
                     <Text className="text-white font-bold text-base">
-                      {mode === 'login' ? 'Iniciar Sesión' : 'Registrar Empleado'}
+                      {mode === 'login' ? 'Iniciar Sesión' :
+                        mode === 'register' ? 'Registrar Empresa' : 'Actualizar Contraseña'}
                     </Text>
                   )}
                 </Button>
 
-                <TouchableOpacity onPress={() => {
-                  setMode(mode === 'login' ? 'register' : 'login');
-                  setPassword('');
-                }} className="pt-2">
-                  <Text className="text-zinc-500 text-center font-medium text-sm">
-                    {mode === 'login' ? '¿No tienes cuenta? Registra un usuario' : '¿Ya tienes cuenta? Inicia sesión'}
-                  </Text>
-                </TouchableOpacity>
+                {/* BOTONES DE NAVEGACIÓN INFERIOR */}
+                <View className="pt-4 flex-col gap-3">
+                  {mode !== 'login' && (
+                    <TouchableOpacity onPress={() => { setMode('login'); setPassword(''); setConfirmPassword(''); }}>
+                      <Text className="text-zinc-500 text-center font-medium text-sm">
+                        Volver a Iniciar Sesión
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {mode === 'login' && (
+                    <TouchableOpacity onPress={() => { setMode('register'); setPassword(''); }}>
+                      <Text className="text-zinc-500 text-center font-medium text-sm">
+                        ¿Eres dueño? <Text className="text-blue-500 font-bold">Registra tu restaurante</Text>
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
 
               </CardContent>
             </Card>
