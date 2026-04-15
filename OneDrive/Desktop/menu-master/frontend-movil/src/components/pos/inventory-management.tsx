@@ -10,7 +10,7 @@ import {
 } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
-import { api } from '@/lib/api'; // Importamos la API centralizada
+import { api } from '@/lib/api';
 
 // ==========================================
 // 1. INTERFACES (Tipado)
@@ -24,7 +24,7 @@ interface InventoryItem {
   minStock: number;
   unit: string;
   price: number;
-  status: 'Suficiente' | 'Bajo'; // Traducido
+  status: 'Suficiente' | 'Bajo';
 }
 
 interface SummaryCardProps {
@@ -42,7 +42,7 @@ interface InventoryRowProps {
   primaryColor: string;
   isLast: boolean;
   onAction: (id: string) => void;
-  isMobile: boolean; // Prop para diseño adaptativo
+  isMobile: boolean;
 }
 
 const CHARCOAL_GRAY = "#171A1C";
@@ -109,7 +109,7 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction, isMobile }
       <Pressable
         onPress={() => onAction(item.id)}
         className={cn(
-          "p-4 mx-4 mb-3 rounded-2xl border",
+          "p-4 mx-4 mb-3 rounded-2xl border w-full",
           isDark ? "bg-zinc-800/40 border-zinc-700/50" : "bg-white border-zinc-200 shadow-sm"
         )}
       >
@@ -169,7 +169,7 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction, isMobile }
       onPressOut={() => setIsHovered(false)}
       onPress={() => onAction(item.id)}
       className={cn(
-        "flex-row items-center px-6 py-4 transition-colors",
+        "flex-row items-center px-6 py-4 transition-colors w-full", // SOLUCIÓN: Agregado w-full aquí
         !isLast && (isDark ? "border-b border-zinc-800/50" : "border-b border-zinc-100"),
         isHovered && (isDark ? "bg-zinc-800/30" : "bg-zinc-50")
       )}
@@ -281,7 +281,7 @@ export function InventoryManagement() {
             minStock: minStock,
             unit: 'Unid.',
             price: Number(prod.precio) || 0,
-            status: stock <= minStock ? 'Bajo' : 'Suficiente' // Status Traducido
+            status: stock <= minStock ? 'Bajo' : 'Suficiente'
           };
         });
 
@@ -341,12 +341,12 @@ export function InventoryManagement() {
 
           {/* ÁREA DE INVENTARIO */}
           <Card className={cn(
-            "border-none overflow-hidden rounded-[32px] mb-8",
+            "border-none overflow-hidden rounded-[32px] mb-8 w-full", // SOLUCIÓN: w-full aquí también
             isDark ? "bg-zinc-900/40" : "bg-white shadow-sm"
           )}>
             {/* Barra de Búsqueda y Filtros */}
             <View className={cn(
-              "p-5 border-b flex-col lg:flex-row justify-between items-start lg:items-center gap-4",
+              "p-5 border-b flex-col lg:flex-row justify-between items-start lg:items-center gap-4 w-full",
               isDark ? "border-zinc-800/60" : "border-zinc-100"
             )}>
               <View className="relative w-full lg:w-96 flex-row items-center">
@@ -375,7 +375,7 @@ export function InventoryManagement() {
             {/* LISTA/TABLA DE PRODUCTOS */}
             {isMobile ? (
               // Vista Móvil: Tarjetas apiladas
-              <View className="py-4">
+              <View className="py-4 w-full">
                 {filteredItems.length === 0 && !isLoading && (
                   <Text className="text-zinc-500 text-center py-8">No se encontraron productos.</Text>
                 )}
@@ -393,9 +393,14 @@ export function InventoryManagement() {
               </View>
             ) : (
               // Vista Escritorio/Tablet: Tabla con Scroll Horizontal
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full">
-                <View className="min-w-[900px] w-full pb-2">
-                  <View className={cn("flex-row px-6 py-4 border-b", isDark ? "bg-zinc-950/20 border-zinc-800/60" : "bg-zinc-50/80 border-zinc-100")}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="w-full"
+                contentContainerStyle={{ minWidth: '100%' }} // SOLUCIÓN: Fuerza al contenido a tomar el 100%
+              >
+                <View className="min-w-[900px] w-full flex-1 pb-2">
+                  <View className={cn("flex-row px-6 py-4 border-b w-full", isDark ? "bg-zinc-950/20 border-zinc-800/60" : "bg-zinc-50/80 border-zinc-100")}>
                     <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[25%] pr-2">Producto</Text>
                     <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[20%] pr-2">Categoría</Text>
                     <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[20%] text-center px-2">Stock Actual</Text>
@@ -404,7 +409,7 @@ export function InventoryManagement() {
                     <View className="w-[5%] pl-2" />
                   </View>
 
-                  <View>
+                  <View className="w-full">
                     {filteredItems.length === 0 && !isLoading && (
                       <Text className="text-zinc-500 text-center py-8">No se encontraron productos.</Text>
                     )}
