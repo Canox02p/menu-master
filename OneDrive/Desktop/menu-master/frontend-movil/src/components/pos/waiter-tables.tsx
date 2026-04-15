@@ -209,27 +209,42 @@ export function WaiterTables() {
     setIsProcessingPayment(true);
 
     try {
-      // 1. Marcar TODAS las comandas de la mesa como PAGADAS
-      for (const orderId of activeAccount.orderIds) {
-        try {
-          await fetch(`https://menu-master-api.onrender.com/pedidos/${orderId}/estado`, {
+      // 1. Armamos el objeto de Venta con los datos de la cuenta consolidada
+      const payloadVenta = {
+        id_pedido: activeAccount.orderIds[0], // Usamos el ID principal
+        id_mesero: user?.id || '000000000000000000000000', // ID del mesero en sesión
+        numero_mesa: selectedTable.numero_mesa,
+        nombre_mesa: selectedTable.nombre || `Mesa ${selectedTable.numero_mesa}`,
+        nombre_mesero: selectedTable.mesero_nombre || user?.name || 'Mesero',
+        metodo_pago: 'EFECTIVO', // *Podrías agregar botones de método de pago en tu modal después
+        division: false,
+        monto_pagado: activeAccount.total,
+        productos_cobrados: activeAccount.items.map(item => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precio: item.precio_unitario
+        }))
+      };
+
+      // 2. Registramos la venta (Esto libera la mesa y paga el pedido automáticamente en MongoDB)
+      await fetch('https://menu-master-api.onrender.com/ventas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadVenta)
+      });
+
+      // 3. Si agrupaste varias comandas en una sola mesa, pagamos las "extra" manualmente
+      if (activeAccount.orderIds.length > 1) {
+        for (let i = 1; i < activeAccount.orderIds.length; i++) {
+          await fetch(`https://menu-master-api.onrender.com/pedidos/${activeAccount.orderIds[i]}/estado`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estado: 'PAGADO' })
           });
-        } catch (e) {
-          if (api?.pedidos?.updateEstado) await api.pedidos.updateEstado(orderId, 'PAGADO');
         }
       }
 
-      // 2. Liberar la Mesa Física
-      await fetch(`https://menu-master-api.onrender.com/mesas/${selectedTable._id}/estado`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: 'LIBRE', mesero_nombre: '' })
-      });
-
-      toast({ title: "Cuenta Pagada", description: "La mesa ha sido liberada exitosamente." });
+      toast({ title: "Cuenta Pagada", description: "Venta registrada y mesa liberada exitosamente." });
       setShowCheckoutModal(false);
       setSelectedTable(null);
       setActiveAccount(null);

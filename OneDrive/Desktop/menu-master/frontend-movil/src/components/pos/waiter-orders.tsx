@@ -7,6 +7,7 @@ import { Clock, Receipt, Printer, X, MapPin, ChevronDown, ChevronUp } from 'luci
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+import { useAuth } from '@/components/providers/auth-provider';
 
 // ==========================================
 // 1. INTERFACES
@@ -146,6 +147,7 @@ export function WaiterOrders() {
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
   const { toast } = useToast();
+  const { user } = useAuth(); // EXTRAEMOS EL USUARIO AQUÍ PARA EL COBRO
 
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -214,27 +216,44 @@ export function WaiterOrders() {
     }
   };
 
+  // ✅ AQUÍ ESTÁ LA FUNCIÓN ACTUALIZADA
   const procesarCobro = async (order: OrderData) => {
     try {
-      // Como pueden ser varias órdenes agrupadas, iteramos sobre los IDs originales
+      // 1. Armar payload de Venta
+      const payloadVenta = {
+        id_pedido: order.originalIds?.[0] || order._id,
+        id_mesero: user?.id || '000000000000000000000000', // Usamos el ID real del mesero autenticado
+        numero_mesa: order.numero_mesa,
+        nombre_mesa: order.nombre_mesa || `Mesa ${order.numero_mesa}`,
+        nombre_mesero: order.nombre_mesero || user?.name || 'Mesero',
+        metodo_pago: 'EFECTIVO',
+        division: false,
+        monto_pagado: order.total,
+        productos_cobrados: order.productos.map(item => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          // Extraemos el precio unitario previniendo que no venga directo
+          precio: item.precio_unitario || (item.subtotal / item.cantidad) || 0
+        }))
+      };
+
+      // 2. Disparar Venta
+      await fetch('https://menu-master-api.onrender.com/ventas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadVenta)
+      });
+
+      // 3. Limpiar sub-órdenes si era una mesa agrupada
       const idsToPay = order.originalIds || [order._id];
-
-      for (const id of idsToPay) {
-        await fetch(`https://menu-master-api.onrender.com/pedidos/${id}/estado`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ estado: 'PAGADO' })
-        });
-      }
-
-      // Liberar la mesa
-      const idMesaReal = order.id_mesa?._id || order.id_mesa;
-      if (idMesaReal && typeof idMesaReal === 'string') {
-        await fetch(`https://menu-master-api.onrender.com/mesas/${idMesaReal}/estado`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ estado: 'LIBRE', mesero_nombre: '' })
-        });
+      if (idsToPay.length > 1) {
+        for (let i = 1; i < idsToPay.length; i++) {
+          await fetch(`https://menu-master-api.onrender.com/pedidos/${idsToPay[i]}/estado`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: 'PAGADO' })
+          });
+        }
       }
 
       toast({ title: "Pago Registrado", description: "La orden se ha cobrado exitosamente." });

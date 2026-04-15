@@ -38,7 +38,6 @@ app.post('/auth/login', async (req, res) => {
     res.json({ mensaje: "Login exitoso", usuario, token: "jwt-temporal-hasta-que-lo-implementes" });
 });
 
-// NUEVA RUTA: Solo para dueños que registran su restaurante
 app.post('/auth/register-company', async (req, res) => {
     try {
         const { nombreRestaurante, nombreDueno, correo, password } = req.body;
@@ -50,7 +49,7 @@ app.post('/auth/register-company', async (req, res) => {
             nombre: nombreDueno,
             email: correo,
             password_hash: password,
-            roles: ["ADMIN"], // Por defecto, quien registra la empresa es ADMIN
+            roles: ["ADMIN"],
             restaurante_nombre: nombreRestaurante
         });
 
@@ -129,7 +128,10 @@ app.delete('/mesas/:id', async (req, res) => {
 app.post('/pedidos', (req, res) => pedidoController.crearPedido(req, res));
 
 app.get('/pedidos/activos', async (req, res) => {
-    const pedidos = await Pedido.find({ estado: { $ne: 'PAGADO' } }).populate('id_mesa');
+    // ✨ CAMBIO APLICADO AQUÍ: Añadimos populate('id_mesero', 'nombre')
+    const pedidos = await Pedido.find({ estado: { $ne: 'PAGADO' } })
+        .populate('id_mesa')
+        .populate('id_mesero', 'nombre');
     res.json(pedidos);
 });
 
@@ -169,7 +171,6 @@ app.delete('/pedidos/:id', async (req, res) => {
 
 // ==========================================
 // 📦 6. MÓDULO DE INVENTARIO
-// ✅ Consume PHP API de Hostinger (MySQL)
 // ==========================================
 app.get('/productos', async (req, res) => {
     try {
