@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity, Modal, DimensionValue } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Clock, Plus, MapPin } from 'lucide-react-native';
+import { Users, Clock, Plus, MapPin, User } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
-import { useAuth } from '@/components/providers/auth-provider'; // <-- IMPORTANTE: Importamos el auth
+import { useAuth } from '@/components/providers/auth-provider';
 import { OrderTaking } from './order-taking';
-import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
+// ==========================================
+// 1. INTERFACES
+// ==========================================
 interface TableData {
   _id: string;
   numero_mesa: number;
@@ -19,33 +21,20 @@ interface TableData {
   ubicacion?: string;
   status: 'Occupied' | 'Available';
   capacity: number;
-}
-
-interface TableCardProps {
-  table: TableData;
-  isSelected: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  primaryColor: string;
-  widthStyle: StyleProp<ViewStyle>;
+  mesero_nombre?: string; // Nombre del mesero que atiende actualmente
 }
 
 const CHARCOAL_GRAY = "#171A1C";
 
-const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyle }: TableCardProps) => {
-  const [isHovered, setIsHovered] = useState(false);
+// ==========================================
+// 2. SUBCOMPONENTE: TARJETA DE MESA
+// ==========================================
+const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyle }: { table: TableData, isSelected: boolean, onPress: () => void, isDark: boolean, primaryColor: string, widthStyle: any }) => {
   const isOccupied = table.status === 'Occupied';
-  const isActive = isHovered || isSelected;
 
   return (
     <View style={widthStyle} className="p-2 mb-2">
-      <Pressable
-        onHoverIn={() => setIsHovered(true)}
-        onHoverOut={() => setIsHovered(false)}
-        onPressIn={() => setIsHovered(true)}
-        onPressOut={() => setIsHovered(false)}
-        onPress={onPress}
-      >
+      <Pressable onPress={onPress}>
         <View
           className={cn(
             "aspect-square rounded-[32px] p-5 transition-all border flex-col justify-between overflow-hidden",
@@ -54,59 +43,38 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
               : (isDark ? "bg-zinc-900/40 border-dashed border-zinc-700" : "bg-card/50 border-dashed border-zinc-300")
           )}
           style={{
-            borderWidth: isActive ? 2 : 1,
-            borderColor: isActive ? primaryColor : (isOccupied ? 'transparent' : undefined),
-            transform: [{ scale: isActive ? 0.98 : 1 }]
+            borderWidth: isSelected ? 2 : 1,
+            borderColor: isSelected ? primaryColor : (isOccupied ? 'transparent' : undefined),
+            transform: [{ scale: isSelected ? 0.98 : 1 }]
           }}
         >
-          {isOccupied && (
-            <View
-              className="absolute top-0 right-0 w-16 h-16 rounded-bl-[32px] items-end pr-4 pt-4"
-              style={{ backgroundColor: `${primaryColor}15` }}
-            >
-              <Users color={primaryColor} size={20} />
-            </View>
-          )}
-
-          <View>
+          <View className="flex-row justify-between items-start">
             <Text className={cn("text-4xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
               {table.numero_mesa}
             </Text>
-            {table.nombre && (
-              <Text className={cn("text-xs font-bold mt-1", isDark ? "text-zinc-400" : "text-zinc-500")} numberOfLines={1}>
-                {table.nombre}
-              </Text>
+            {isOccupied && (
+              <View className="p-2 rounded-xl" style={{ backgroundColor: `${primaryColor}15` }}>
+                <User color={primaryColor} size={18} />
+              </View>
             )}
           </View>
 
           <View>
-            <View className="flex-row items-center gap-1.5 mb-1.5">
-              <Users color={isDark ? "#71717a" : "#a1a1aa"} size={12} />
-              <Text className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                {table.capacity} Pax
-              </Text>
-            </View>
-
-            {table.ubicacion && (
-              <View className="flex-row items-center gap-1.5 mb-2">
-                <MapPin color={isDark ? "#71717a" : "#a1a1aa"} size={12} />
-                <Text className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                  {table.ubicacion}
+            {isOccupied && (
+              <View className="mb-2">
+                <Text className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">Atiende:</Text>
+                <Text className={cn("text-[11px] font-bold", isDark ? "text-zinc-300" : "text-zinc-700")} numberOfLines={1}>
+                  {table.mesero_nombre || 'Mesero'}
                 </Text>
               </View>
             )}
 
-            {isOccupied ? (
-              <View className="flex-row items-center gap-1.5 mt-2 bg-rose-500/10 self-start px-2 py-1 rounded-full">
-                <Clock color="#f43f5e" size={12} />
-                <Text className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">Ocupada</Text>
-              </View>
-            ) : (
-              <View className="flex-row items-center gap-1.5 mt-2 bg-emerald-500/10 self-start px-2 py-1 rounded-full">
-                <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <Text className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">Libre</Text>
-              </View>
-            )}
+            <View className={cn("flex-row items-center gap-1.5 px-2.5 py-1 rounded-full self-start", isOccupied ? "bg-rose-500/10" : "bg-emerald-500/10")}>
+              <View className={cn("w-1.5 h-1.5 rounded-full", isOccupied ? "bg-rose-500" : "bg-emerald-500")} />
+              <Text className={cn("text-[10px] font-bold uppercase", isOccupied ? "text-rose-500" : "text-emerald-500")}>
+                {isOccupied ? 'Ocupada' : 'Libre'}
+              </Text>
+            </View>
           </View>
         </View>
       </Pressable>
@@ -114,13 +82,17 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
   );
 };
 
+// ==========================================
+// 3. COMPONENTE PRINCIPAL
+// ==========================================
 export function WaiterTables() {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
   const { toast } = useToast();
 
-  const { user } = useAuth(); // <-- IMPORTANTE: Sacamos al usuario de la sesión
+  // Extraemos el usuario para saber quién está operando
+  const { user } = useAuth();
 
   const [tables, setTables] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,7 +111,8 @@ export function WaiterTables() {
         nombre: t.nombre,
         ubicacion: t.ubicacion,
         status: t.estado === 'LIBRE' ? 'Available' : 'Occupied',
-        capacity: t.capacidad
+        capacity: t.capacidad,
+        mesero_nombre: t.mesero_nombre // Traemos el nombre del mesero desde el backend
       }));
 
       setTables(mappedTables.sort((a, b) => a.numero_mesa - b.numero_mesa));
@@ -154,12 +127,9 @@ export function WaiterTables() {
     fetchTables();
   }, []);
 
-  const isDesktop = width >= 1024;
-  const isTablet = width >= 768 && width < 1024;
-
-  const getCardWidth = (): StyleProp<ViewStyle> => {
-    if (isDesktop) return { width: '20%' };
-    if (isTablet) return { width: '33.33%' };
+  const getCardWidth = (): { width: DimensionValue } => {
+    if (width >= 1024) return { width: '20%' };
+    if (width >= 768) return { width: '33.33%' };
     return { width: '50%' };
   };
 
@@ -176,7 +146,7 @@ export function WaiterTables() {
               <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
                 Plano de Mesas
               </Text>
-              <Text className="text-zinc-500">Selecciona una mesa libre para tomar la orden.</Text>
+              <Text className="text-zinc-500">Selecciona una mesa para gestionar la comanda.</Text>
             </View>
             <View className="flex-row items-center gap-3 mt-2 md:mt-0">
               {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
@@ -205,6 +175,7 @@ export function WaiterTables() {
         </View>
       </ScrollView>
 
+      {/* POPUP INFERIOR: ACCIÓN SOBRE MESA */}
       {selectedTable && !showOrderTaking && (
         <View className="absolute bottom-8 left-4 right-4 items-center justify-center z-50">
           <Card
@@ -222,41 +193,35 @@ export function WaiterTables() {
                   <View>
                     <Text className="font-bold text-lg text-white">Mesa #{selectedTable.numero_mesa}</Text>
                     <Text className="text-xs text-white/80 font-medium uppercase tracking-widest mt-0.5">
-                      {selectedTable.status === 'Available' ? 'ESTADO: LIBRE' : 'ESTADO: OCUPADA'}
+                      {selectedTable.status === 'Available' ? 'ESTADO: LIBRE' : `ATIENDE: ${selectedTable.mesero_nombre || 'MESERO'}`}
                     </Text>
                   </View>
                 </View>
 
-                <View className="flex-row gap-2">
-                  <TouchableOpacity
-                    className="h-12 px-4 rounded-xl items-center justify-center bg-black/10"
-                    onPress={() => setSelectedTable(null)}
-                  >
-                    <Text className="text-white font-bold text-sm">Cerrar</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  className="h-12 w-12 rounded-full items-center justify-center bg-black/10"
+                  onPress={() => setSelectedTable(null)}
+                >
+                  <Plus color="white" size={24} style={{ transform: [{ rotate: '45deg' }] }} />
+                </TouchableOpacity>
               </View>
 
-              {selectedTable.status === 'Available' ? (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  className="w-full rounded-xl bg-white items-center justify-center flex-row py-4 shadow-lg shadow-black/10 transition-transform active:scale-95"
-                  onPress={() => setShowOrderTaking(true)}
-                >
-                  <Plus color={primaryColor} size={20} strokeWidth={3} />
-                  <Text style={{ color: primaryColor }} className="font-bold text-lg ml-2">Tomar Nueva Orden</Text>
-                </TouchableOpacity>
-              ) : (
-                <View className="w-full rounded-xl bg-black/20 items-center justify-center py-4">
-                  <Text className="text-white/80 font-bold text-sm">Esta mesa ya tiene una orden activa.</Text>
-                </View>
-              )}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                className="w-full rounded-xl bg-white items-center justify-center flex-row py-4 shadow-lg shadow-black/10 transition-transform active:scale-95"
+                onPress={() => setShowOrderTaking(true)}
+              >
+                <Plus color={primaryColor} size={20} strokeWidth={3} />
+                <Text style={{ color: primaryColor }} className="font-bold text-lg ml-2">
+                  {selectedTable.status === 'Available' ? 'Tomar Nueva Orden' : 'Añadir a la Cuenta'}
+                </Text>
+              </TouchableOpacity>
             </CardContent>
           </Card>
         </View>
       )}
 
-      {/* MODAL CERRADO CORRECTAMENTE */}
+      {/* MODAL DE TOMA DE PEDIDO */}
       <Modal
         visible={selectedTable !== null && showOrderTaking}
         animationType="slide"

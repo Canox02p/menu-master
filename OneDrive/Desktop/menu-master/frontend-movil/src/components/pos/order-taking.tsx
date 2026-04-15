@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, SafeAreaView, ActivityIndicator } from 'react-native';
-import { Minus, Plus, Send, ReceiptText, ChevronLeft, Trash2, UtensilsCrossed, Clock, User } from 'lucide-react-native';
+// ¡AQUÍ ESTÁ EL ARREGLO! Se agregó Platform a la lista
+import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, SafeAreaView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { Minus, Plus, Send, ReceiptText, ChevronLeft, Trash2, Clock, User, CheckCircle2 } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
@@ -153,17 +154,14 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reloj en tiempo real
   const [currentTime, setCurrentTime] = useState('');
 
   useEffect(() => {
-    // Inicializar reloj
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }, 1000);
     setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
-    // Cargar Menú
     const fetchMenu = async () => {
       try {
         setIsLoading(true);
@@ -219,6 +217,9 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
 
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
+  // ==========================================
+  // LOGICA: ENVIAR COMANDA A COCINA
+  // ==========================================
   const handleSendOrder = async () => {
     if (cart.length === 0) return;
 
@@ -263,6 +264,48 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
     }
   };
 
+  // ==========================================
+  // LOGICA: COBRAR Y LIBERAR MESA
+  // ==========================================
+  const handleCheckout = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`¿Registrar pago y liberar la ${tableName || `Mesa #${tableNumber}`}?`)) {
+        processCheckout();
+      }
+    } else {
+      Alert.alert(
+        "Cobrar Mesa",
+        `¿Registrar pago y liberar la ${tableName || `Mesa #${tableNumber}`}?`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Cobrar", style: "default", onPress: processCheckout }
+        ]
+      );
+    }
+  };
+
+  const processCheckout = async () => {
+    setIsSubmitting(true);
+    try {
+      // Liberar la mesa en la base de datos
+      await fetch(`https://menu-master-api.onrender.com/mesas/${tableId}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'LIBRE', mesero_nombre: '' })
+      });
+
+      toast({
+        title: "Pago Exitoso",
+        description: `La ${tableName || `Mesa #${tableNumber}`} ha sido cobrada y liberada.`
+      });
+      onClose(); // Cerrar vista y recargar mesas
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo procesar el pago.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const displayedMenu = selectedCategory === 'Todas'
     ? menuItems
     : menuItems.filter(i => i.category === selectedCategory);
@@ -272,7 +315,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
       className="absolute z-[100] top-0 bottom-0 left-0 right-0"
       style={{ backgroundColor: isDark ? "#121212" : "#f4f4f5", flex: 1 }}
     >
-      {/* Contenedor principal con flex: 1 para limitar la altura a la pantalla */}
       <View style={{ flex: 1, flexDirection: 'column' }} className="w-full mx-auto">
 
         {/* ========================================== */}
@@ -300,16 +342,29 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
             </View>
           </View>
 
-          {/* INFORMACIÓN DEL MESERO Y HORA */}
+          {/* INFORMACIÓN DEL MESERO Y BOTÓN DE COBRO */}
           <View className="hidden md:flex flex-row items-center gap-6">
-            <View className="flex-row items-center gap-2">
-              <User color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
-              <Text className={cn("text-sm font-bold uppercase", isDark ? "text-zinc-300" : "text-zinc-700")}>{waiterName}</Text>
+            <View className="flex-row items-center gap-4 border-r pr-6" style={{ borderColor: isDark ? '#2A2A2A' : '#e4e4e7' }}>
+              <View className="flex-row items-center gap-2">
+                <User color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
+                <Text className={cn("text-sm font-bold uppercase", isDark ? "text-zinc-300" : "text-zinc-700")}>{waiterName}</Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <Clock color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
+                <Text className={cn("text-sm font-mono font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{currentTime}</Text>
+              </View>
             </View>
-            <View className="flex-row items-center gap-2">
-              <Clock color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
-              <Text className={cn("text-sm font-mono font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{currentTime}</Text>
-            </View>
+
+            {/* BOTÓN PARA COBRAR MESA */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleCheckout}
+              disabled={isSubmitting}
+              className="flex-row items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 rounded-xl transition-transform active:scale-95"
+            >
+              {isSubmitting ? <ActivityIndicator color="#10b981" size="small" /> : <CheckCircle2 color="#10b981" size={18} />}
+              <Text className="text-emerald-500 font-bold text-sm">Cobrar Mesa</Text>
+            </TouchableOpacity>
           </View>
 
           {/* BADGE PARA MÓVILES */}
@@ -357,7 +412,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               </ScrollView>
             </View>
 
-            {/* PRODUCTOS (CON SCROLL INTERNO BLOQUEADO) */}
+            {/* PRODUCTOS */}
             <View style={{ flex: 1 }}>
               {isLoading ? (
                 <View className="flex-1 items-center justify-center">
@@ -402,7 +457,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               )}
             </View>
 
-            {/* ITEMS DEL CARRITO (CON SCROLL INTERNO BLOQUEADO) */}
+            {/* ITEMS DEL CARRITO */}
             <View style={{ flex: 1 }}>
               <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
                 {cart.length === 0 ? (
@@ -430,7 +485,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               </ScrollView>
             </View>
 
-            {/* PIE DEL TICKET (BOTÓN Y TOTALES ANCLADOS AL FONDO) */}
+            {/* PIE DEL TICKET */}
             <View className={cn("p-6 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-200")}>
               <View className="flex-row justify-between items-center mb-4">
                 <Text className={cn("text-base font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>Subtotal</Text>
