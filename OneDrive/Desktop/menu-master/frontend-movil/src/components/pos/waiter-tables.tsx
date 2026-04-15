@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// ¡AQUÍ ESTÁ EL ARREGLO! Agregamos TouchableOpacity a la lista de importaciones
-import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -279,18 +278,29 @@ export function WaiterTables() {
         </View>
       )}
 
-      {/* VISTA COMPLETA: TOMA DE ORDENES */}
-      {selectedTable && showOrderTaking && (
-        <OrderTaking
-          tableId={selectedTable._id}
-          tableNumber={selectedTable.numero_mesa}
-          onClose={() => {
-            setShowOrderTaking(false);
-            setSelectedTable(null);
-            fetchTables();
-          }}
-        />
-      )}
+      {/* VISTA COMPLETA: TOMA DE ORDENES ENVUELTA EN MODAL NATIVO */}
+      <Modal
+        visible={selectedTable !== null && showOrderTaking}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => {
+          setShowOrderTaking(false);
+          setSelectedTable(null);
+          fetchTables();
+        }}
+      >
+        {selectedTable && showOrderTaking && (
+          <OrderTaking
+            tableId={selectedTable._id}
+            tableNumber={selectedTable.numero_mesa}
+            onClose={() => {
+              setShowOrderTaking(false);
+              setSelectedTable(null);
+              fetchTables();
+            }}
+          />
+        )}
+      </Modal>
     </View>
   );
 }
