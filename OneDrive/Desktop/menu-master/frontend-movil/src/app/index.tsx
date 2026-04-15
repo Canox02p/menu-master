@@ -11,6 +11,7 @@ import { WaiterOrders } from '@/components/pos/waiter-orders';
 import { ChefKDS } from '@/components/pos/chef-kds';
 import { SettingsView } from '@/components/pos/settings-view';
 import { InventoryManagement } from '@/components/pos/inventory-management';
+import { TableManagement } from '@/components/pos/table-management';
 import { ReportsView } from '@/components/pos/reports-view';
 import { StaffManagement } from '@/components/pos/staff-management';
 import { Card, CardContent } from '@/components/ui/card';
@@ -393,12 +394,12 @@ export default function Home() {
       </View>
     );
   }
-
   // --- VISTA PRINCIPAL (LOGUEADO) ---
   return (
     <AppLayout activeTab={activeTab} setActiveTab={setActiveTab} sessionRole={sessionRole}>
       <View className="flex-1 animate-in fade-in slide-in-from-bottom-2 duration-500">
         {activeTab === 'dashboard' && <AdminDashboard />}
+        {activeTab === 'table-management' && <TableManagement />}
         {activeTab === 'menu' && <MenuManagement />}
         {activeTab === 'inventory' && <InventoryManagement />}
         {activeTab === 'staff' && <StaffManagement />}
@@ -408,7 +409,7 @@ export default function Home() {
         {activeTab === 'settings' && <SettingsView />}
         {activeTab === 'reports' && <ReportsView />}
 
-        {!['dashboard', 'menu', 'tables', 'orders', 'kds', 'settings', 'inventory', 'staff', 'reports'].includes(activeTab) && (
+        {!['dashboard', 'table-management', 'menu', 'tables', 'orders', 'kds', 'settings', 'inventory', 'staff', 'reports'].includes(activeTab) && (
           <View className="flex-1 flex-col items-center justify-center h-[60vh] opacity-50">
             <View className="mb-4">
               <LayoutDashboard color="gray" size={64} />

@@ -1,8 +1,9 @@
-import { LayoutDashboard, UtensilsCrossed, ChefHat, Settings, Package, ClipboardList, Users, Receipt } from 'lucide-react-native';
+import { LayoutDashboard, UtensilsCrossed, ChefHat, Settings, Package, ClipboardList, Users, Receipt, Armchair } from 'lucide-react-native';
 
 export const NAV_ITEMS = {
   ADMIN: [
     { label: 'Dashboard', icon: LayoutDashboard, path: 'dashboard' },
+    { label: 'Mesas', icon: Armchair, path: 'table-management' },
     { label: 'Menu', icon: UtensilsCrossed, path: 'menu' },
     { label: 'Inventory', icon: Package, path: 'inventory' },
     { label: 'Reports', icon: ClipboardList, path: 'reports' },
