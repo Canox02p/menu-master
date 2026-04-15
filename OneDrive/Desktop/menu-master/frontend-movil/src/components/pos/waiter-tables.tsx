@@ -282,6 +282,6 @@ export function WaiterTables() {
           />
         )}
       </Modal>
-    </View> // <-- AQUÍ ESTABA EL ETIQUETA QUE FALTABA
+    </View>
   );
 }

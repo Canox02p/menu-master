@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions, Platform, Pressable, StyleProp, ViewStyle, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, CheckCircle2, AlertCircle } from 'lucide-react-native';
+// ¡AQUÍ ESTÁ EL ARREGLO! Agregamos UtensilsCrossed
+import { Clock, CheckCircle2, AlertCircle, User, UtensilsCrossed } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
-import { api } from '@/lib/api'; // API real
+import { api } from '@/lib/api';
 
 // ==========================================
-// 1. INTERFACES (Tipado Estricto)
+// 1. INTERFACES (Tipado)
 // ==========================================
 
 interface KDSOrderItem {
@@ -23,8 +24,10 @@ interface KDSOrderItem {
 
 interface KDSOrder {
   id: string;
-  table: string; // Mongo devuelve ID o string
+  table: string;
+  waiterName: string;
   time: string;
+  minutesAgo: number;
   items: KDSOrderItem[];
   urgency: 'high' | 'normal';
 }
@@ -41,12 +44,27 @@ interface OrderTicketProps {
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 2. SUBCOMPONENTES (SRP & Interacciones)
+// 2. SUBCOMPONENTES (Ticket de la Cocina)
 // ==========================================
 
 const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, onCompleteOrder }: OrderTicketProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const isUrgent = order.urgency === 'high';
+
+  const [opacityAnim] = useState(new Animated.Value(1));
+
+  useEffect(() => {
+    if (isUrgent) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacityAnim, { toValue: 0.4, duration: 1000, useNativeDriver: true }),
+          Animated.timing(opacityAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [isUrgent]);
+
+  const isFullyCompleted = order.items.every(item => item.status === 'Completed');
 
   return (
     <View style={widthStyle} className="p-2 mb-2">
@@ -59,28 +77,26 @@ const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, 
       >
         <Card
           className={cn(
-            "border-none overflow-hidden transition-all duration-300 rounded-[24px] flex-1 flex flex-col",
-            isDark ? "bg-zinc-900/40" : "bg-white",
-            isHovered ? "shadow-md" : "shadow-sm",
-            isUrgent && (isDark ? "bg-red-950/20" : "bg-red-50/50")
+            "border-none overflow-hidden transition-all duration-300 rounded-[24px] flex-1 flex flex-col shadow-lg",
+            isDark ? "bg-[#1E1E1E]" : "bg-white",
+            isUrgent && (isDark ? "bg-red-950/30" : "bg-red-50/80")
           )}
           style={{
             borderWidth: isUrgent ? 2 : 1.5,
-            borderColor: isUrgent ? '#ef4444' : (isHovered ? primaryColor : 'transparent'),
+            borderColor: isUrgent ? '#ef4444' : (isHovered ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7')),
             transform: [{ translateY: isHovered ? -2 : 0 }]
           }}
         >
-          {/* CABECERA DEL TICKET */}
           <CardHeader className={cn(
             "flex flex-row items-center justify-between py-4 border-b",
             isUrgent ? (isDark ? "bg-red-500/20 border-red-500/30" : "bg-red-500/10 border-red-200") :
-              (isDark ? "bg-zinc-800/40 border-zinc-800" : "bg-zinc-50 border-zinc-100")
+              (isDark ? "bg-[#2A2A2A] border-[#3f3f46]" : "bg-zinc-50 border-zinc-200")
           )}>
             <View className="flex-row items-center gap-3">
               <View
                 className={cn(
                   "w-12 h-12 rounded-[14px] flex items-center justify-center shadow-sm px-1",
-                  isUrgent ? "bg-red-500" : (isDark ? "bg-zinc-800" : "bg-white")
+                  isUrgent ? "bg-red-500" : (isDark ? "bg-black/40" : "bg-white")
                 )}
                 style={!isUrgent ? { backgroundColor: `${primaryColor}15` } : {}}
               >
@@ -89,86 +105,89 @@ const OrderTicket = ({ order, isDark, primaryColor, widthStyle, onCompleteItem, 
                   className="font-headline font-bold text-xs text-center"
                   numberOfLines={2}
                 >
-                  T{order.table}
+                  Mesa {order.table}
                 </Text>
               </View>
               <View>
                 <CardTitle className={cn("text-base font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                  #{order.id.slice(-4)}
+                  Ticket #{order.id.slice(-4)}
                 </CardTitle>
                 <View className="flex-row items-center gap-1.5 mt-0.5">
-                  {/* LIMPIEZA NATIVEWIND */}
                   <Clock color={isUrgent ? "#ef4444" : (isDark ? "#a1a1aa" : "#71717a")} size={12} />
                   <Text className={cn("text-[11px] font-bold", isUrgent ? "text-red-500" : "text-zinc-500")}>
-                    {order.time}
+                    Hace {order.minutesAgo} min ({order.time})
                   </Text>
                 </View>
               </View>
             </View>
+
             {isUrgent && (
-              <View className="bg-red-500 px-3 py-1 rounded-full animate-pulse">
-                <Text className="text-[10px] font-bold text-white uppercase tracking-wider">Urgent</Text>
-              </View>
+              <Animated.View style={{ opacity: opacityAnim }} className="bg-red-500 px-3 py-1.5 rounded-full flex-row items-center gap-1">
+                <AlertCircle color="white" size={12} strokeWidth={3} />
+                <Text className="text-[10px] font-bold text-white uppercase tracking-wider">Urgente</Text>
+              </Animated.View>
             )}
           </CardHeader>
 
-          {/* LISTA DE PLATILLOS */}
+          <View className={cn("px-4 py-2 border-b flex-row items-center gap-2", isDark ? "border-[#2A2A2A] bg-black/20" : "border-zinc-100 bg-zinc-50/50")}>
+            <User color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
+            <Text className={cn("text-xs font-bold uppercase tracking-widest", isDark ? "text-zinc-400" : "text-zinc-500")}>Mesero: {order.waiterName}</Text>
+          </View>
+
           <CardContent className="p-4 flex-1 space-y-3">
             {order.items.map((item, i) => {
               const isCompleted = item.status === 'Completed';
               return (
                 <View key={i} className={cn(
-                  "p-3 rounded-[16px] flex-row items-start justify-between gap-3 transition-colors",
+                  "p-3 rounded-[16px] flex-row items-center justify-between gap-3 transition-colors border",
                   isCompleted
-                    ? (isDark ? "bg-emerald-500/10" : "bg-emerald-50")
-                    : (isDark ? "bg-zinc-800/50 border border-zinc-700/50" : "bg-white shadow-sm border border-zinc-100")
+                    ? (isDark ? "bg-emerald-500/10 border-emerald-500/20" : "bg-emerald-50 border-emerald-200")
+                    : (isDark ? "bg-[#2A2A2A] border-[#3f3f46]" : "bg-white shadow-sm border-zinc-200")
                 )}>
-                  <View className="flex-1">
-                    <View className="flex-row items-center gap-2.5 mb-1">
-                      <View className={cn(
-                        "w-6 h-6 rounded-md flex items-center justify-center",
-                        isCompleted ? "bg-emerald-500/20" : "bg-zinc-200 dark:bg-zinc-700"
-                      )}>
-                        <Text className={cn("text-[11px] font-bold", isCompleted ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-700 dark:text-zinc-300")}>
-                          {item.qty}x
-                        </Text>
-                      </View>
-                      <Text className={cn(
-                        "font-bold text-sm flex-1",
-                        isCompleted
-                          ? "text-emerald-600 dark:text-emerald-500 line-through decoration-emerald-500/50"
-                          : (isDark ? "text-zinc-200" : "text-zinc-800")
-                      )}>
-                        {item.name}
+                  <View className="flex-1 flex-row items-center gap-3">
+                    <View className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center",
+                      isCompleted ? "bg-emerald-500/20" : (isDark ? "bg-black/40" : "bg-zinc-100")
+                    )}>
+                      <Text className={cn("text-xs font-bold", isCompleted ? "text-emerald-500" : (isDark ? "text-zinc-300" : "text-zinc-700"))}>
+                        {item.qty}x
                       </Text>
                     </View>
+                    <Text className={cn(
+                      "font-bold text-base flex-1",
+                      isCompleted
+                        ? "text-emerald-600 dark:text-emerald-500 line-through decoration-emerald-500/50"
+                        : (isDark ? "text-zinc-200" : "text-zinc-800")
+                    )}>
+                      {item.name}
+                    </Text>
                   </View>
 
                   <TouchableOpacity
                     activeOpacity={0.6}
                     onPress={() => onCompleteItem(order.id, item.name)}
-                    disabled={isCompleted}
                     className={cn(
-                      "w-11 h-11 rounded-xl items-center justify-center",
-                      isCompleted ? "bg-emerald-500" : (isDark ? "bg-zinc-700" : "bg-zinc-100")
+                      "w-12 h-12 rounded-xl items-center justify-center border",
+                      isCompleted ? "bg-emerald-500 border-emerald-500" : (isDark ? "bg-[#1E1E1E] border-[#3f3f46]" : "bg-zinc-50 border-zinc-300")
                     )}
                   >
-                    {/* LIMPIEZA NATIVEWIND */}
-                    <CheckCircle2 color={isCompleted ? "white" : (isDark ? "#52525b" : "#d4d4d8")} size={22} />
+                    <CheckCircle2 color={isCompleted ? "white" : (isDark ? "#52525b" : "#d4d4d8")} size={24} />
                   </TouchableOpacity>
                 </View>
               );
             })}
 
-            {/* BOTÓN DESPACHAR ORDEN COMPLETA */}
             <View className="pt-4 mt-auto">
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => onCompleteOrder(order.id)}
-                style={{ backgroundColor: primaryColor }}
-                className="w-full rounded-[16px] h-12 flex-row justify-center items-center shadow-lg shadow-primary/30"
+                style={{ backgroundColor: isFullyCompleted ? '#10b981' : primaryColor }}
+                className="w-full rounded-2xl h-14 flex-row justify-center items-center shadow-lg active:scale-95 transition-transform"
               >
-                <Text className="text-white font-bold tracking-wide">Ready for Service</Text>
+                {isFullyCompleted ? <CheckCircle2 color="white" size={20} className="mr-2" /> : null}
+                <Text className="text-white font-bold tracking-wide text-base">
+                  {isFullyCompleted ? "Despachar Orden" : "Marcar todo como Listo"}
+                </Text>
               </TouchableOpacity>
             </View>
           </CardContent>
@@ -191,7 +210,6 @@ export function ChefKDS() {
   const [orders, setOrders] = useState<KDSOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Responsividad exacta
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
@@ -201,41 +219,44 @@ export function ChefKDS() {
     return { width: '100%' };
   };
 
-  // Cargar órdenes y resolver nombres con MySQL
   const fetchKDSData = async () => {
     try {
-      // 1. Obtener el diccionario de productos
-      const productosData = await api.productos.getAll();
-      const productDict: Record<string, string> = {};
-      productosData.forEach((p: any) => {
-        const id = p.id_producto?.toString() || p.id?.toString();
-        productDict[id] = p.nombre;
-      });
-
-      // 2. Obtener pedidos de Mongo
       const pedidosData = await api.pedidos.getCocina();
 
-      // 3. Mapear y combinar
       const mappedOrders: KDSOrder[] = pedidosData.map((p: any) => {
         const fecha = new Date(p.fecha_creacion || Date.now());
         const diffMins = Math.floor((Date.now() - fecha.getTime()) / 60000);
 
         return {
           id: p._id,
-          table: p.id_mesa?.numero_mesa?.toString() || p.id_mesa?.toString().slice(-4) || '?',
-          time: diffMins > 0 ? `${diffMins}m ago` : 'Just now',
+          table: p.numero_mesa?.toString() || p.id_mesa?.numero_mesa?.toString() || '?',
+          waiterName: p.nombre_mesero || 'Mesero Desconocido',
+          time: fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          minutesAgo: diffMins,
           items: (p.productos || []).map((prod: any) => ({
             id_producto: prod.id_producto,
-            name: productDict[prod.id_producto] || `Platillo #${prod.id_producto?.slice(-4)}`,
+            name: prod.nombre || `Platillo #${prod.id_producto?.slice(-4)}`,
             qty: prod.cantidad,
             status: 'Preparing',
             mods: ''
           })),
-          urgency: diffMins >= 15 ? 'high' : 'normal' // Si pasan de 15 mins se pone rojo
+          urgency: diffMins >= 10 ? 'high' : 'normal'
         };
       });
 
-      setOrders(mappedOrders);
+      setOrders(currentOrders => {
+        return mappedOrders.map(newOrder => {
+          const oldOrder = currentOrders.find(o => o.id === newOrder.id);
+          if (oldOrder) {
+            newOrder.items = newOrder.items.map(newItem => {
+              const oldItem = oldOrder.items.find(i => i.name === newItem.name);
+              return oldItem ? { ...newItem, status: oldItem.status } : newItem;
+            });
+          }
+          return newOrder;
+        });
+      });
+
     } catch (error) {
       console.error("Error cargando KDS:", error);
     } finally {
@@ -245,16 +266,19 @@ export function ChefKDS() {
 
   useEffect(() => {
     fetchKDSData();
-    // Auto-recarga cada 10 segundos (Polling)
-    const interval = setInterval(fetchKDSData, 10000);
+    const interval = setInterval(() => {
+      fetchKDSData();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
   const completeItem = (orderId: string, itemName: string) => {
-    // Estado puramente visual para que el chef tache cosas
     setOrders(orders.map(o => {
       if (o.id === orderId) {
-        return { ...o, items: o.items.map(i => i.name === itemName ? { ...i, status: 'Completed' } : i) };
+        return {
+          ...o,
+          items: o.items.map(i => i.name === itemName ? { ...i, status: i.status === 'Completed' ? 'Preparing' : 'Completed' } : i)
+        };
       }
       return o;
     }));
@@ -262,18 +286,17 @@ export function ChefKDS() {
 
   const completeOrder = async (orderId: string) => {
     try {
-      // Optimistic UI: lo quitamos de la pantalla antes de la respuesta
       setOrders(prev => prev.filter(o => o.id !== orderId));
-
-      // Enviamos actualización a MongoDB (Cambia estado a LISTO y crea Notificación)
       await api.pedidos.updateEstado(orderId, 'LISTO');
-
-      toast({ title: "¡Orden Lista!", description: "Se ha notificado al mesero." });
+      toast({ title: "¡Orden Lista!", description: "La orden ha sido despachada." });
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo actualizar el estado.", variant: "destructive" });
-      fetchKDSData(); // Revertimos si falla
+      toast({ title: "Error", description: "No se pudo actualizar el estado de la orden.", variant: "destructive" });
+      fetchKDSData();
     }
   };
+
+  const pendingOrders = orders.length;
+  const urgentOrders = orders.filter(o => o.urgency === 'high').length;
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}>
@@ -284,33 +307,37 @@ export function ChefKDS() {
       >
         <View className="px-4 pt-8 max-w-[1400px] mx-auto w-full">
 
-          {/* HEADER DEL KDS */}
           <View className="flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 px-2">
             <View className="flex-row items-center gap-4">
               <View>
                 <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                  Kitchen Display
+                  Pantalla de Cocina
                 </Text>
-                <Text className="text-zinc-500">Monitor en tiempo real de MongoDB.</Text>
+                <Text className="text-zinc-500">Recibiendo órdenes en tiempo real. (Auto-recarga 5s).</Text>
               </View>
               {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
             </View>
 
-            {/* ESTADÍSTICAS RÁPIDAS */}
             <View className={cn(
-              "flex-row items-center p-4 rounded-[20px] shadow-sm w-full md:w-auto justify-around md:justify-start gap-6",
-              isDark ? "bg-zinc-900/80" : "bg-white"
+              "flex-row items-center p-4 rounded-2xl shadow-sm w-full md:w-auto justify-around md:justify-start gap-8 border",
+              isDark ? "bg-[#1E1E1E] border-[#2A2A2A]" : "bg-white border-zinc-200"
             )}>
               <View className="items-center">
-                <Text className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Pending</Text>
-                <Text className={cn("text-2xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                  {orders.length}
+                <Text className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Pendientes</Text>
+                <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
+                  {pendingOrders}
+                </Text>
+              </View>
+              <View className="w-px h-10 bg-zinc-500/20" />
+              <View className="items-center">
+                <Text className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Urgentes</Text>
+                <Text className={cn("text-3xl font-headline font-bold", urgentOrders > 0 ? "text-red-500" : (isDark ? "text-zinc-700" : "text-zinc-300"))}>
+                  {urgentOrders}
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* GRID DE TICKETS */}
           <View className="flex-row flex-wrap -mx-2">
             {orders.map((order) => (
               <OrderTicket
@@ -324,15 +351,13 @@ export function ChefKDS() {
               />
             ))}
 
-            {/* MENSAJE SI NO HAY ÓRDENES */}
             {!isLoading && orders.length === 0 && (
-              <View className="w-full py-20 items-center justify-center">
-                {/* LIMPIEZA NATIVEWIND: Se movieron las clases al contenedor View */}
+              <View className="w-full py-32 items-center justify-center">
                 <View className="mb-4 opacity-50">
-                  <CheckCircle2 color={primaryColor} size={64} />
+                  <UtensilsCrossed color={primaryColor} size={64} />
                 </View>
-                <Text className={cn("text-2xl font-headline font-bold mb-2", isDark ? "text-white" : "text-zinc-900")}>All caught up!</Text>
-                <Text className="text-zinc-500">The kitchen is clear. Great job team.</Text>
+                <Text className={cn("text-2xl font-headline font-bold mb-2", isDark ? "text-white" : "text-zinc-900")}>¡Todo listo!</Text>
+                <Text className="text-zinc-500">No hay órdenes pendientes en este momento.</Text>
               </View>
             )}
           </View>
