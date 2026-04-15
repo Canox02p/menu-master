@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity, Modal, DimensionValue } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity, Modal, DimensionValue, Alert, SafeAreaView } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Clock, Plus, MapPin, User } from 'lucide-react-native';
+import { Users, Clock, Plus, MapPin, User, ReceiptText, CheckCircle2, X } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { OrderTaking } from './order-taking';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/lib/api';
 
 // ==========================================
 // 1. INTERFACES
@@ -21,7 +22,14 @@ interface TableData {
   ubicacion?: string;
   status: 'Occupied' | 'Available';
   capacity: number;
-  mesero_nombre?: string; // Nombre del mesero que atiende actualmente
+  mesero_nombre?: string;
+}
+
+// Nueva interfaz para agrupar las comandas de una mesa
+interface ConsolidatedOrder {
+  items: { nombre: string, cantidad: number, precio_unitario: number, subtotal: number }[];
+  total: number;
+  orderIds: string[]; // Guardamos los IDs de todas las sub-órdenes para marcarlas pagadas
 }
 
 const CHARCOAL_GRAY = "#171A1C";
@@ -39,12 +47,12 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
           className={cn(
             "aspect-square rounded-[32px] p-5 transition-all border flex-col justify-between overflow-hidden",
             isOccupied
-              ? (isDark ? "bg-zinc-800/80 border-transparent shadow-xl" : "bg-white shadow-lg border-transparent")
-              : (isDark ? "bg-zinc-900/40 border-dashed border-zinc-700" : "bg-card/50 border-dashed border-zinc-300")
+              ? (isDark ? "bg-[#1E1E1E] border-[#3f3f46] shadow-xl" : "bg-white shadow-lg border-zinc-200")
+              : (isDark ? "bg-[#161616] border-dashed border-[#2A2A2A]" : "bg-zinc-50 border-dashed border-zinc-300")
           )}
           style={{
             borderWidth: isSelected ? 2 : 1,
-            borderColor: isSelected ? primaryColor : (isOccupied ? 'transparent' : undefined),
+            borderColor: isSelected ? primaryColor : (isOccupied ? (isDark ? '#3f3f46' : '#e4e4e7') : undefined),
             transform: [{ scale: isSelected ? 0.98 : 1 }]
           }}
         >
@@ -63,7 +71,7 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
             {isOccupied && (
               <View className="mb-2">
                 <Text className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">Atiende:</Text>
-                <Text className={cn("text-[11px] font-bold", isDark ? "text-zinc-300" : "text-zinc-700")} numberOfLines={1}>
+                <Text className={cn("text-[11px] font-bold uppercase", isDark ? "text-zinc-300" : "text-zinc-700")} numberOfLines={1}>
                   {table.mesero_nombre || 'Mesero'}
                 </Text>
               </View>
@@ -71,7 +79,7 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
 
             <View className={cn("flex-row items-center gap-1.5 px-2.5 py-1 rounded-full self-start", isOccupied ? "bg-rose-500/10" : "bg-emerald-500/10")}>
               <View className={cn("w-1.5 h-1.5 rounded-full", isOccupied ? "bg-rose-500" : "bg-emerald-500")} />
-              <Text className={cn("text-[10px] font-bold uppercase", isOccupied ? "text-rose-500" : "text-emerald-500")}>
+              <Text className={cn("text-[10px] font-bold uppercase tracking-widest", isOccupied ? "text-rose-500" : "text-emerald-500")}>
                 {isOccupied ? 'Ocupada' : 'Libre'}
               </Text>
             </View>
@@ -90,14 +98,19 @@ export function WaiterTables() {
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
   const { toast } = useToast();
-
-  // Extraemos el usuario para saber quién está operando
   const { user } = useAuth();
 
   const [tables, setTables] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
+
+  // Modales
   const [showOrderTaking, setShowOrderTaking] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+
+  // Datos consolidados para cobrar
+  const [activeAccount, setActiveAccount] = useState<ConsolidatedOrder | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const fetchTables = async () => {
     try {
@@ -112,7 +125,7 @@ export function WaiterTables() {
         ubicacion: t.ubicacion,
         status: t.estado === 'LIBRE' ? 'Available' : 'Occupied',
         capacity: t.capacidad,
-        mesero_nombre: t.mesero_nombre // Traemos el nombre del mesero desde el backend
+        mesero_nombre: t.mesero_nombre
       }));
 
       setTables(mappedTables.sort((a, b) => a.numero_mesa - b.numero_mesa));
@@ -125,7 +138,108 @@ export function WaiterTables() {
 
   useEffect(() => {
     fetchTables();
+    const interval = setInterval(() => { fetchTables(); }, 10000); // Recarga automática silenciosa
+    return () => clearInterval(interval);
   }, []);
+
+  // Lógica para Consolidar la Cuenta antes de Cobrar
+  const openCheckout = async (mesa: TableData) => {
+    try {
+      setIsLoading(true);
+      // 1. Obtenemos todas las órdenes de la API
+      const response = await fetch('https://menu-master-api.onrender.com/pedidos');
+      let data = await response.json();
+      let pedidosArray = Array.isArray(data) ? data : (data.pedidos || data.data || Object.values(data)[0] || []);
+
+      // 2. Filtramos solo las de ESTA mesa que NO estén pagadas
+      const comandasMesa = pedidosArray.filter((p: any) => {
+        const idMesaStr = p.id_mesa?._id || p.id_mesa;
+        const isCorrectMesa = idMesaStr === mesa._id || p.numero_mesa === mesa.numero_mesa;
+        const isNotPaid = p.estado !== 'PAGADO' && p.estado !== 'PAID';
+        return isCorrectMesa && isNotPaid;
+      });
+
+      if (comandasMesa.length === 0) {
+        toast({ title: "Sin Cuenta", description: "Esta mesa no tiene órdenes activas por cobrar." });
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Consolidamos todos los items en una sola lista y sumamos el total
+      let grandTotal = 0;
+      let orderIds: string[] = [];
+      let mergedItems: { [key: string]: { nombre: string, cantidad: number, precio_unitario: number, subtotal: number } } = {};
+
+      comandasMesa.forEach((orden: any) => {
+        orderIds.push(orden._id);
+        grandTotal += Number(orden.total || 0);
+
+        (orden.productos || []).forEach((prod: any) => {
+          if (mergedItems[prod.nombre]) {
+            mergedItems[prod.nombre].cantidad += Number(prod.cantidad);
+            mergedItems[prod.nombre].subtotal += Number(prod.subtotal) || (Number(prod.cantidad) * Number(prod.precio_unitario));
+          } else {
+            mergedItems[prod.nombre] = {
+              nombre: prod.nombre,
+              cantidad: Number(prod.cantidad),
+              precio_unitario: Number(prod.precio_unitario),
+              subtotal: Number(prod.subtotal) || (Number(prod.cantidad) * Number(prod.precio_unitario))
+            };
+          }
+        });
+      });
+
+      setActiveAccount({
+        items: Object.values(mergedItems),
+        total: grandTotal,
+        orderIds: orderIds
+      });
+      setShowCheckoutModal(true);
+
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo generar la cuenta.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para procesar el pago y liberar mesa
+  const processPayment = async () => {
+    if (!activeAccount || !selectedTable) return;
+    setIsProcessingPayment(true);
+
+    try {
+      // 1. Marcar TODAS las comandas de la mesa como PAGADAS
+      for (const orderId of activeAccount.orderIds) {
+        try {
+          await fetch(`https://menu-master-api.onrender.com/pedidos/${orderId}/estado`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: 'PAGADO' })
+          });
+        } catch (e) {
+          if (api?.pedidos?.updateEstado) await api.pedidos.updateEstado(orderId, 'PAGADO');
+        }
+      }
+
+      // 2. Liberar la Mesa Física
+      await fetch(`https://menu-master-api.onrender.com/mesas/${selectedTable._id}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'LIBRE', mesero_nombre: '' })
+      });
+
+      toast({ title: "Cuenta Pagada", description: "La mesa ha sido liberada exitosamente." });
+      setShowCheckoutModal(false);
+      setSelectedTable(null);
+      setActiveAccount(null);
+      fetchTables();
+    } catch (error) {
+      toast({ title: "Error crítico", description: "Fallo al procesar el pago.", variant: "destructive" });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   const getCardWidth = (): { width: DimensionValue } => {
     if (width >= 1024) return { width: '20%' };
@@ -135,18 +249,14 @@ export function WaiterTables() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}>
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 140 : 120 }}
-      >
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
         <View className="px-4 pt-8 max-w-[1400px] mx-auto w-full">
           <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
             <View>
               <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
                 Plano de Mesas
               </Text>
-              <Text className="text-zinc-500">Selecciona una mesa para gestionar la comanda.</Text>
+              <Text className="text-zinc-500">Selecciona una mesa para gestionar la comanda o cobrar.</Text>
             </View>
             <View className="flex-row items-center gap-3 mt-2 md:mt-0">
               {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
@@ -157,7 +267,7 @@ export function WaiterTables() {
 
           <View className="flex-row flex-wrap -mx-2">
             {!isLoading && tables.length === 0 && (
-              <Text className="text-zinc-500 p-4 w-full text-center">No hay mesas configuradas. El administrador debe agregarlas.</Text>
+              <Text className="text-zinc-500 p-4 w-full text-center">No hay mesas configuradas.</Text>
             )}
 
             {tables.map((table) => (
@@ -176,13 +286,13 @@ export function WaiterTables() {
       </ScrollView>
 
       {/* POPUP INFERIOR: ACCIÓN SOBRE MESA */}
-      {selectedTable && !showOrderTaking && (
+      {selectedTable && !showOrderTaking && !showCheckoutModal && (
         <View className="absolute bottom-8 left-4 right-4 items-center justify-center z-50">
           <Card
             className="border-none shadow-2xl rounded-[32px] overflow-hidden w-full max-w-lg"
             style={{ backgroundColor: primaryColor }}
           >
-            <CardContent className="p-5 flex-col gap-4">
+            <CardContent className="p-5 flex-col gap-5">
               <View className="flex-row justify-between items-center w-full">
                 <View className="flex-row items-center gap-4">
                   <View className="w-14 h-14 rounded-2xl bg-white/20 items-center justify-center">
@@ -199,27 +309,105 @@ export function WaiterTables() {
                 </View>
 
                 <TouchableOpacity
-                  className="h-12 w-12 rounded-full items-center justify-center bg-black/10"
+                  className="h-12 w-12 rounded-full items-center justify-center bg-black/10 active:scale-95 transition-transform"
                   onPress={() => setSelectedTable(null)}
                 >
                   <Plus color="white" size={24} style={{ transform: [{ rotate: '45deg' }] }} />
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
-                className="w-full rounded-xl bg-white items-center justify-center flex-row py-4 shadow-lg shadow-black/10 transition-transform active:scale-95"
-                onPress={() => setShowOrderTaking(true)}
-              >
-                <Plus color={primaryColor} size={20} strokeWidth={3} />
-                <Text style={{ color: primaryColor }} className="font-bold text-lg ml-2">
-                  {selectedTable.status === 'Available' ? 'Tomar Nueva Orden' : 'Añadir a la Cuenta'}
-                </Text>
-              </TouchableOpacity>
+              {/* BOTONERA DUAL SI ESTÁ OCUPADA */}
+              {selectedTable.status === 'Occupied' ? (
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    className="flex-1 rounded-xl bg-white/20 items-center justify-center flex-row py-4 shadow-sm active:scale-95 transition-transform"
+                    onPress={() => setShowOrderTaking(true)}
+                  >
+                    <Plus color="white" size={20} strokeWidth={3} />
+                    <Text className="text-white font-bold text-base ml-2">Añadir Más</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    className="flex-1 rounded-xl bg-white items-center justify-center flex-row py-4 shadow-lg shadow-black/10 active:scale-95 transition-transform"
+                    onPress={() => openCheckout(selectedTable)}
+                  >
+                    <ReceiptText color={primaryColor} size={20} strokeWidth={3} />
+                    <Text style={{ color: primaryColor }} className="font-bold text-base ml-2">Cobrar Cuenta</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  className="w-full rounded-xl bg-white items-center justify-center flex-row py-4 shadow-lg shadow-black/10 active:scale-95 transition-transform"
+                  onPress={() => setShowOrderTaking(true)}
+                >
+                  <Plus color={primaryColor} size={20} strokeWidth={3} />
+                  <Text style={{ color: primaryColor }} className="font-bold text-lg ml-2">Abrir Mesa (Nueva Orden)</Text>
+                </TouchableOpacity>
+              )}
+
             </CardContent>
           </Card>
         </View>
       )}
+
+      {/* MODAL DEL RESUMEN DE CUENTA (CHECKOUT) */}
+      <Modal visible={showCheckoutModal} transparent animationType="slide">
+        <SafeAreaView className="absolute z-[200] top-0 bottom-0 left-0 right-0 bg-black/60 items-center justify-center p-4">
+          <View className={cn("w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl flex-col max-h-[90%]", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
+
+            <View className={cn("p-6 flex-row justify-between items-center border-b", isDark ? "border-[#2A2A2A]" : "border-zinc-200")}>
+              <Text className={cn("font-bold text-lg font-headline", isDark ? "text-white" : "text-black")}>
+                Cuenta Mesa {selectedTable?.numero_mesa}
+              </Text>
+              <TouchableOpacity onPress={() => setShowCheckoutModal(false)} className={cn("p-2 rounded-full", isDark ? "bg-[#2A2A2A]" : "bg-zinc-100")}>
+                <X color={isDark ? "white" : "black"} size={20} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView className="p-6 flex-1" showsVerticalScrollIndicator={false}>
+              <View className="mb-4 border-b border-dashed pb-4" style={{ borderColor: isDark ? '#3f3f46' : '#e4e4e7' }}>
+                <View className="flex-row justify-between mb-3">
+                  <Text className="text-[10px] font-bold text-zinc-500 w-8">CANT</Text>
+                  <Text className="text-[10px] font-bold text-zinc-500 flex-1">PRODUCTO</Text>
+                  <Text className="text-[10px] font-bold text-zinc-500 text-right">SUBTOTAL</Text>
+                </View>
+
+                {activeAccount?.items.map((item, idx) => (
+                  <View key={idx} className="flex-row justify-between mb-3 items-start">
+                    <Text className={cn("text-sm font-bold w-8", isDark ? "text-zinc-300" : "text-zinc-800")}>{item.cantidad}</Text>
+                    <Text className={cn("text-sm font-medium flex-1 pr-2", isDark ? "text-zinc-400" : "text-zinc-700")}>{item.nombre}</Text>
+                    <Text className={cn("text-sm font-mono font-bold", isDark ? "text-zinc-300" : "text-zinc-800")}>${item.subtotal.toFixed(2)}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View className="flex-row justify-between items-end mt-2 mb-6">
+                <Text className={cn("text-xl font-bold uppercase tracking-widest", isDark ? "text-zinc-500" : "text-zinc-400")}>Total a Pagar</Text>
+                <Text style={{ color: primaryColor }} className="text-4xl font-mono font-bold">${activeAccount?.total.toFixed(2)}</Text>
+              </View>
+            </ScrollView>
+
+            <View className={cn("p-6 pt-0 border-t mt-2", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
+              <TouchableOpacity
+                onPress={processPayment}
+                disabled={isProcessingPayment}
+                style={{ backgroundColor: primaryColor }}
+                className="w-full py-4 mt-6 rounded-2xl items-center justify-center flex-row shadow-lg active:scale-95 transition-transform"
+              >
+                {isProcessingPayment ? <ActivityIndicator color="white" /> : (
+                  <>
+                    <CheckCircle2 color="white" size={20} className="mr-2" />
+                    <Text className="text-white font-bold text-lg tracking-wide">Confirmar Pago y Liberar</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
 
       {/* MODAL DE TOMA DE PEDIDO */}
       <Modal
