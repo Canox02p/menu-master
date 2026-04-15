@@ -9,18 +9,21 @@ interface AppLayoutProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  sessionRole?: string | null;
 }
 
-export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps) {
+export function AppLayout({ children, activeTab, setActiveTab, sessionRole }: AppLayoutProps) {
   const { user, logout } = useAuth();
 
   if (!user) return <>{children}</>;
 
-  // 🚨 SALVAVIDAS PARA CUENTAS VIEJAS Y NUEVAS
-  // Extraemos los roles de forma segura (si no existe user.roles, buscamos el viejo user.role)
   const rolesSeguros: string[] = user.roles || ((user as any).role ? [(user as any).role] : []);
 
-  const getHighestRole = (): keyof typeof NAV_ITEMS => {
+  const getActiveRole = (): keyof typeof NAV_ITEMS => {
+    if (sessionRole && (sessionRole === 'ADMIN' || sessionRole === 'COCINERO' || sessionRole === 'MESERO')) {
+      return sessionRole as keyof typeof NAV_ITEMS;
+    }
+
     if (rolesSeguros.length === 0) return 'DEFAULT';
     if (rolesSeguros.includes('ADMIN')) return 'ADMIN';
     if (rolesSeguros.includes('COCINERO')) return 'COCINERO';
@@ -28,12 +31,11 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
     return 'DEFAULT';
   };
 
-  const currentRole = getHighestRole();
+  const currentRole = getActiveRole();
   const items = NAV_ITEMS[currentRole] || [];
 
   return (
     <View className="flex-1 flex-row bg-background overflow-hidden">
-      {/* Sidebar for Desktop/Tablet */}
       <View className="hidden md:flex flex-col w-64 border-r bg-card/50 backdrop-blur-md">
         <View className="p-6 flex-row items-center gap-3">
           <View className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -73,7 +75,7 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
             <Text className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Logged in as</Text>
             <Text className="font-bold text-foreground">{user.name}</Text>
             <Text className="text-xs text-primary font-medium mt-1 uppercase">
-              {user.restaurante_nombre ? user.restaurante_nombre : rolesSeguros.join(', ')}
+              {currentRole} {/* Muestra el rol exacto con el que entró */}
             </Text>
           </View>
 
@@ -87,7 +89,6 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
         </View>
       </View>
 
-      {/* Main Content Area */}
       <View className="flex-1 flex flex-col relative h-full">
         <View className="md:hidden flex-row items-center justify-between p-4 border-b bg-card">
           <View className="flex-row items-center gap-2">
@@ -105,7 +106,6 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
           {children}
         </ScrollView>
 
-        {/* Mobile Bottom Bar */}
         <View className="md:hidden absolute bottom-0 left-0 right-0 bg-card/80 backdrop-blur-lg border-t flex-row items-center justify-around py-3 px-2 z-50">
           {items.map((item) => (
             <TouchableOpacity

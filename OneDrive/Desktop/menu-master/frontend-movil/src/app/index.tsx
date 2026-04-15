@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { LayoutDashboard, Eye, EyeOff, CheckCircle2 } from 'lucide-react-native';
+import { LayoutDashboard, Eye, EyeOff, CheckCircle2, Shield, ChefHat, UtensilsCrossed, ChevronRight } from 'lucide-react-native';
 
 const BASE_URL = 'https://menu-master-api.onrender.com';
 
@@ -32,6 +32,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // NUEVO: Estado para guardar el rol que el usuario selecciona al entrar
+  const [sessionRole, setSessionRole] = useState<string | null>(null);
+
   // CAMPOS
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,14 +42,31 @@ export default function Home() {
   const [restaurantName, setRestaurantName] = useState('');
   const [ownerName, setOwnerName] = useState('');
 
-  // Lógica de redirección por prioridad (Multi-rol)
+  // Lógica de redirección por prioridad y selección de rol
   useEffect(() => {
     if (user?.roles) {
-      if (user.roles.includes('ADMIN')) setActiveTab('dashboard');
-      else if (user.roles.includes('COCINERO')) setActiveTab('kds');
-      else setActiveTab('tables'); // Por defecto mesero
+      // Si solo tiene 1 rol, entra directo sin preguntar
+      if (user.roles.length === 1) {
+        handleRoleSelection(user.roles[0]);
+      }
+    } else {
+      // Si el usuario hace logout, limpiamos la selección
+      setSessionRole(null);
     }
   }, [user]);
+
+  const handleRoleSelection = (role: string) => {
+    setSessionRole(role);
+    if (role === 'ADMIN') setActiveTab('dashboard');
+    else if (role === 'COCINERO') setActiveTab('kds');
+    else setActiveTab('tables');
+  };
+
+  const getRoleIcon = (role: string) => {
+    if (role === 'ADMIN') return <Shield color="#3b82f6" size={24} />;
+    if (role === 'COCINERO') return <ChefHat color="#10b981" size={24} />;
+    return <UtensilsCrossed color="#f97316" size={24} />;
+  };
 
   // VALIDACIONES EXHAUSTIVAS
   const validateForm = () => {
@@ -188,7 +208,6 @@ export default function Home() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1 bg-[#09090b]"
       >
-        {/* CORRECCIÓN DE JUSTIFY-CONTENT AQUÍ */}
         <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <View className="max-w-md w-full space-y-8 animate-in fade-in zoom-in-95 duration-700">
 
@@ -339,9 +358,45 @@ export default function Home() {
     );
   }
 
+  // --- VISTA DE SELECCIÓN DE ROL (Solo si tiene > 1 rol y aún no selecciona nada) ---
+  if (user && user.roles && user.roles.length > 1 && !sessionRole) {
+    return (
+      <View className="flex-1 bg-[#09090b] items-center justify-center p-6">
+        <View className="max-w-md w-full space-y-6 animate-in fade-in zoom-in-95 duration-500">
+
+          <View className="text-center space-y-2 mb-4">
+            <Text className="text-3xl font-headline font-bold text-white text-center">Selecciona tu Rol</Text>
+            <Text className="text-zinc-500 text-center text-base">
+              Tienes múltiples roles asignados. ¿Cómo deseas entrar hoy?
+            </Text>
+          </View>
+
+          <Card className="bg-zinc-900/50 border-zinc-800/60 rounded-[32px] overflow-hidden shadow-2xl">
+            <CardContent className="p-6 space-y-3">
+              {user.roles.map(role => (
+                <TouchableOpacity
+                  key={role}
+                  onPress={() => handleRoleSelection(role)}
+                  className="bg-zinc-800/50 border border-zinc-700 p-5 rounded-2xl flex-row items-center justify-between hover:bg-zinc-800 active:scale-95 transition-all"
+                >
+                  <View className="flex-row items-center gap-4">
+                    {getRoleIcon(role)}
+                    <Text className="text-white font-bold text-lg tracking-wide">{role}</Text>
+                  </View>
+                  <ChevronRight color="#a1a1aa" size={24} />
+                </TouchableOpacity>
+              ))}
+            </CardContent>
+          </Card>
+
+        </View>
+      </View>
+    );
+  }
+
   // --- VISTA PRINCIPAL (LOGUEADO) ---
   return (
-    <AppLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <AppLayout activeTab={activeTab} setActiveTab={setActiveTab} sessionRole={sessionRole}>
       <View className="flex-1 animate-in fade-in slide-in-from-bottom-2 duration-500">
         {activeTab === 'dashboard' && <AdminDashboard />}
         {activeTab === 'menu' && <MenuManagement />}
