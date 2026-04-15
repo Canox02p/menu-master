@@ -2,14 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, SafeAreaView, ActivityIndicator } from 'react-native';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Minus, Send, ReceiptText, ChevronLeft, MapPin, User, Clock } from 'lucide-react-native';
+import { Minus, Plus, Send, ReceiptText, ChevronLeft, Trash2, UtensilsCrossed } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
-import { useAuth } from '@/components/providers/auth-provider';
 import { api } from '@/lib/api';
+import { Badge } from '@/components/ui/badge'; // <-- AQUÍ ESTÁ LA IMPORTACIÓN FALTANTE
 
 // ==========================================
 // 1. INTERFACES (Tipado Estricto)
@@ -29,7 +27,7 @@ interface CartItem extends MenuItem {
 interface OrderTakingProps {
   tableId: string;
   tableNumber: number;
-  tableName?: string; // Nombre opcional
+  tableName?: string;
   waiterId: string;
   waiterName: string;
   onClose: () => void;
@@ -49,9 +47,8 @@ interface CartItemRowProps {
   primaryColor: string;
   onIncrease: () => void;
   onDecrease: () => void;
+  onRemove: () => void;
 }
-
-const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
 // 2. SUBCOMPONENTES INTERACTIVOS
@@ -69,66 +66,60 @@ const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuIte
         onPressOut={() => setIsHovered(false)}
         onPress={() => onAdd(item)}
       >
-        <Card
+        <View
           className={cn(
-            "border-none overflow-hidden transition-all duration-200 rounded-[24px] h-36 flex-col justify-between",
-            isDark ? "bg-zinc-900/60" : "bg-white",
-            isHovered ? "shadow-md" : "shadow-sm"
+            "rounded-[20px] p-5 transition-all duration-200 h-36 flex-col justify-between border",
+            isDark ? "bg-[#1E1E1E] border-[#2A2A2A]" : "bg-white border-zinc-200"
           )}
           style={{
-            borderWidth: 1.5,
-            borderColor: isHovered ? primaryColor : 'transparent',
-            transform: [{ scale: isHovered ? 0.97 : 1 }]
+            borderColor: isHovered ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7'),
+            transform: [{ scale: isHovered ? 0.98 : 1 }]
           }}
         >
-          <CardContent className="p-5 flex-1 justify-between">
-            <Text className={cn("font-bold text-base", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={2}>
-              {item.name}
-            </Text>
+          <Text className={cn("font-bold text-base leading-tight", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={2}>
+            {item.name}
+          </Text>
 
-            <View className="flex-row justify-between items-center mt-auto">
-              <Text style={{ color: primaryColor }} className="text-lg font-headline font-bold">
-                ${item.price.toFixed(2)}
-              </Text>
-              <View
-                className="w-9 h-9 rounded-[12px] flex items-center justify-center transition-colors"
-                style={{ backgroundColor: isHovered ? primaryColor : `${primaryColor}15` }}
-              >
-                <Plus color={isHovered ? "white" : primaryColor} size={20} strokeWidth={3} />
-              </View>
+          <View className="flex-row justify-between items-end mt-auto w-full">
+            <Text style={{ color: primaryColor }} className="text-lg font-headline font-bold">
+              ${item.price.toFixed(2)}
+            </Text>
+            <View
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+              style={{ backgroundColor: isDark ? '#2A2A2A' : '#f4f4f5' }}
+            >
+              <Plus color={isDark ? "#a1a1aa" : "#71717a"} size={16} strokeWidth={3} />
             </View>
-          </CardContent>
-        </Card>
+          </View>
+        </View>
       </Pressable>
     </View>
   );
 };
 
-const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease }: CartItemRowProps) => {
+const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease, onRemove }: CartItemRowProps) => {
   return (
-    <View className={cn(
-      "flex-row items-center justify-between p-3.5 rounded-2xl mb-3",
-      isDark ? "bg-zinc-900/60 border border-zinc-800" : "bg-white border border-zinc-100 shadow-sm"
-    )}>
-      <View className="flex-1 pr-2">
-        <Text className={cn("font-bold text-sm mb-1", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={1}>
+    <View className="flex-row items-center justify-between py-3 border-b" style={{ borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}>
+      <View className="flex-1 pr-3">
+        <Text className={cn("font-bold text-sm mb-1", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={{ color: primaryColor }} className="text-xs font-bold">
+        <Text style={{ color: primaryColor }} className="text-sm font-bold">
           ${(item.price * item.qty).toFixed(2)}
         </Text>
       </View>
 
-      <View className={cn("flex-row items-center gap-3 p-1 rounded-xl", isDark ? "bg-zinc-950/50" : "bg-zinc-50")}>
+      <View className="flex-row items-center">
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onDecrease}
-          className={cn("w-8 h-8 rounded-lg items-center justify-center", isDark ? "bg-zinc-800" : "bg-white shadow-sm")}
+          className="w-8 h-8 rounded-full border items-center justify-center"
+          style={{ borderColor: isDark ? '#3f3f46' : '#d4d4d8' }}
         >
-          <Minus color={isDark ? "#d4d4d8" : "#52525b"} size={16} strokeWidth={3} />
+          <Minus color={isDark ? "#d4d4d8" : "#52525b"} size={14} strokeWidth={3} />
         </TouchableOpacity>
 
-        <Text className={cn("font-bold text-sm w-4 text-center", isDark ? "text-white" : "text-zinc-900")}>
+        <Text className={cn("font-bold text-sm w-8 text-center", isDark ? "text-white" : "text-zinc-900")}>
           {item.qty}
         </Text>
 
@@ -136,9 +127,9 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease }: Car
           activeOpacity={0.7}
           onPress={onIncrease}
           style={{ backgroundColor: primaryColor }}
-          className="w-8 h-8 rounded-lg items-center justify-center shadow-sm"
+          className="w-8 h-8 rounded-full items-center justify-center"
         >
-          <Plus color="white" size={16} strokeWidth={3} />
+          <Plus color="white" size={14} strokeWidth={3} />
         </TouchableOpacity>
       </View>
     </View>
@@ -163,16 +154,8 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [currentTime, setCurrentTime] = useState('');
-
-  // FETCH DEL MENÚ DESDE MYSQL (VÍA TU API) Y RELOJ
+  // FETCH DEL MENÚ DESDE MYSQL (VÍA TU API)
   useEffect(() => {
-    // Reloj para la cabecera
-    const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }, 1000);
-    setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-
     const fetchMenu = async () => {
       try {
         setIsLoading(true);
@@ -197,10 +180,8 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
     };
 
     fetchMenu();
-    return () => clearInterval(timer);
   }, []);
 
-  // DIMENSIONES FIJAS PARA EVITAR CRECIMIENTO INFINITO
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
@@ -224,11 +205,13 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
     setCart(prev => prev.map(i => i.id === id ? { ...i, qty: Math.max(0, i.qty - 1) } : i).filter(i => i.qty > 0));
   };
 
+  const deleteFromCart = (id: string) => {
+    setCart(prev => prev.filter(i => i.id !== id));
+  };
+
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
-  // ==========================================
   // ENVÍO DE ORDEN COMPLETA A MONGODB
-  // ==========================================
   const handleSendOrder = async () => {
     if (cart.length === 0) return;
 
@@ -251,7 +234,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
         estado: 'EN_COCINA'
       };
 
-      // 1. Crear Pedido en MongoDB
       const resPedido = await fetch('https://menu-master-api.onrender.com/pedidos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -259,7 +241,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
       });
       if (!resPedido.ok) throw new Error("No se pudo crear el pedido.");
 
-      // 2. Cambiar Mesa a OCUPADA
       await fetch(`https://menu-master-api.onrender.com/mesas/${tableId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -267,7 +248,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
       });
 
       toast({ title: "¡Éxito!", description: "Pedido enviado a cocina." });
-      onClose(); // Cerramos el modal
+      onClose();
     } catch (error) {
       toast({ title: "Error", description: "No se pudo enviar el pedido a la cocina.", variant: "destructive" });
     } finally {
@@ -282,60 +263,55 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
   return (
     <SafeAreaView
       className="absolute z-[100] top-0 bottom-0 left-0 right-0 h-full w-full"
-      style={{ backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}
+      style={{ backgroundColor: isDark ? "#121212" : "#f4f4f5" }}
     >
-      <View className="flex-col h-full w-full max-w-[1600px] mx-auto">
+      <View className="flex-col h-full w-full mx-auto">
 
-        {/* TOP HEADER */}
+        {/* TOP HEADER SÚTIL */}
         <View className={cn(
-          "p-4 border-b flex-row items-center justify-between",
-          isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"
+          "p-6 flex-row items-center justify-between",
+          isDark ? "bg-[#121212]" : "bg-[#f4f4f5]"
         )}>
           <View className="flex-row items-center gap-4">
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={onClose}
-              className={cn("w-10 h-10 rounded-xl items-center justify-center", isDark ? "bg-zinc-800" : "bg-zinc-100")}
+              className={cn("w-10 h-10 rounded-full items-center justify-center border", isDark ? "border-[#2A2A2A] bg-[#1E1E1E]" : "border-zinc-300 bg-white")}
             >
-              <ChevronLeft color={isDark ? "#d4d4d8" : "#52525b"} size={24} />
+              <ChevronLeft color={isDark ? "#d4d4d8" : "#52525b"} size={20} />
             </TouchableOpacity>
             <View>
-              <Text className={cn("text-xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                {tableName || `Mesa #${tableNumber}`}
+              <Text className={cn("text-2xl font-bold", isDark ? "text-white" : "text-zinc-900")}>
+                {tableName || `Table #${tableNumber}`}
               </Text>
-              <Text className="text-xs font-medium text-zinc-500 tracking-wide uppercase">
-                Nueva Orden
+              <Text className="text-xs text-zinc-500 tracking-wide uppercase mt-1">
+                New Order Entry
               </Text>
-            </View>
-          </View>
-
-          {/* INDICADORES INFO (Mesero y Reloj) */}
-          <View className="hidden md:flex flex-row items-center gap-6 mr-4">
-            <View className="flex-row items-center gap-2">
-              <User color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
-              <Text className={cn("text-sm font-bold uppercase", isDark ? "text-zinc-300" : "text-zinc-700")}>{waiterName}</Text>
-            </View>
-            <View className="flex-row items-center gap-2">
-              <Clock color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
-              <Text className={cn("text-sm font-mono font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{currentTime}</Text>
             </View>
           </View>
 
           <Badge
             variant="outline"
-            className={cn("rounded-full px-4 py-1.5 md:hidden", isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-100")}
-            label={`${cart.length} Items`}
+            className={cn("rounded-full px-4 py-1.5 md:hidden", isDark ? "border-[#2A2A2A] bg-[#1E1E1E]" : "border-zinc-300 bg-white")}
+            label={`${cart.length} Items Selected`}
           />
+          <View className="hidden md:flex">
+            <Badge
+              variant="outline"
+              className={cn("rounded-full px-4 py-1.5", isDark ? "border-[#2A2A2A] bg-[#1E1E1E]" : "border-zinc-300 bg-white")}
+              label={`${cart.length} Items Selected`}
+            />
+          </View>
         </View>
 
         {/* CONTENIDO PRINCIPAL */}
         <View className="flex-1 flex-col md:flex-row h-full">
 
           {/* LADO IZQUIERDO: MENÚ */}
-          <View className="flex-1 flex-col p-4 h-full">
+          <View className="flex-1 flex-col px-6 h-full">
 
-            {/* Categorías Fijas */}
-            <View className="mb-4">
+            {/* Categorías tipo "Tabs" */}
+            <View className="mb-6 border-b" style={{ borderBottomColor: isDark ? '#2A2A2A' : '#e4e4e7' }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible">
                 {categories.map(cat => {
                   const isSelected = selectedCategory === cat;
@@ -344,15 +320,15 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                       key={cat}
                       activeOpacity={0.8}
                       onPress={() => setSelectedCategory(cat)}
-                      style={{ backgroundColor: isSelected ? primaryColor : (isDark ? '#27272a' : 'white') }}
-                      className={cn(
-                        "rounded-full px-6 py-3 mr-3 shadow-sm transition-all",
-                        !isSelected && (isDark ? "border border-zinc-700" : "border border-zinc-200")
-                      )}
+                      style={{
+                        borderBottomWidth: isSelected ? 3 : 0,
+                        borderBottomColor: isSelected ? primaryColor : 'transparent',
+                      }}
+                      className="px-6 py-4 mr-2"
                     >
                       <Text className={cn(
-                        "font-bold",
-                        isSelected ? "text-white" : (isDark ? "text-zinc-300" : "text-zinc-600")
+                        "text-sm font-bold",
+                        isSelected ? "text-white" : (isDark ? "text-zinc-400" : "text-zinc-600")
                       )}>
                         {cat}
                       </Text>
@@ -362,15 +338,14 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               </ScrollView>
             </View>
 
-            {/* Grid de Platillos con ScrollView Flexible */}
+            {/* Grid de Platillos */}
             <View className="flex-1">
               {isLoading ? (
                 <View className="flex-1 items-center justify-center">
                   <ActivityIndicator size="large" color={primaryColor} />
-                  <Text className="text-zinc-500 mt-4">Cargando menú desde la base de datos...</Text>
                 </View>
               ) : (
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                   <View className="flex-row flex-wrap -mx-2">
                     {displayedMenu.map(item => (
                       <MenuItemCard
@@ -388,39 +363,36 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
             </View>
           </View>
 
-          {/* LADO DERECHO: TICKET DE ORDEN (Ancho fijo en Desktop) */}
+          {/* LADO DERECHO: RESUMEN DE ORDEN FIJO */}
           <View className={cn(
-            "w-full md:w-[400px] border-t md:border-t-0 md:border-l flex-col shadow-2xl h-[400px] md:h-full",
-            isDark ? "bg-zinc-950 border-zinc-800" : "bg-zinc-50 border-zinc-200"
+            "w-full md:w-[380px] border-t md:border-t-0 md:border-l flex-col h-[400px] md:h-full",
+            isDark ? "bg-[#161616] border-[#2A2A2A]" : "bg-white border-zinc-200 shadow-xl"
           )}>
 
-            <View className={cn("p-6 pb-4 border-b flex-row justify-between items-center", isDark ? "border-zinc-800" : "border-zinc-200")}>
+            <View className={cn("p-6 pb-4 flex-row justify-between items-center")}>
               <View className="flex-row items-center gap-3">
-                <ReceiptText color={primaryColor} size={24} />
+                <ReceiptText color={primaryColor} size={22} />
                 <Text className={cn("font-headline font-bold text-xl", isDark ? "text-white" : "text-zinc-900")}>
-                  Resumen
+                  Order Summary
                 </Text>
               </View>
-              {/* Botón de limpiar carrito */}
               {cart.length > 0 && (
                 <TouchableOpacity onPress={() => setCart([])}>
-                  <Text className="text-xs font-bold text-red-500">Limpiar</Text>
+                  <Trash2 color="#ef4444" size={18} />
                 </TouchableOpacity>
               )}
             </View>
 
-            <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
+            <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
               {cart.length === 0 ? (
-                <View className="flex-col items-center justify-center flex-1 opacity-60 space-y-4 min-h-[200px]">
-                  <View className={cn("w-20 h-20 rounded-full items-center justify-center mb-2", isDark ? "bg-zinc-800" : "bg-zinc-200")}>
-                    <ReceiptText color={isDark ? "#52525b" : "#a1a1aa"} size={36} />
-                  </View>
-                  <Text className={cn("font-bold text-base", isDark ? "text-zinc-400" : "text-zinc-500")}>
-                    Aún no hay productos
+                <View className="flex-col items-center justify-center flex-1 opacity-40 space-y-4">
+                  <ReceiptText color={isDark ? "#a1a1aa" : "#71717a"} size={48} />
+                  <Text className={cn("font-medium text-base", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                    No items added yet
                   </Text>
                 </View>
               ) : (
-                <View>
+                <View className="space-y-1">
                   {cart.map(item => (
                     <CartItemRow
                       key={item.id}
@@ -429,34 +401,39 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                       primaryColor={primaryColor}
                       onIncrease={() => addToCart(item)}
                       onDecrease={() => removeFromCart(item.id)}
+                      onRemove={() => deleteFromCart(item.id)}
                     />
                   ))}
                 </View>
               )}
             </ScrollView>
 
-            {/* PIE DE CARRITO (Totales y Botón Fijo Abajo) */}
-            <View className={cn("p-6 border-t", isDark ? "bg-zinc-950 border-zinc-800" : "bg-white border-zinc-200")}>
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className={cn("text-sm font-bold text-zinc-500 uppercase tracking-widest")}>Total</Text>
-                <Text className={cn("text-3xl font-mono font-bold", isDark ? "text-white" : "text-black")}>
+            <View className={cn("p-6 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-200")}>
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className={cn("text-base font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>Subtotal</Text>
+                <Text className={cn("text-xl font-bold", isDark ? "text-zinc-300" : "text-zinc-600")}>
+                  ${total.toFixed(2)}
+                </Text>
+              </View>
+
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className={cn("text-2xl font-bold", isDark ? "text-white" : "text-black")}>Total</Text>
+                <Text style={{ color: primaryColor }} className="text-3xl font-bold">
                   ${total.toFixed(2)}
                 </Text>
               </View>
 
               <TouchableOpacity
-                onPress={handleSendOrder} // <--- CAMBIA ESTO
+                onPress={handleSendOrder}
                 disabled={isSubmitting || cart.length === 0}
-                style={{ backgroundColor: cart.length > 0 ? primaryColor : (isDark ? '#3f3f46' : '#e4e4e7') }}
+                style={{ backgroundColor: cart.length > 0 ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7') }}
                 className="w-full py-4 rounded-xl items-center justify-center flex-row shadow-lg active:scale-95 transition-transform"
               >
                 {isSubmitting ? <ActivityIndicator color="white" /> : (
                   <>
-                    <View className="mr-2">
-                      <Send color={cart.length === 0 ? (isDark ? '#a1a1aa' : '#a1a1aa') : "white"} size={20} />
-                    </View>
-                    <Text className={cn("text-lg font-bold tracking-wide", cart.length === 0 ? (isDark ? "text-zinc-400" : "text-zinc-400") : "text-white")}>
-                      Enviar a Cocina
+                    <Send color={cart.length === 0 ? (isDark ? '#52525b' : '#a1a1aa') : "white"} size={18} className="mr-2" />
+                    <Text className={cn("text-base font-bold", cart.length === 0 ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-white")}>
+                      Send to Kitchen
                     </Text>
                   </>
                 )}
