@@ -1,6 +1,5 @@
 "use client"
 
-// Inspired by react-hot-toast library
 import * as React from "react"
 
 import type {
@@ -9,7 +8,8 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+// 1. CORRECCIÓN: Tiempo de eliminación reducido a 500ms para que la 'X' funcione al instante
+const TOAST_REMOVE_DELAY = 500
 
 type ToasterToast = ToastProps & {
   id: string
@@ -36,21 +36,21 @@ type ActionType = typeof actionTypes
 
 type Action =
   | {
-      type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
-    }
+    type: ActionType["ADD_TOAST"]
+    toast: ToasterToast
+  }
   | {
-      type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
-    }
+    type: ActionType["UPDATE_TOAST"]
+    toast: Partial<ToasterToast>
+  }
   | {
-      type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+    type: ActionType["DISMISS_TOAST"]
+    toastId?: ToasterToast["id"]
+  }
   | {
-      type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+    type: ActionType["REMOVE_TOAST"]
+    toastId?: ToasterToast["id"]
+  }
 
 interface State {
   toasts: ToasterToast[]
@@ -93,8 +93,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -108,9 +106,9 @@ export const reducer = (state: State, action: Action): State => {
         toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined
             ? {
-                ...t,
-                open: false,
-              }
+              ...t,
+              open: false,
+            }
             : t
         ),
       }
@@ -140,9 +138,13 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+// 2. CORRECCIÓN: Le enseñamos a TypeScript que 'duration' es una propiedad válida
+type Toast = Omit<ToasterToast, "id"> & {
+  duration?: number;
+}
 
-function toast({ ...props }: Toast) {
+// 3. CORRECCIÓN: Le damos 3 segundos por defecto y lo programamos para cerrarse solo
+function toast({ duration = 3000, ...props }: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -163,6 +165,13 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  // MAGIA AQUÍ: Cierre automático
+  if (duration !== Infinity) {
+    setTimeout(() => {
+      dismiss()
+    }, duration)
+  }
 
   return {
     id: id,

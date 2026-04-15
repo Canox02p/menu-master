@@ -108,7 +108,10 @@ export default function Home() {
     try {
       if (mode === 'login') {
         await login(cleanEmail, password.trim());
-        toast({ title: "Bienvenido", description: "Acceso concedido exitosamente." });
+        toast({
+          title: "Bienvenido",
+          description: "Acceso concedido exitosamente."
+        });
 
       } else if (mode === 'register') {
         const res = await fetch(`${BASE_URL}/auth/register-company`, {
@@ -125,12 +128,11 @@ export default function Home() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al registrar la empresa.');
 
-        setMode('success'); // Pantalla de confirmación
+        setMode('success');
         setPassword('');
         setConfirmPassword('');
 
       } else if (mode === 'recovery') {
-        // Asumiendo que crearás una ruta PUT/POST /auth/recover-password en Node.js
         const res = await fetch(`${BASE_URL}/auth/recover-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -185,6 +187,7 @@ export default function Home() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1 bg-[#09090b]"
       >
+        {/* CORRECCIÓN DE JUSTIFY-CONTENT AQUÍ */}
         <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <View className="max-w-md w-full space-y-8 animate-in fade-in zoom-in-95 duration-700">
 
