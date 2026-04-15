@@ -10,7 +10,7 @@ import { useTheme } from '@/components/providers/theme-provider';
 import { api } from '@/lib/api';
 
 // ==========================================
-// 1. INTERFACES SEGURAS
+// 1. INTERFACES (Defensa contra datos nulos)
 // ==========================================
 interface OrderItem {
   nombre: string;
@@ -35,7 +35,7 @@ interface OrderData {
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 2. COMPONENTE TICKET
+// 2. COMPONENTE TICKET (Anti-Crashes)
 // ==========================================
 const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { order: OrderData | null, visible: boolean, onClose: () => void, primaryColor: string, isDark: boolean }) => {
   if (!order || !visible) return null;
@@ -48,8 +48,10 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
     }
   };
 
-  const fecha = new Date(order.fecha_creacion);
-  // Cálculo hiper-seguro del total de items
+  // Protección de fechas y arreglos
+  let fecha = new Date();
+  try { if (order.fecha_creacion) fecha = new Date(order.fecha_creacion); } catch (e) { }
+
   const safeProductos = Array.isArray(order.productos) ? order.productos : [];
   const totalItems = safeProductos.reduce((acc, item) => acc + (Number(item.cantidad) || 0), 0);
 
@@ -71,13 +73,13 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
         <ScrollView className="p-6 flex-1" showsVerticalScrollIndicator={false}>
           <View className="items-center mb-6">
             <Text className="text-2xl font-headline font-bold text-black mb-1">MENU MASTER</Text>
-            <Text className="text-zinc-500 text-xs">Ticket #{String(order._id).slice(-6).toUpperCase()}</Text>
+            <Text className="text-zinc-500 text-xs">Ticket #{String(order._id || '0000').slice(-6).toUpperCase()}</Text>
           </View>
 
           <View className="space-y-1.5 mb-6 border-b border-zinc-200 pb-4">
-            <Text className="text-sm font-medium text-zinc-700">Fecha: <Text className="font-bold">{fecha.toLocaleDateString()}</Text></Text>
-            <Text className="text-sm font-medium text-zinc-700">Hora: <Text className="font-bold">{fecha.toLocaleTimeString()}</Text></Text>
-            <Text className="text-sm font-medium text-zinc-700">Le atendió: <Text className="font-bold uppercase">{order.nombre_mesero}</Text></Text>
+            <Text className="text-sm font-medium text-zinc-700">Fecha: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleDateString() : '--/--/----'}</Text></Text>
+            <Text className="text-sm font-medium text-zinc-700">Hora: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleTimeString() : '--:--'}</Text></Text>
+            <Text className="text-sm font-medium text-zinc-700">Le atendió: <Text className="font-bold uppercase">{order.nombre_mesero || 'Mesero'}</Text></Text>
             <View className="flex-row flex-wrap mt-2 items-center gap-2">
               <View className="bg-zinc-100 px-2 py-1 rounded border border-zinc-200">
                 <Text className="text-sm font-bold text-zinc-800">
@@ -100,9 +102,11 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
 
             {safeProductos.map((item, idx) => (
               <View key={idx} className="flex-row justify-between mb-2 items-start">
-                <Text className="text-sm font-bold text-zinc-800 w-8">{item.cantidad}</Text>
-                <Text className="text-sm font-medium text-zinc-700 flex-1 pr-2">{item.nombre}</Text>
-                <Text className="text-sm font-mono font-bold text-zinc-800">${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}</Text>
+                <Text className="text-sm font-bold text-zinc-800 w-8">{item.cantidad || 1}</Text>
+                <Text className="text-sm font-medium text-zinc-700 flex-1 pr-2">{item.nombre || 'Item sin nombre'}</Text>
+                <Text className="text-sm font-mono font-bold text-zinc-800">
+                  ${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}
+                </Text>
               </View>
             ))}
           </View>
@@ -147,53 +151,80 @@ export function WaiterOrders() {
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'Ongoing' | 'History'>('Ongoing');
-  const [debugError, setDebugError] = useState<string | null>(null); // Por si todo falla, mostrar en pantalla
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   const [selectedTicket, setSelectedTicket] = useState<OrderData | null>(null);
+
+  // ==========================================
+  // EXTRACCIÓN ROBUSTA DE LA API
+  // ==========================================
+  // Esta función busca un arreglo dentro del objeto que devuelve el backend
+  const findArrayInObject = (obj: any): any[] => {
+    if (!obj) return [];
+    if (Array.isArray(obj)) return obj;
+    if (typeof obj === 'object') {
+      for (const key in obj) {
+        if (Array.isArray(obj[key])) {
+          return obj[key];
+        }
+      }
+    }
+    return [];
+  };
 
   const fetchOrders = async () => {
     try {
       setDebugError(null);
-
-      // 1. Intentar el endpoint directo
-      const response = await fetch('https://menu-master-api.onrender.com/pedidos');
-      let data = await response.json();
-
-      // 2. Extracción blindada del arreglo
+      let rawData: any = null;
       let pedidosArray: any[] = [];
-      if (Array.isArray(data)) {
-        pedidosArray = data;
-      } else if (data && typeof data === 'object') {
-        pedidosArray = data.pedidos || data.data || Object.values(data)[0] || [];
+
+      // 1. Intentar el endpoint principal
+      try {
+        const response = await fetch('https://menu-master-api.onrender.com/pedidos');
+        rawData = await response.json();
+        pedidosArray = findArrayInObject(rawData);
+      } catch (err) { }
+
+      // 2. Si falla, intentar usar api.pedidos.getAll o getCocina
+      if (pedidosArray.length === 0) {
+        try {
+          if (api?.pedidos?.getCocina) {
+            rawData = await api.pedidos.getCocina();
+            pedidosArray = findArrayInObject(rawData);
+          }
+        } catch (err) { }
       }
 
-      // 3. Si el array principal falló, intentamos usar el de Cocina que sabemos que te funciona
-      if (!Array.isArray(pedidosArray) || pedidosArray.length === 0) {
-        if (api?.pedidos?.getCocina) {
-          const fallbackData = await api.pedidos.getCocina();
-          pedidosArray = Array.isArray(fallbackData) ? fallbackData : [];
-        }
+      if (pedidosArray.length === 0) {
+        throw new Error("No se encontraron arreglos de datos en la respuesta del servidor.");
       }
 
-      // 4. Mapeo Blindado (Anti-Crashes)
+      // 3. Mapeo Defensivo Extremo
       const mappedOrders: OrderData[] = pedidosArray.map((p: any) => {
-        let estadoNormalizado = p.estado ? String(p.estado).toUpperCase().trim().replace(' ', '_') : 'EN_COCINA';
+        // Normalización implacable del estado
+        const rawStatus = p.estado ? String(p.estado).trim().toUpperCase() : 'EN_COCINA';
+        let finalStatus = 'EN_COCINA'; // Default
+
+        if (rawStatus.includes('PAGADO') || rawStatus.includes('PAID')) finalStatus = 'PAGADO';
+        else if (rawStatus.includes('LISTO') || rawStatus.includes('READY')) finalStatus = 'LISTO';
+        else if (rawStatus.includes('COCINA') || rawStatus.includes('PREPARING')) finalStatus = 'EN_COCINA';
+        else finalStatus = rawStatus.replace(/\s+/g, '_'); // Guarda lo que haya llegado con guiones
 
         return {
-          _id: p._id || p.id || Math.random().toString(36).substring(7), // Si no hay ID, genera uno temporal para no crashear
-          fecha_creacion: p.fecha_creacion || p.createdAt || new Date().toISOString(),
-          estado: estadoNormalizado,
+          _id: p._id || p.id || Math.random().toString(36).substring(7),
+          fecha_creacion: p.fecha_creacion || p.createdAt || p.date || new Date().toISOString(),
+          estado: finalStatus,
           total: Number(p.total) || 0,
-          nombre_mesero: p.nombre_mesero || p.mesero_nombre || 'Mesero',
+          nombre_mesero: p.nombre_mesero || p.mesero_nombre || p.waiter || 'Mesero',
           productos: Array.isArray(p.productos) ? p.productos : [],
           numero_mesa: p.numero_mesa || p.id_mesa?.numero_mesa || 0,
           nombre_mesa: p.nombre_mesa || p.id_mesa?.nombre || '',
           ubicacion_mesa: p.ubicacion_mesa || p.id_mesa?.ubicacion || 'General',
-          id_mesa: p.id_mesa
+          id_mesa: p.id_mesa || null
         };
       });
 
-      // 5. Ordenar por más recientes
+      // 4. Ordenar por fecha descendentemente
       const sorted = mappedOrders.sort((a, b) => {
         const dateA = new Date(a.fecha_creacion).getTime();
         const dateB = new Date(b.fecha_creacion).getTime();
@@ -202,8 +233,8 @@ export function WaiterOrders() {
 
       setOrders(sorted);
     } catch (error: any) {
-      console.error("Error al cargar órdenes:", error);
-      setDebugError(error.message || "Error desconocido al procesar el JSON.");
+      console.error("Error crítico al cargar órdenes:", error);
+      setDebugError(error.message || "Error al procesar los datos de la base de datos.");
     } finally {
       setIsLoading(false);
     }
@@ -217,13 +248,13 @@ export function WaiterOrders() {
 
   const handleCobrar = async (order: OrderData) => {
     if (Platform.OS === 'web') {
-      if (window.confirm(`¿Confirmas el cobro de $${order.total.toFixed(2)} y la liberación de la mesa?`)) {
+      if (window.confirm(`¿Confirmas el cobro de $${Number(order.total || 0).toFixed(2)} y la liberación de la mesa?`)) {
         procesarCobro(order);
       }
     } else {
       Alert.alert(
         "Procesar Cobro",
-        `¿Confirmas el cobro de $${order.total.toFixed(2)}?`,
+        `¿Confirmas el cobro de $${Number(order.total || 0).toFixed(2)}?`,
         [
           { text: "Cancelar", style: "cancel" },
           { text: "Cobrar", style: "default", onPress: () => procesarCobro(order) }
@@ -234,8 +265,19 @@ export function WaiterOrders() {
 
   const procesarCobro = async (order: OrderData) => {
     try {
-      await api.pedidos.updateEstado(order._id, 'PAGADO');
+      // 1. Marcar orden como pagada
+      const resPedido = await fetch(`https://menu-master-api.onrender.com/pedidos/${order._id}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'PAGADO' })
+      });
 
+      // Intentar API local si el fetch directo falla
+      if (!resPedido.ok && api?.pedidos?.updateEstado) {
+        await api.pedidos.updateEstado(order._id, 'PAGADO');
+      }
+
+      // 2. Liberar mesa
       const idMesaReal = order.id_mesa?._id || order.id_mesa;
       if (idMesaReal && typeof idMesaReal === 'string') {
         await fetch(`https://menu-master-api.onrender.com/mesas/${idMesaReal}/estado`, {
@@ -248,7 +290,7 @@ export function WaiterOrders() {
       toast({ title: "Pago Registrado", description: "La orden se ha cobrado exitosamente." });
       fetchOrders();
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo procesar el cobro.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo procesar el cobro con la API.", variant: "destructive" });
     }
   };
 
@@ -261,7 +303,7 @@ export function WaiterOrders() {
     return { width: '100%' };
   };
 
-  // FILTRO SEGURO: Si no es PAGADO, va a Activas.
+  // FILTRO SEGURO
   const displayedOrders = orders.filter(o => {
     if (filter === 'History') return o.estado === 'PAGADO';
     return o.estado !== 'PAGADO';
@@ -284,7 +326,6 @@ export function WaiterOrders() {
               {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
             </View>
 
-            {/* Pestañas */}
             <View className={cn("flex-row p-1.5 rounded-xl border", isDark ? "bg-[#1E1E1E] border-[#2A2A2A]" : "bg-zinc-100 border-zinc-200")}>
               <TouchableOpacity
                 onPress={() => setFilter('Ongoing')}
@@ -305,17 +346,22 @@ export function WaiterOrders() {
             </View>
           </View>
 
-          {/* MENSAJE DE ERROR DEBUG (Solo si la app crashea leyendo los datos) */}
+          {/* MODO DEBUG: Si hay error, mostrarlo visualmente */}
           {debugError && (
             <View className="bg-red-500/10 border border-red-500/50 p-4 rounded-2xl mb-6 mx-2">
-              <Text className="text-red-500 font-bold">⚠️ Error de conexión con la Base de Datos:</Text>
-              <Text className="text-red-500/80 text-xs mt-1">{debugError}</Text>
+              <Text className="text-red-500 font-bold text-base">⚠️ Falló la lectura de datos</Text>
+              <Text className="text-red-500/80 text-sm mt-1">{debugError}</Text>
             </View>
+          )}
+
+          {/* MODO DEBUG: Mostrar cuántos items hay en total (Sin importar el filtro) */}
+          {!isLoading && !debugError && (
+            <Text className="text-zinc-500 text-xs px-2 mb-4 hidden md:flex">Debug Total Data: {orders.length} pedidos encontrados.</Text>
           )}
 
           {/* GRID DE TARJETAS DE ORDEN */}
           <View className="flex-row flex-wrap -mx-2">
-            {!isLoading && displayedOrders.length === 0 && (
+            {!isLoading && displayedOrders.length === 0 && !debugError && (
               <View className="w-full py-32 items-center justify-center opacity-50">
                 <Receipt color={isDark ? "white" : "black"} size={64} className="mb-4" />
                 <Text className={cn("text-xl font-bold font-headline", isDark ? "text-white" : "text-zinc-900")}>
@@ -326,15 +372,13 @@ export function WaiterOrders() {
 
             {displayedOrders.map((order) => {
               const isReady = order.estado === 'LISTO';
-              const isCooking = order.estado === 'EN_COCINA' || (!isReady && order.estado !== 'PAGADO');
               const isPaid = order.estado === 'PAGADO';
+              const isCooking = !isReady && !isPaid; // Todo lo que no sea LISTO o PAGADO, se muestra como COCINANDO
 
-              // Evitamos fechas inválidas
               let fecha = new Date();
-              try { fecha = new Date(order.fecha_creacion); } catch (e) { }
+              try { if (order.fecha_creacion) fecha = new Date(order.fecha_creacion); } catch (e) { }
               const diffMins = Math.floor((Date.now() - fecha.getTime()) / 60000);
 
-              // Suma segura de items
               const safeProductos = Array.isArray(order.productos) ? order.productos : [];
               const itemsCount = safeProductos.reduce((acc, i) => acc + (Number(i.cantidad) || 0), 0);
 
