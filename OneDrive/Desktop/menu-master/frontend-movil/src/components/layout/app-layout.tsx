@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useAuth, UserRole } from '@/components/providers/auth-provider';
+import { useAuth } from '@/components/providers/auth-provider';
 import { NAV_ITEMS } from './nav-config';
 import { cn } from '@/lib/utils';
 import { LogOut } from 'lucide-react-native';
@@ -16,12 +16,15 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
 
   if (!user) return <>{children}</>;
 
-  // Lógica para Multi-Rol usando los nombres correctos en español
+  // 🚨 SALVAVIDAS PARA CUENTAS VIEJAS Y NUEVAS
+  // Extraemos los roles de forma segura (si no existe user.roles, buscamos el viejo user.role)
+  const rolesSeguros: string[] = user.roles || ((user as any).role ? [(user as any).role] : []);
+
   const getHighestRole = (): keyof typeof NAV_ITEMS => {
-    if (!user.roles || user.roles.length === 0) return 'DEFAULT';
-    if (user.roles.includes('ADMIN')) return 'ADMIN';
-    if (user.roles.includes('COCINERO')) return 'COCINERO';
-    if (user.roles.includes('MESERO')) return 'MESERO';
+    if (rolesSeguros.length === 0) return 'DEFAULT';
+    if (rolesSeguros.includes('ADMIN')) return 'ADMIN';
+    if (rolesSeguros.includes('COCINERO')) return 'COCINERO';
+    if (rolesSeguros.includes('MESERO')) return 'MESERO';
     return 'DEFAULT';
   };
 
@@ -69,8 +72,8 @@ export function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps)
           <View className="bg-accent/5 rounded-2xl p-4 mb-4">
             <Text className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Logged in as</Text>
             <Text className="font-bold text-foreground">{user.name}</Text>
-            <Text className="text-xs text-primary font-medium mt-1">
-              {user.restaurante_nombre ? user.restaurante_nombre : user.roles?.join(', ')}
+            <Text className="text-xs text-primary font-medium mt-1 uppercase">
+              {user.restaurante_nombre ? user.restaurante_nombre : rolesSeguros.join(', ')}
             </Text>
           </View>
 
