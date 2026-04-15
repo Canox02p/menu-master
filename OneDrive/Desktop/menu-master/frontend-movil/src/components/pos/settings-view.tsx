@@ -31,12 +31,12 @@ interface SystemToggleProps {
 }
 
 const colorPresets: ColorPreset[] = [
-  { name: 'Classic Blue', hex: '#3b82f6' },
-  { name: 'Emerald', hex: '#10B981' },
-  { name: 'Rose', hex: '#F43F5E' },
-  { name: 'Amber', hex: '#F59E0B' },
-  { name: 'Purple', hex: '#8B5CF6' },
-  { name: 'Slate', hex: '#3f3f46' },
+  { name: 'Azul Clásico', hex: '#3b82f6' },
+  { name: 'Esmeralda', hex: '#10B981' },
+  { name: 'Rosa', hex: '#F43F5E' },
+  { name: 'Ámbar', hex: '#F59E0B' },
+  { name: 'Morado', hex: '#8B5CF6' },
+  { name: 'Pizarra', hex: '#3f3f46' },
 ];
 
 const CHARCOAL_GRAY = "#171A1C";
@@ -97,7 +97,7 @@ export function SettingsView() {
         if (savedCloudSync !== null) setCloudSync(savedCloudSync === 'true');
         if (savedGuestWifi !== null) setGuestWifi(savedGuestWifi === 'true');
       } catch (error) {
-        console.error('Error loading settings', error);
+        console.error('Error al cargar la configuración', error);
       }
     };
     loadSettings();
@@ -135,9 +135,9 @@ export function SettingsView() {
           {/* HEADER */}
           <View className="mb-8 px-2">
             <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-              Application Settings
+              Configuración del Sistema
             </Text>
-            <Text className="text-zinc-500">Customize the look, feel, and behavior of your POS.</Text>
+            <Text className="text-zinc-500">Personaliza la apariencia y el comportamiento de tu Punto de Venta.</Text>
           </View>
 
           {/* CONTENEDOR DE TARJETAS */}
@@ -159,19 +159,19 @@ export function SettingsView() {
                   </View>
                   <View>
                     <CardTitle className={cn("font-headline text-xl", isDark ? "text-white" : "text-zinc-900")}>
-                      Appearance
+                      Apariencia
                     </CardTitle>
                     <CardDescription className="text-zinc-500">
-                      Visual customization and themes.
+                      Personalización visual y temas.
                     </CardDescription>
                   </View>
                 </View>
               </CardHeader>
 
               <CardContent className="p-6 space-y-8">
-                {/* DARK MODE TOGGLE */}
+                {/* TEMA OSCURO / CLARO */}
                 <View>
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Display Mode</Text>
+                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Modo de Pantalla</Text>
                   <View className={cn(
                     "flex-row items-center justify-between p-4 rounded-2xl border",
                     isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-100 shadow-sm"
@@ -181,17 +181,21 @@ export function SettingsView() {
                         {isDark ? <Moon color="#818cf8" size={20} /> : <Sun color="#f59e0b" size={20} />}
                       </View>
                       <View>
-                        <Text className={cn("font-bold text-sm", isDark ? "text-zinc-200" : "text-zinc-800")}>Dark Mode</Text>
-                        <Text className="text-xs text-zinc-500">Easier on the eyes in low light.</Text>
+                        <Text className={cn("font-bold text-sm", isDark ? "text-zinc-200" : "text-zinc-800")}>
+                          {isDark ? 'Modo Oscuro' : 'Modo Claro'}
+                        </Text>
+                        <Text className="text-xs text-zinc-500">
+                          {isDark ? 'Más cómodo para la vista en entornos oscuros.' : 'Mayor contraste en lugares iluminados.'}
+                        </Text>
                       </View>
                     </View>
                     <Switch checked={isDark} onCheckedChange={toggleTheme} />
                   </View>
                 </View>
 
-                {/* BRAND COLOR */}
+                {/* COLOR DE MARCA */}
                 <View>
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Brand Color</Text>
+                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Color de Marca</Text>
 
                   <View className="flex-row flex-wrap gap-3 mb-5">
                     {colorPresets.map((color) => {
@@ -216,7 +220,7 @@ export function SettingsView() {
                   <View className={cn("p-4 rounded-2xl border flex-row items-center gap-4", isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-zinc-50 border-zinc-200")}>
                     <View className="w-8 h-8 rounded-lg shadow-inner" style={{ backgroundColor: primaryColor }} />
                     <View className="flex-1">
-                      <Text className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-1">Custom Hex</Text>
+                      <Text className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-1">Código HEX Personalizado</Text>
                       <TextInput
                         value={primaryColor}
                         onChangeText={setPrimaryColor}
@@ -243,10 +247,10 @@ export function SettingsView() {
                   </View>
                   <View>
                     <CardTitle className={cn("font-headline text-xl", isDark ? "text-white" : "text-zinc-900")}>
-                      System Control
+                      Control Operativo
                     </CardTitle>
                     <CardDescription className="text-zinc-500">
-                      Operational and security toggles.
+                      Ajustes de hardware y seguridad.
                     </CardDescription>
                   </View>
                 </View>
@@ -254,11 +258,11 @@ export function SettingsView() {
 
               <CardContent className="p-6 flex-col justify-between flex-1">
                 <View className="space-y-1">
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Hardware & Network</Text>
+                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Hardware y Red</Text>
 
                   <SystemToggle
-                    label="Auto-Print Receipts"
-                    desc="Send to thermal printer immediately."
+                    label="Impresión Automática"
+                    desc="Enviar ticket a la impresora térmica inmediatamente."
                     icon={ShieldCheck}
                     value={autoPrint}
                     onValueChange={setAutoPrint}
@@ -266,8 +270,8 @@ export function SettingsView() {
                     primaryColor={primaryColor}
                   />
                   <SystemToggle
-                    label="Cloud Sync"
-                    desc="Real-time backup of all orders."
+                    label="Sincronización en la Nube"
+                    desc="Respaldo en tiempo real de todas las ventas."
                     icon={Database}
                     value={cloudSync}
                     onValueChange={setCloudSync}
@@ -275,8 +279,8 @@ export function SettingsView() {
                     primaryColor={primaryColor}
                   />
                   <SystemToggle
-                    label="Guest WiFi Login"
-                    desc="Allow QR code table scanning."
+                    label="Modo Cliente / Código QR"
+                    desc="Permite a los clientes escanear la mesa para ordenar."
                     icon={Users}
                     value={guestWifi}
                     onValueChange={setGuestWifi}
@@ -292,7 +296,7 @@ export function SettingsView() {
                     style={{ backgroundColor: primaryColor }}
                     className="w-full rounded-[16px] h-14 flex-row justify-center items-center shadow-lg shadow-primary/30"
                   >
-                    <Text className="text-white font-bold tracking-wide text-base">Save Settings</Text>
+                    <Text className="text-white font-bold tracking-wide text-base">Guardar Ajustes</Text>
                   </TouchableOpacity>
                 </View>
               </CardContent>

@@ -3,18 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Clock, Plus, MapPin } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
+import { useAuth } from '@/components/providers/auth-provider'; // <-- IMPORTANTE: Importamos el auth
 import { OrderTaking } from './order-taking';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-
-// ==========================================
-// 1. INTERFACES (Tipado)
-// ==========================================
 
 interface TableData {
   _id: string;
@@ -36,15 +32,9 @@ interface TableCardProps {
 
 const CHARCOAL_GRAY = "#171A1C";
 
-// ==========================================
-// 2. SUBCOMPONENTES (Tarjetas Interactivas)
-// ==========================================
-
 const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyle }: TableCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const isOccupied = table.status === 'Occupied';
-
-  // La tarjeta está "activa" visualmente si pasas el mouse o si la seleccionaste
   const isActive = isHovered || isSelected;
 
   return (
@@ -124,23 +114,19 @@ const TableCard = ({ table, isSelected, onPress, isDark, primaryColor, widthStyl
   );
 };
 
-// ==========================================
-// 3. COMPONENTE PRINCIPAL
-// ==========================================
-
 export function WaiterTables() {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
   const { toast } = useToast();
 
-  // Estados Reales
+  const { user } = useAuth(); // <-- IMPORTANTE: Sacamos al usuario de la sesión
+
   const [tables, setTables] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
   const [showOrderTaking, setShowOrderTaking] = useState(false);
 
-  // Carga de datos
   const fetchTables = async () => {
     try {
       setIsLoading(true);
@@ -172,9 +158,9 @@ export function WaiterTables() {
   const isTablet = width >= 768 && width < 1024;
 
   const getCardWidth = (): StyleProp<ViewStyle> => {
-    if (isDesktop) return { width: '20%' };    // 5 columnas en monitores grandes
-    if (isTablet) return { width: '33.33%' };  // 3 columnas
-    return { width: '50%' };                   // 2 columnas en celular
+    if (isDesktop) return { width: '20%' };
+    if (isTablet) return { width: '33.33%' };
+    return { width: '50%' };
   };
 
   return (
@@ -185,8 +171,6 @@ export function WaiterTables() {
         contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 140 : 120 }}
       >
         <View className="px-4 pt-8 max-w-[1400px] mx-auto w-full">
-
-          {/* HEADER */}
           <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
             <View>
               <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
@@ -201,7 +185,6 @@ export function WaiterTables() {
             </View>
           </View>
 
-          {/* GRID DE MESAS */}
           <View className="flex-row flex-wrap -mx-2">
             {!isLoading && tables.length === 0 && (
               <Text className="text-zinc-500 p-4 w-full text-center">No hay mesas configuradas. El administrador debe agregarlas.</Text>
@@ -219,11 +202,9 @@ export function WaiterTables() {
               />
             ))}
           </View>
-
         </View>
       </ScrollView>
 
-      {/* POPUP INFERIOR: MESA SELECCIONADA */}
       {selectedTable && !showOrderTaking && (
         <View className="absolute bottom-8 left-4 right-4 items-center justify-center z-50">
           <Card
@@ -232,7 +213,6 @@ export function WaiterTables() {
           >
             <CardContent className="p-5 flex-col gap-4">
               <View className="flex-row justify-between items-center w-full">
-
                 <View className="flex-row items-center gap-4">
                   <View className="w-14 h-14 rounded-2xl bg-white/20 items-center justify-center">
                     <Text className="text-2xl font-headline font-bold text-white text-center">
@@ -257,7 +237,6 @@ export function WaiterTables() {
                 </View>
               </View>
 
-              {/* Botón de Acción Principal */}
               {selectedTable.status === 'Available' ? (
                 <TouchableOpacity
                   activeOpacity={0.8}
@@ -272,13 +251,12 @@ export function WaiterTables() {
                   <Text className="text-white/80 font-bold text-sm">Esta mesa ya tiene una orden activa.</Text>
                 </View>
               )}
-
             </CardContent>
           </Card>
         </View>
       )}
 
-      {/* VISTA COMPLETA: TOMA DE ORDENES ENVUELTA EN MODAL NATIVO */}
+      {/* MODAL CERRADO CORRECTAMENTE */}
       <Modal
         visible={selectedTable !== null && showOrderTaking}
         animationType="slide"
@@ -293,6 +271,9 @@ export function WaiterTables() {
           <OrderTaking
             tableId={selectedTable._id}
             tableNumber={selectedTable.numero_mesa}
+            tableName={selectedTable.nombre || `Mesa ${selectedTable.numero_mesa}`}
+            waiterId={user?.id || ''}
+            waiterName={user?.name || 'Mesero'}
             onClose={() => {
               setShowOrderTaking(false);
               setSelectedTable(null);
@@ -301,6 +282,6 @@ export function WaiterTables() {
           />
         )}
       </Modal>
-    </View>
+    </View> // <-- AQUÍ ESTABA EL ETIQUETA QUE FALTABA
   );
 }

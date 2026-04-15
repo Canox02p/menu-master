@@ -2,24 +2,24 @@ import { LayoutDashboard, UtensilsCrossed, ChefHat, Settings, Package, Clipboard
 
 export const NAV_ITEMS = {
   ADMIN: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: 'dashboard' },
+    { label: 'Inicio', icon: LayoutDashboard, path: 'dashboard' },
     { label: 'Mesas', icon: Armchair, path: 'table-management' },
     { label: 'Menu', icon: UtensilsCrossed, path: 'menu' },
-    { label: 'Inventory', icon: Package, path: 'inventory' },
-    { label: 'Reports', icon: ClipboardList, path: 'reports' },
-    { label: 'Staff', icon: Users, path: 'staff' },
-    { label: 'Settings', icon: Settings, path: 'settings' },
+    { label: 'Inventario', icon: Package, path: 'inventory' },
+    { label: 'Reportes', icon: ClipboardList, path: 'reports' },
+    { label: 'Personal', icon: Users, path: 'staff' },
+    { label: 'Configuraciones', icon: Settings, path: 'settings' },
   ],
   MESERO: [
-    { label: 'Tables', icon: LayoutDashboard, path: 'tables' },
-    { label: 'Active Orders', icon: Receipt, path: 'orders' },
+    { label: 'Mesas', icon: LayoutDashboard, path: 'tables' },
+    { label: 'Ordenes Activas', icon: Receipt, path: 'orders' },
     { label: 'Menu', icon: UtensilsCrossed, path: 'menu' },
-    { label: 'Preferences', icon: Settings, path: 'settings' },
+    { label: 'Configuraciones', icon: Settings, path: 'settings' },
   ],
   COCINERO: [
-    { label: 'Kitchen Display', icon: ChefHat, path: 'kds' },
-    { label: 'Inventory', icon: Package, path: 'inventory' },
-    { label: 'Preferences', icon: Settings, path: 'settings' },
+    { label: 'Display de Cocina', icon: ChefHat, path: 'kds' },
+    { label: 'Inventario', icon: Package, path: 'inventory' },
+    { label: 'Configuraciones', icon: Settings, path: 'settings' },
   ],
   DEFAULT: []
 };
