@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// ¡AQUÍ ESTÁ EL ARREGLO! Importamos DimensionValue de react-native
 import { View, Text, ScrollView, useWindowDimensions, Platform, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, DimensionValue } from 'react-native';
 import { Card } from '@/components/ui/card';
-import { Clock, Receipt, Printer, X, MapPin, CheckCircle2 } from 'lucide-react-native';
+import { Clock, Receipt, Printer, X, MapPin } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
@@ -23,7 +22,7 @@ interface OrderItem {
 interface OrderData {
   _id: string;
   fecha_creacion: string;
-  estado: 'EN_COCINA' | 'LISTO' | 'PAGADO';
+  estado: string; // Ahora acepta cualquier string para no ocultar nada por error
   total: number;
   nombre_mesero: string;
   productos: OrderItem[];
@@ -50,7 +49,7 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
   };
 
   const fecha = new Date(order.fecha_creacion);
-  const totalItems = order.productos.reduce((acc, item) => acc + item.cantidad, 0);
+  const totalItems = order.productos?.reduce((acc, item) => acc + (item.cantidad || 0), 0) || 0;
 
   const numMesa = order.numero_mesa || order.id_mesa?.numero_mesa || '?';
   const nomMesa = order.nombre_mesa || order.id_mesa?.nombre || '';
@@ -100,7 +99,7 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
               <Text className="text-[10px] font-bold text-zinc-500 text-right">IMPORTE</Text>
             </View>
 
-            {order.productos.map((item, idx) => (
+            {(order.productos || []).map((item, idx) => (
               <View key={idx} className="flex-row justify-between mb-2 items-start">
                 <Text className="text-sm font-bold text-zinc-800 w-8">{item.cantidad}</Text>
                 <Text className="text-sm font-medium text-zinc-700 flex-1 pr-2">{item.nombre}</Text>
@@ -158,20 +157,31 @@ export function WaiterOrders() {
       const response = await fetch('https://menu-master-api.onrender.com/pedidos');
       const data = await response.json();
 
-      const pedidosArray = Array.isArray(data) ? data : (data.pedidos || data.data || []);
+      // Mapeo ultra-seguro para asegurar que extraemos el arreglo
+      let pedidosArray = [];
+      if (Array.isArray(data)) {
+        pedidosArray = data;
+      } else if (data && typeof data === 'object') {
+        pedidosArray = data.pedidos || data.data || Object.values(data)[0] || [];
+      }
 
-      const mappedOrders: OrderData[] = pedidosArray.map((p: any) => ({
-        _id: p._id,
-        fecha_creacion: p.fecha_creacion || p.createdAt || new Date().toISOString(),
-        estado: p.estado ? p.estado.toUpperCase() : 'EN_COCINA',
-        total: Number(p.total) || 0,
-        nombre_mesero: p.nombre_mesero || p.mesero_nombre || 'Mesero Desconocido',
-        productos: p.productos || [],
-        numero_mesa: p.numero_mesa || p.id_mesa?.numero_mesa || 0,
-        nombre_mesa: p.nombre_mesa || p.id_mesa?.nombre || '',
-        ubicacion_mesa: p.ubicacion_mesa || p.id_mesa?.ubicacion || 'General',
-        id_mesa: p.id_mesa
-      }));
+      const mappedOrders: OrderData[] = pedidosArray.map((p: any) => {
+        // Normalizamos el estado para no fallar por espacios o minúsculas
+        let estadoNormalizado = p.estado ? String(p.estado).toUpperCase().trim().replace(' ', '_') : 'EN_COCINA';
+
+        return {
+          _id: p._id,
+          fecha_creacion: p.fecha_creacion || p.createdAt || new Date().toISOString(),
+          estado: estadoNormalizado,
+          total: Number(p.total) || 0,
+          nombre_mesero: p.nombre_mesero || p.mesero_nombre || 'Mesero',
+          productos: Array.isArray(p.productos) ? p.productos : [],
+          numero_mesa: p.numero_mesa || p.id_mesa?.numero_mesa || 0,
+          nombre_mesa: p.nombre_mesa || p.id_mesa?.nombre || '',
+          ubicacion_mesa: p.ubicacion_mesa || p.id_mesa?.ubicacion || 'General',
+          id_mesa: p.id_mesa
+        };
+      });
 
       // Ordenar por más recientes
       const sorted = mappedOrders.sort((a, b) => new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime());
@@ -185,6 +195,7 @@ export function WaiterOrders() {
 
   useEffect(() => {
     fetchOrders();
+    // Auto-recarga cada 5 segundos
     const interval = setInterval(() => { fetchOrders(); }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -229,16 +240,17 @@ export function WaiterOrders() {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
-  // ¡AQUÍ ESTÁ EL ARREGLO! Retorna { width: DimensionValue }
   const getCardWidth = (): { width: DimensionValue } => {
     if (isDesktop) return { width: '33.33%' };
     if (isTablet) return { width: '50%' };
     return { width: '100%' };
   };
 
+  // FILTRO A PRUEBA DE BALAS
   const displayedOrders = orders.filter(o => {
-    if (filter === 'Ongoing') return o.estado === 'EN_COCINA' || o.estado === 'LISTO';
-    return o.estado === 'PAGADO';
+    if (filter === 'History') return o.estado === 'PAGADO';
+    // Si el filtro es "Ongoing" (Activas), mostramos TODO lo que NO esté pagado.
+    return o.estado !== 'PAGADO';
   });
 
   return (
@@ -292,13 +304,13 @@ export function WaiterOrders() {
 
             {displayedOrders.map((order) => {
               const isReady = order.estado === 'LISTO';
-              const isCooking = order.estado === 'EN_COCINA';
+              const isCooking = order.estado === 'EN_COCINA' || (!isReady && order.estado !== 'PAGADO'); // Cualquier estado intermedio asume cocina
               const isPaid = order.estado === 'PAGADO';
 
               const fecha = new Date(order.fecha_creacion);
               const diffMins = Math.floor((Date.now() - fecha.getTime()) / 60000);
-              const itemsCount = order.productos.reduce((acc, i) => acc + i.cantidad, 0);
-              const numMesa = order.numero_mesa || order.id_mesa?.numero_mesa || '?';
+              const itemsCount = (order.productos || []).reduce((acc, i) => acc + (i.cantidad || 0), 0);
+              const numMesa = order.numero_mesa || '?';
 
               return (
                 <View key={order._id} style={getCardWidth()} className="p-2 mb-2">
@@ -336,7 +348,7 @@ export function WaiterOrders() {
                           isCooking && "text-amber-500",
                           isPaid && "text-zinc-400"
                         )}>
-                          {order.estado}
+                          {order.estado.replace('_', ' ')}
                         </Text>
                       </View>
                     </View>
