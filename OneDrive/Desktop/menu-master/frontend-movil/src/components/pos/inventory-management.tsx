@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Search, Plus, Wine, Package, Thermometer,
-  AlertTriangle, ArrowDown, Filter, Droplets, ArrowRight
+  AlertTriangle, Filter, ArrowRight
 } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
@@ -24,7 +24,7 @@ interface InventoryItem {
   minStock: number;
   unit: string;
   price: number;
-  status: 'Healthy' | 'Low';
+  status: 'Suficiente' | 'Bajo'; // Traducido
 }
 
 interface SummaryCardProps {
@@ -42,6 +42,7 @@ interface InventoryRowProps {
   primaryColor: string;
   isLast: boolean;
   onAction: (id: string) => void;
+  isMobile: boolean; // Prop para diseño adaptativo
 }
 
 const CHARCOAL_GRAY = "#171A1C";
@@ -85,9 +86,9 @@ const SummaryCard = ({ title, value, icon: Icon, colorTheme, isDark, widthStyle 
             <View className={cn("p-3 rounded-2xl", themeColors.bg)}>
               <Icon color={themeColors.hex} size={24} />
             </View>
-            <View>
+            <View className="flex-1">
               <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">{title}</Text>
-              <Text className={cn("text-2xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
+              <Text className={cn("text-2xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")} numberOfLines={1} adjustsFontSizeToFit>
                 {value}
               </Text>
             </View>
@@ -98,10 +99,68 @@ const SummaryCard = ({ title, value, icon: Icon, colorTheme, isDark, widthStyle 
   );
 };
 
-const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: InventoryRowProps) => {
+const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction, isMobile }: InventoryRowProps) => {
   const [isHovered, setIsHovered] = useState(false);
-  const isLow = item.status === 'Low';
+  const isLow = item.status === 'Bajo';
 
+  // --- VISTA MÓVIL (Tarjeta Compacta) ---
+  if (isMobile) {
+    return (
+      <Pressable
+        onPress={() => onAction(item.id)}
+        className={cn(
+          "p-4 mx-4 mb-3 rounded-2xl border",
+          isDark ? "bg-zinc-800/40 border-zinc-700/50" : "bg-white border-zinc-200 shadow-sm"
+        )}
+      >
+        <View className="flex-row justify-between items-start mb-3">
+          <View className="flex-row items-center gap-3 flex-1 pr-2">
+            <View
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${primaryColor}15` }}
+            >
+              {item.category.includes('Wine') || item.category.toLowerCase().includes('bebida')
+                ? <Wine color={primaryColor} size={18} />
+                : <Package color={primaryColor} size={18} />
+              }
+            </View>
+            <View className="flex-1">
+              <Text className={cn("font-bold text-base", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text className="text-xs text-zinc-500 mt-0.5">{item.category}</Text>
+            </View>
+          </View>
+          <View className={cn(
+            "flex-row items-center gap-1.5 px-2.5 py-1 rounded-full",
+            isLow ? "bg-red-500/10" : "bg-emerald-500/10"
+          )}>
+            <View className={cn("w-1.5 h-1.5 rounded-full", isLow ? "bg-red-500" : "bg-emerald-500")} />
+            <Text className={cn("text-[10px] font-bold uppercase", isLow ? "text-red-500" : "text-emerald-500")}>
+              {item.status}
+            </Text>
+          </View>
+        </View>
+
+        <View className="flex-row justify-between items-center pt-3 border-t border-zinc-500/20">
+          <View>
+            <Text className="text-[10px] font-bold text-zinc-500 uppercase">Stock Actual</Text>
+            <Text className={cn("font-bold text-lg", isLow ? "text-red-500" : (isDark ? "text-white" : "text-zinc-900"))}>
+              {item.stock} <Text className="text-xs font-medium text-zinc-500">{item.unit}</Text>
+            </Text>
+          </View>
+          <View className="items-end">
+            <Text className="text-[10px] font-bold text-zinc-500 uppercase">Precio</Text>
+            <Text className={cn("font-mono font-bold text-lg", isDark ? "text-zinc-300" : "text-zinc-700")}>
+              ${item.price.toFixed(2)}
+            </Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
+
+  // --- VISTA ESCRITORIO/TABLET (Fila de Tabla) ---
   return (
     <Pressable
       onHoverIn={() => setIsHovered(true)}
@@ -115,13 +174,12 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
         isHovered && (isDark ? "bg-zinc-800/30" : "bg-zinc-50")
       )}
     >
-      {/* Nombre e Icono */}
       <View className="flex-row items-center gap-4 w-[25%] pr-2">
         <View
           className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
           style={{ backgroundColor: `${primaryColor}15` }}
         >
-          {item.category.includes('Wine') || item.category.includes('Bebida')
+          {item.category.includes('Wine') || item.category.toLowerCase().includes('bebida')
             ? <Wine color={primaryColor} size={18} />
             : <Package color={primaryColor} size={18} />
           }
@@ -131,7 +189,6 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
         </Text>
       </View>
 
-      {/* Categoría */}
       <View className="w-[20%] pr-2 justify-center">
         <Badge
           variant="outline"
@@ -140,7 +197,6 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
         />
       </View>
 
-      {/* Stock */}
       <View className="w-[20%] items-center px-2">
         <Text className={cn(
           "font-headline font-bold text-base",
@@ -151,7 +207,6 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
         <Text className="text-[10px] text-zinc-500 font-bold mt-1 tracking-widest">MIN: {item.minStock}</Text>
       </View>
 
-      {/* Estado */}
       <View className="w-[15%] items-center px-2">
         <View className={cn(
           "flex-row items-center gap-1.5 px-3 py-1.5 rounded-full",
@@ -164,14 +219,12 @@ const InventoryRow = ({ item, isDark, primaryColor, isLast, onAction }: Inventor
         </View>
       </View>
 
-      {/* Precio */}
       <View className="w-[15%] items-end justify-center px-2">
         <Text className={cn("font-mono font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>
           ${item.price.toFixed(2)}
         </Text>
       </View>
 
-      {/* Acción */}
       <View className="w-[5%] items-end justify-center pl-2">
         <View className={cn(
           "w-8 h-8 rounded-lg items-center justify-center transition-all",
@@ -198,8 +251,10 @@ export function InventoryManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Breakpoints para diseño responsivo
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
+  const isMobile = width < 768;
 
   const getCardWidth = (): StyleProp<ViewStyle> => {
     if (isDesktop) return { width: '33.33%' };
@@ -207,17 +262,15 @@ export function InventoryManagement() {
     return { width: '100%' };
   };
 
-  // Carga de inventario híbrido
+  // Carga de inventario
   useEffect(() => {
     const fetchInventory = async () => {
       try {
         setIsLoading(true);
         const data = await api.productos.getAll();
 
-        // Mapeamos los datos de MySQL/PHP a la estructura del Frontend
         const mappedItems: InventoryItem[] = data.map((prod: any) => {
           const stock = Number(prod.stock) || 0;
-          // Si MySQL no maneja minStock, definimos un umbral por defecto
           const minStock = 10;
 
           return {
@@ -226,9 +279,9 @@ export function InventoryManagement() {
             category: prod.categoria || 'General',
             stock: stock,
             minStock: minStock,
-            unit: 'Unidades',
+            unit: 'Unid.',
             price: Number(prod.precio) || 0,
-            status: stock <= minStock ? 'Low' : 'Healthy'
+            status: stock <= minStock ? 'Bajo' : 'Suficiente' // Status Traducido
           };
         });
 
@@ -243,13 +296,11 @@ export function InventoryManagement() {
     fetchInventory();
   }, []);
 
-  // Filtrado de búsqueda
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Estadísticas dinámicas
-  const lowStockCount = items.filter(i => i.status === 'Low').length;
+  const lowStockCount = items.filter(i => i.status === 'Bajo').length;
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? CHARCOAL_GRAY : "#f3f4f6" }}>
@@ -264,9 +315,9 @@ export function InventoryManagement() {
           <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
             <View>
               <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                Cellar & Inventory
+                Bodega e Inventario
               </Text>
-              <Text className="text-zinc-500">Gestión de inventario conectada a MySQL.</Text>
+              <Text className="text-zinc-500">Gestión de catálogo y existencias en tiempo real.</Text>
             </View>
             <View className="flex-row flex-wrap gap-3 mt-2 md:mt-0 w-full md:w-auto">
               {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
@@ -276,23 +327,24 @@ export function InventoryManagement() {
                 className="rounded-2xl flex-row items-center justify-center gap-2 px-5 py-3 shadow-lg shadow-primary/30 flex-1 md:flex-none"
               >
                 <Plus color="white" size={18} strokeWidth={3} />
-                <Text className="text-white font-bold text-sm tracking-wide">Stock Intake</Text>
+                <Text className="text-white font-bold text-sm tracking-wide">Nuevo Producto</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* TARJETAS DE RESUMEN DINÁMICAS */}
+          {/* TARJETAS DE RESUMEN */}
           <View className="flex-row flex-wrap -mx-2 mb-6">
             <SummaryCard title="Total Productos" value={`${items.length}`} icon={Package} colorTheme="amber" isDark={isDark} widthStyle={getCardWidth()} />
             <SummaryCard title="En Stock" value={`${items.reduce((acc, curr) => acc + curr.stock, 0)} U.`} icon={Thermometer} colorTheme="blue" isDark={isDark} widthStyle={getCardWidth()} />
-            <SummaryCard title="Low Stock Alerts" value={`${lowStockCount} Items`} icon={AlertTriangle} colorTheme="red" isDark={isDark} widthStyle={getCardWidth()} />
+            <SummaryCard title="Alertas (Stock Bajo)" value={`${lowStockCount} Items`} icon={AlertTriangle} colorTheme="red" isDark={isDark} widthStyle={getCardWidth()} />
           </View>
 
-          {/* TABLA DE INVENTARIO */}
+          {/* ÁREA DE INVENTARIO */}
           <Card className={cn(
             "border-none overflow-hidden rounded-[32px] mb-8",
             isDark ? "bg-zinc-900/40" : "bg-white shadow-sm"
           )}>
+            {/* Barra de Búsqueda y Filtros */}
             <View className={cn(
               "p-5 border-b flex-col lg:flex-row justify-between items-start lg:items-center gap-4",
               isDark ? "border-zinc-800/60" : "border-zinc-100"
@@ -302,7 +354,7 @@ export function InventoryManagement() {
                   <Search color={isDark ? "#a1a1aa" : "#71717a"} size={18} />
                 </View>
                 <TextInput
-                  placeholder="Buscar en el inventario..."
+                  placeholder="Buscar productos..."
                   placeholderTextColor={isDark ? "#71717a" : "#a1a1aa"}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -315,39 +367,62 @@ export function InventoryManagement() {
               <View className="flex-row gap-3 w-full lg:w-auto">
                 <TouchableOpacity className={cn("rounded-xl flex-row items-center justify-center gap-2 h-11 px-4 flex-1 lg:flex-none", isDark ? "bg-zinc-800/50" : "bg-zinc-50")}>
                   <Filter color={isDark ? "#a1a1aa" : "#71717a"} size={16} />
-                  <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Filters</Text>
+                  <Text className={cn("text-xs font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>Filtros</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full">
-              <View className="min-w-[900px] w-full pb-2">
-                <View className={cn("flex-row px-6 py-4 border-b", isDark ? "bg-zinc-950/20 border-zinc-800/60" : "bg-zinc-50/80 border-zinc-100")}>
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[25%] pr-2">Item Name</Text>
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[20%] pr-2">Category</Text>
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[20%] text-center px-2">Current Stock</Text>
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[15%] text-center px-2">Status</Text>
-                  <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[15%] text-right px-2">Unit Price</Text>
-                  <View className="w-[5%] pl-2" />
-                </View>
-
-                <View>
-                  {filteredItems.length === 0 && !isLoading && (
-                    <Text className="text-zinc-500 text-center py-8">No se encontraron productos.</Text>
-                  )}
-                  {filteredItems.map((item, index) => (
-                    <InventoryRow
-                      key={item.id}
-                      item={item}
-                      isDark={isDark}
-                      primaryColor={primaryColor}
-                      isLast={index === filteredItems.length - 1}
-                      onAction={(id) => console.log(`Gestionar item ${id}`)}
-                    />
-                  ))}
-                </View>
+            {/* LISTA/TABLA DE PRODUCTOS */}
+            {isMobile ? (
+              // Vista Móvil: Tarjetas apiladas
+              <View className="py-4">
+                {filteredItems.length === 0 && !isLoading && (
+                  <Text className="text-zinc-500 text-center py-8">No se encontraron productos.</Text>
+                )}
+                {filteredItems.map((item, index) => (
+                  <InventoryRow
+                    key={item.id}
+                    item={item}
+                    isDark={isDark}
+                    primaryColor={primaryColor}
+                    isLast={index === filteredItems.length - 1}
+                    isMobile={true}
+                    onAction={(id) => console.log(`Gestionar item ${id}`)}
+                  />
+                ))}
               </View>
-            </ScrollView>
+            ) : (
+              // Vista Escritorio/Tablet: Tabla con Scroll Horizontal
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full">
+                <View className="min-w-[900px] w-full pb-2">
+                  <View className={cn("flex-row px-6 py-4 border-b", isDark ? "bg-zinc-950/20 border-zinc-800/60" : "bg-zinc-50/80 border-zinc-100")}>
+                    <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[25%] pr-2">Producto</Text>
+                    <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[20%] pr-2">Categoría</Text>
+                    <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[20%] text-center px-2">Stock Actual</Text>
+                    <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[15%] text-center px-2">Estado</Text>
+                    <Text className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-[15%] text-right px-2">Precio Unit.</Text>
+                    <View className="w-[5%] pl-2" />
+                  </View>
+
+                  <View>
+                    {filteredItems.length === 0 && !isLoading && (
+                      <Text className="text-zinc-500 text-center py-8">No se encontraron productos.</Text>
+                    )}
+                    {filteredItems.map((item, index) => (
+                      <InventoryRow
+                        key={item.id}
+                        item={item}
+                        isDark={isDark}
+                        primaryColor={primaryColor}
+                        isLast={index === filteredItems.length - 1}
+                        isMobile={false}
+                        onAction={(id) => console.log(`Gestionar item ${id}`)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+            )}
           </Card>
 
         </View>
