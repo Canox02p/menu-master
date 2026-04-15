@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, SafeAreaView, ActivityIndicator } from 'react-native';
-import { Minus, Plus, Send, ReceiptText, ChevronLeft, Trash2, UtensilsCrossed } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, SafeAreaView, ActivityIndicator } from 'react-native';
+import { Minus, Plus, Send, ReceiptText, ChevronLeft, Trash2, UtensilsCrossed, Clock, User } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
 import { api } from '@/lib/api';
-import { Badge } from '@/components/ui/badge'; // <-- AQUÍ ESTÁ LA IMPORTACIÓN FALTANTE
+import { Badge } from '@/components/ui/badge';
 
 // ==========================================
-// 1. INTERFACES (Tipado Estricto)
+// 1. INTERFACES
 // ==========================================
 
 interface MenuItem {
@@ -51,7 +51,7 @@ interface CartItemRowProps {
 }
 
 // ==========================================
-// 2. SUBCOMPONENTES INTERACTIVOS
+// 2. SUBCOMPONENTES
 // ==========================================
 
 const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuItemCardProps) => {
@@ -69,7 +69,7 @@ const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuIte
         <View
           className={cn(
             "rounded-[20px] p-5 transition-all duration-200 h-36 flex-col justify-between border",
-            isDark ? "bg-[#1E1E1E] border-[#2A2A2A]" : "bg-white border-zinc-200"
+            isDark ? "bg-[#1E1E1E]" : "bg-white"
           )}
           style={{
             borderColor: isHovered ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7'),
@@ -127,7 +127,7 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease, onRem
           activeOpacity={0.7}
           onPress={onIncrease}
           style={{ backgroundColor: primaryColor }}
-          className="w-8 h-8 rounded-full items-center justify-center"
+          className="w-8 h-8 rounded-full items-center justify-center shadow-sm"
         >
           <Plus color="white" size={14} strokeWidth={3} />
         </TouchableOpacity>
@@ -137,7 +137,7 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease, onRem
 };
 
 // ==========================================
-// 3. COMPONENTE PRINCIPAL (Overlay/Modal)
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
 
 export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterName, onClose }: OrderTakingProps) {
@@ -146,16 +146,24 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
   const { width } = useWindowDimensions();
   const { toast } = useToast();
 
-  // ESTADOS REALES
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<string[]>(['All']);
+  const [categories, setCategories] = useState<string[]>(['Todas']);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // FETCH DEL MENÚ DESDE MYSQL (VÍA TU API)
+  // Reloj en tiempo real
+  const [currentTime, setCurrentTime] = useState('');
+
   useEffect(() => {
+    // Inicializar reloj
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 1000);
+    setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+    // Cargar Menú
     const fetchMenu = async () => {
       try {
         setIsLoading(true);
@@ -169,17 +177,17 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
         }));
 
         setMenuItems(mappedItems);
-
         const uniqueCategories = Array.from(new Set(mappedItems.map(i => i.category)));
-        setCategories(['All', ...uniqueCategories]);
+        setCategories(['Todas', ...uniqueCategories]);
       } catch (error) {
-        toast({ title: "Error", description: "No se pudo cargar el menú", variant: "destructive" });
+        toast({ title: "Error", description: "No se pudo cargar el menú.", variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchMenu();
+    return () => clearInterval(timer);
   }, []);
 
   const isDesktop = width >= 1024;
@@ -211,7 +219,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
 
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
-  // ENVÍO DE ORDEN COMPLETA A MONGODB
   const handleSendOrder = async () => {
     if (cart.length === 0) return;
 
@@ -256,21 +263,24 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
     }
   };
 
-  const displayedMenu = selectedCategory === 'All'
+  const displayedMenu = selectedCategory === 'Todas'
     ? menuItems
     : menuItems.filter(i => i.category === selectedCategory);
 
   return (
     <SafeAreaView
-      className="absolute z-[100] top-0 bottom-0 left-0 right-0 h-full w-full"
-      style={{ backgroundColor: isDark ? "#121212" : "#f4f4f5" }}
+      className="absolute z-[100] top-0 bottom-0 left-0 right-0"
+      style={{ backgroundColor: isDark ? "#121212" : "#f4f4f5", flex: 1 }}
     >
-      <View className="flex-col h-full w-full mx-auto">
+      {/* Contenedor principal con flex: 1 para limitar la altura a la pantalla */}
+      <View style={{ flex: 1, flexDirection: 'column' }} className="w-full mx-auto">
 
-        {/* TOP HEADER SÚTIL */}
+        {/* ========================================== */}
+        {/* HEADER SUPERIOR */}
+        {/* ========================================== */}
         <View className={cn(
-          "p-6 flex-row items-center justify-between",
-          isDark ? "bg-[#121212]" : "bg-[#f4f4f5]"
+          "px-6 py-4 flex-row items-center justify-between border-b",
+          isDark ? "bg-[#121212] border-[#2A2A2A]" : "bg-[#f4f4f5] border-zinc-200"
         )}>
           <View className="flex-row items-center gap-4">
             <TouchableOpacity
@@ -282,37 +292,45 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
             </TouchableOpacity>
             <View>
               <Text className={cn("text-2xl font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                {tableName || `Table #${tableNumber}`}
+                {tableName || `Mesa #${tableNumber}`}
               </Text>
               <Text className="text-xs text-zinc-500 tracking-wide uppercase mt-1">
-                New Order Entry
+                Nueva Comanda
               </Text>
             </View>
           </View>
 
+          {/* INFORMACIÓN DEL MESERO Y HORA */}
+          <View className="hidden md:flex flex-row items-center gap-6">
+            <View className="flex-row items-center gap-2">
+              <User color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
+              <Text className={cn("text-sm font-bold uppercase", isDark ? "text-zinc-300" : "text-zinc-700")}>{waiterName}</Text>
+            </View>
+            <View className="flex-row items-center gap-2">
+              <Clock color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
+              <Text className={cn("text-sm font-mono font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{currentTime}</Text>
+            </View>
+          </View>
+
+          {/* BADGE PARA MÓVILES */}
           <Badge
             variant="outline"
             className={cn("rounded-full px-4 py-1.5 md:hidden", isDark ? "border-[#2A2A2A] bg-[#1E1E1E]" : "border-zinc-300 bg-white")}
-            label={`${cart.length} Items Selected`}
+            label={`${cart.length} Ítems`}
           />
-          <View className="hidden md:flex">
-            <Badge
-              variant="outline"
-              className={cn("rounded-full px-4 py-1.5", isDark ? "border-[#2A2A2A] bg-[#1E1E1E]" : "border-zinc-300 bg-white")}
-              label={`${cart.length} Items Selected`}
-            />
-          </View>
         </View>
 
-        {/* CONTENIDO PRINCIPAL */}
-        <View className="flex-1 flex-col md:flex-row h-full">
+        {/* ========================================== */}
+        {/* CUERPO PRINCIPAL (Split Layout) */}
+        {/* ========================================== */}
+        <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column', overflow: 'hidden' }}>
 
           {/* LADO IZQUIERDO: MENÚ */}
-          <View className="flex-1 flex-col px-6 h-full">
+          <View style={{ flex: 1, flexDirection: 'column', padding: 24 }}>
 
-            {/* Categorías tipo "Tabs" */}
-            <View className="mb-6 border-b" style={{ borderBottomColor: isDark ? '#2A2A2A' : '#e4e4e7' }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible">
+            {/* TABS DE CATEGORÍAS */}
+            <View style={{ height: 60, borderBottomWidth: 1, borderBottomColor: isDark ? '#2A2A2A' : '#e4e4e7', marginBottom: 16 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {categories.map(cat => {
                   const isSelected = selectedCategory === cat;
                   return (
@@ -323,8 +341,9 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                       style={{
                         borderBottomWidth: isSelected ? 3 : 0,
                         borderBottomColor: isSelected ? primaryColor : 'transparent',
+                        paddingHorizontal: 24,
+                        justifyContent: 'center',
                       }}
-                      className="px-6 py-4 mr-2"
                     >
                       <Text className={cn(
                         "text-sm font-bold",
@@ -338,14 +357,14 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               </ScrollView>
             </View>
 
-            {/* Grid de Platillos */}
-            <View className="flex-1">
+            {/* PRODUCTOS (CON SCROLL INTERNO BLOQUEADO) */}
+            <View style={{ flex: 1 }}>
               {isLoading ? (
                 <View className="flex-1 items-center justify-center">
                   <ActivityIndicator size="large" color={primaryColor} />
                 </View>
               ) : (
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
                   <View className="flex-row flex-wrap -mx-2">
                     {displayedMenu.map(item => (
                       <MenuItemCard
@@ -363,53 +382,57 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
             </View>
           </View>
 
-          {/* LADO DERECHO: RESUMEN DE ORDEN FIJO */}
-          <View className={cn(
-            "w-full md:w-[380px] border-t md:border-t-0 md:border-l flex-col h-[400px] md:h-full",
-            isDark ? "bg-[#161616] border-[#2A2A2A]" : "bg-white border-zinc-200 shadow-xl"
-          )}>
-
-            <View className={cn("p-6 pb-4 flex-row justify-between items-center")}>
+          {/* LADO DERECHO: TICKET DE ORDEN */}
+          <View
+            style={{ width: isDesktop ? 400 : '100%', height: isDesktop ? '100%' : 400, borderLeftWidth: isDesktop ? 1 : 0, borderTopWidth: !isDesktop ? 1 : 0 }}
+            className={cn("flex-col shadow-2xl", isDark ? "bg-[#161616] border-[#2A2A2A]" : "bg-white border-zinc-200")}
+          >
+            {/* CABECERA DEL TICKET */}
+            <View className="p-6 pb-4 flex-row justify-between items-center">
               <View className="flex-row items-center gap-3">
                 <ReceiptText color={primaryColor} size={22} />
                 <Text className={cn("font-headline font-bold text-xl", isDark ? "text-white" : "text-zinc-900")}>
-                  Order Summary
+                  Resumen de Orden
                 </Text>
               </View>
               {cart.length > 0 && (
-                <TouchableOpacity onPress={() => setCart([])}>
+                <TouchableOpacity onPress={() => setCart([])} className="p-2">
                   <Trash2 color="#ef4444" size={18} />
                 </TouchableOpacity>
               )}
             </View>
 
-            <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
-              {cart.length === 0 ? (
-                <View className="flex-col items-center justify-center flex-1 opacity-40 space-y-4">
-                  <ReceiptText color={isDark ? "#a1a1aa" : "#71717a"} size={48} />
-                  <Text className={cn("font-medium text-base", isDark ? "text-zinc-400" : "text-zinc-500")}>
-                    No items added yet
-                  </Text>
-                </View>
-              ) : (
-                <View className="space-y-1">
-                  {cart.map(item => (
-                    <CartItemRow
-                      key={item.id}
-                      item={item}
-                      isDark={isDark}
-                      primaryColor={primaryColor}
-                      onIncrease={() => addToCart(item)}
-                      onDecrease={() => removeFromCart(item.id)}
-                      onRemove={() => deleteFromCart(item.id)}
-                    />
-                  ))}
-                </View>
-              )}
-            </ScrollView>
+            {/* ITEMS DEL CARRITO (CON SCROLL INTERNO BLOQUEADO) */}
+            <View style={{ flex: 1 }}>
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
+                {cart.length === 0 ? (
+                  <View className="flex-col items-center justify-center flex-1 opacity-40 space-y-4 py-20">
+                    <ReceiptText color={isDark ? "#a1a1aa" : "#71717a"} size={48} />
+                    <Text className={cn("font-medium text-base", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                      Aún no hay productos
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="space-y-1">
+                    {cart.map(item => (
+                      <CartItemRow
+                        key={item.id}
+                        item={item}
+                        isDark={isDark}
+                        primaryColor={primaryColor}
+                        onIncrease={() => addToCart(item)}
+                        onDecrease={() => removeFromCart(item.id)}
+                        onRemove={() => deleteFromCart(item.id)}
+                      />
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            </View>
 
+            {/* PIE DEL TICKET (BOTÓN Y TOTALES ANCLADOS AL FONDO) */}
             <View className={cn("p-6 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-200")}>
-              <View className="flex-row justify-between items-center mb-6">
+              <View className="flex-row justify-between items-center mb-4">
                 <Text className={cn("text-base font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>Subtotal</Text>
                 <Text className={cn("text-xl font-bold", isDark ? "text-zinc-300" : "text-zinc-600")}>
                   ${total.toFixed(2)}
@@ -424,6 +447,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               </View>
 
               <TouchableOpacity
+                activeOpacity={0.8}
                 onPress={handleSendOrder}
                 disabled={isSubmitting || cart.length === 0}
                 style={{ backgroundColor: cart.length > 0 ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7') }}
@@ -433,7 +457,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                   <>
                     <Send color={cart.length === 0 ? (isDark ? '#52525b' : '#a1a1aa') : "white"} size={18} className="mr-2" />
                     <Text className={cn("text-base font-bold", cart.length === 0 ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-white")}>
-                      Send to Kitchen
+                      Enviar a Cocina
                     </Text>
                   </>
                 )}
@@ -442,6 +466,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
 
           </View>
         </View>
+
       </View>
     </SafeAreaView>
   );
