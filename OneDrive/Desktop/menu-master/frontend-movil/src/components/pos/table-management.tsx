@@ -31,7 +31,7 @@ export function TableManagement() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Estado para edición
+    // Estado para saber si estamos editando
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const [newMesa, setNewMesa] = useState({
@@ -47,7 +47,7 @@ export function TableManagement() {
             const response = await fetch(`${BASE_URL}/mesas`);
             const data = await response.json();
 
-            // Verificación segura de datos
+            // Verificación segura de datos recibidos de MongoDB
             const validMesas = Array.isArray(data)
                 ? data.filter(m => m && m._id && m.numero_mesa != null)
                 : [];
@@ -68,13 +68,12 @@ export function TableManagement() {
         setIsModalVisible(true);
     };
 
-    // SOLUCIÓN AL ERROR toString(): Validamos que existan los datos antes de convertirlos
     const openEditModal = (mesa: Mesa) => {
         if (!mesa) return;
 
         setEditingId(mesa._id || null);
         setNewMesa({
-            // Usamos String() como alternativa segura a .toString() para evitar el Uncaught TypeError
+            // Solución al error Uncaught TypeError: uso de String() seguro
             numero_mesa: String(mesa.numero_mesa ?? ''),
             nombre: mesa.nombre || '',
             capacidad: String(mesa.capacidad ?? '4'),
@@ -115,7 +114,7 @@ export function TableManagement() {
 
             toast({
                 title: "¡Éxito!",
-                description: editingId ? `Mesa ${payload.numero_mesa} actualizada.` : `Mesa ${payload.numero_mesa} registrada.`
+                description: editingId ? `La Mesa ${payload.numero_mesa} ha sido actualizada.` : `Mesa ${payload.numero_mesa} registrada exitosamente.`
             });
 
             setIsModalVisible(false);
@@ -143,7 +142,7 @@ export function TableManagement() {
         try {
             const response = await fetch(`${BASE_URL}/mesas/${id}`, { method: 'DELETE' });
             if (response.ok) {
-                toast({ title: "Eliminada", description: "La mesa ha sido borrada." });
+                toast({ title: "Eliminada", description: "La mesa ha sido borrada del sistema." });
                 loadMesas();
             } else {
                 throw new Error("No se pudo eliminar");
@@ -167,11 +166,11 @@ export function TableManagement() {
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
                 <View className="px-4 pt-8 max-w-[1400px] mx-auto w-full">
 
-                    {/* Header */}
+                    {/* Header de Gestión */}
                     <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
                         <View>
                             <Text className={cn("text-3xl font-bold", isDark ? "text-white" : "text-zinc-900")}>Gestión de Mesas</Text>
-                            <Text className="text-zinc-500">Organiza los espacios físicos del restaurante.</Text>
+                            <Text className="text-zinc-500">Añade, edita y organiza los espacios físicos del restaurante.</Text>
                         </View>
                         <TouchableOpacity
                             onPress={openCreateModal}
@@ -201,6 +200,8 @@ export function TableManagement() {
                             <View key={mesa._id || Math.random().toString()} style={getCardWidth()} className="p-2 mb-2">
                                 <Card className={cn("border-none overflow-hidden rounded-[24px] shadow-sm", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
                                     <CardContent className="p-5">
+
+                                        {/* Cabecera de la Tarjeta */}
                                         <View className="flex-row justify-between items-start mb-4">
                                             <View className="flex-row items-center gap-3">
                                                 <View className="w-12 h-12 rounded-[14px] items-center justify-center" style={{ backgroundColor: `${primaryColor}15` }}>
@@ -229,16 +230,22 @@ export function TableManagement() {
                                             </View>
                                         </View>
 
+                                        {/* DETALLES DE LA MESA (UBICACIÓN Y CAPACIDAD) */}
                                         <View className={cn("flex-row items-center justify-between pt-4 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
-                                            <View className="flex-row items-center gap-1.5">
+                                            <View className="flex-row items-center gap-2">
                                                 <MapPin color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
-                                                <Text className={cn("text-sm font-medium", isDark ? "text-zinc-300" : "text-zinc-600")}>{mesa.ubicacion}</Text>
+                                                <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-zinc-600")}>
+                                                    {mesa.ubicacion || "Principal"}
+                                                </Text>
                                             </View>
-                                            <View className="flex-row items-center gap-1.5">
+                                            <View className="flex-row items-center gap-2">
                                                 <Users color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
-                                                <Text className={cn("text-sm font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{mesa.capacidad} pax</Text>
+                                                <Text className={cn("text-sm font-bold", isDark ? "text-white" : "text-zinc-700")}>
+                                                    {mesa.capacidad} Capacidad
+                                                </Text>
                                             </View>
                                         </View>
+
                                     </CardContent>
                                 </Card>
                             </View>
@@ -247,13 +254,13 @@ export function TableManagement() {
                 </View>
             </ScrollView>
 
-            {/* Modal de Formulario */}
+            {/* Modal de Formulario (Crear / Editar) */}
             <Modal visible={isModalVisible} transparent={true} animationType="fade">
                 <View className="flex-1 bg-black/60 items-center justify-center p-4">
-                    <View className={cn("w-full max-w-md p-6 rounded-[32px]", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
+                    <View className={cn("w-full max-w-md p-6 rounded-[32px] shadow-2xl", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
                         <View className="flex-row justify-between items-center mb-6 pb-4 border-b" style={{ borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}>
                             <Text className={cn("text-xl font-bold", isDark ? "text-white" : "text-black")}>
-                                {editingId ? "Editar Mesa" : "Nueva Mesa"}
+                                {editingId ? "Editar Mesa" : "Registrar Nueva Mesa"}
                             </Text>
                             <TouchableOpacity onPress={() => setIsModalVisible(false)} className={cn("p-2 rounded-full", isDark ? "bg-[#2A2A2A]" : "bg-zinc-100")}>
                                 <X color={isDark ? "#a1a1aa" : "#71717a"} size={20} />
@@ -266,15 +273,17 @@ export function TableManagement() {
                                     <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Número *</Text>
                                     <TextInput
                                         className={cn("px-4 py-4 rounded-xl font-bold", isDark ? "bg-[#2A2A2A] text-white" : "bg-zinc-100 text-black")}
+                                        placeholder="Ej. 1"
                                         keyboardType="numeric"
                                         value={newMesa.numero_mesa}
                                         onChangeText={(t) => setNewMesa({ ...newMesa, numero_mesa: t })}
                                     />
                                 </View>
                                 <View className="flex-1">
-                                    <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Pax *</Text>
+                                    <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Capacidad *</Text>
                                     <TextInput
                                         className={cn("px-4 py-4 rounded-xl font-bold", isDark ? "bg-[#2A2A2A] text-white" : "bg-zinc-100 text-black")}
+                                        placeholder="Pax"
                                         keyboardType="numeric"
                                         value={newMesa.capacidad}
                                         onChangeText={(t) => setNewMesa({ ...newMesa, capacidad: t })}
@@ -285,6 +294,7 @@ export function TableManagement() {
                                 <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Nombre</Text>
                                 <TextInput
                                     className={cn("px-4 py-4 rounded-xl font-bold", isDark ? "bg-[#2A2A2A] text-white" : "bg-zinc-100 text-black")}
+                                    placeholder="Nombre de mesa"
                                     value={newMesa.nombre}
                                     onChangeText={(t) => setNewMesa({ ...newMesa, nombre: t })}
                                 />
@@ -315,12 +325,12 @@ export function TableManagement() {
                             onPress={handleGuardarMesa}
                             disabled={isSaving}
                             style={{ backgroundColor: primaryColor }}
-                            className="p-4 rounded-xl items-center flex-row justify-center shadow-lg"
+                            className="p-4 rounded-xl items-center flex-row justify-center shadow-lg active:scale-95 transition-transform"
                         >
                             {isSaving ? <ActivityIndicator color="white" /> : (
                                 <>
                                     <CheckCircle2 color="white" size={20} className="mr-2" />
-                                    <Text className="text-white font-bold text-base">{editingId ? "Actualizar" : "Guardar"}</Text>
+                                    <Text className="text-white font-bold text-base">{editingId ? "Actualizar Mesa" : "Guardar Mesa"}</Text>
                                 </>
                             )}
                         </TouchableOpacity>
