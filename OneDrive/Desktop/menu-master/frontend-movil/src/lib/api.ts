@@ -88,11 +88,17 @@ export const api = {
             const res = await fetch(`${BASE_URL}/productos`, { headers: await getHeaders() });
             return res.json();
         },
+
+        // MODIFICADO: Ahora extrae el producto correcto del arreglo general
         getById: async (id: string) => {
-            const res = await fetch(`${BASE_URL}/productos/${id}`, { headers: await getHeaders() });
-            if (!res.ok) throw new Error(`Error al obtener producto ${id}`);
-            return res.json();
+            const res = await fetch(`${BASE_URL}/productos`, { headers: await getHeaders() });
+            if (!res.ok) throw new Error(`Error de conexión al buscar producto`);
+            const todosLosProductos = await res.json();
+            const producto = todosLosProductos.find((p: any) => String(p.id) === String(id) || String(p.id_producto) === String(id));
+            if (!producto) throw new Error(`No se encontró el producto con ID ${id}`);
+            return producto;
         },
+
         create: async (data: object) => {
             const res = await fetch(`${BASE_URL}/productos`, {
                 method: 'POST',
@@ -116,21 +122,44 @@ export const api = {
             });
             return res.json();
         },
+
+        // MODIFICADO: Versión súper optimizada que descarga el catálogo 1 sola vez por orden
         descontarInventarioPorPedido: async (itemsPedido: { id_producto: string; cantidad: number }[]) => {
-            await Promise.all(
-                itemsPedido.map(async (pedidoItem) => {
-                    try {
-                        const productoActual = await api.productos.getById(pedidoItem.id_producto);
+            try {
+                // 1. Descargar catálogo completo una sola vez
+                const res = await fetch(`${BASE_URL}/productos`, { headers: await getHeaders() });
+                const todosLosProductos = await res.json();
+
+                // 2. Procesar todos los descuentos en paralelo
+                await Promise.all(
+                    itemsPedido.map(async (pedidoItem) => {
+                        // Buscar el producto en el catálogo descargado
+                        const productoActual = todosLosProductos.find((p: any) =>
+                            String(p.id) === String(pedidoItem.id_producto) ||
+                            String(p.id_producto) === String(pedidoItem.id_producto)
+                        );
+
+                        if (!productoActual) {
+                            console.warn(`Producto ${pedidoItem.id_producto} no encontrado para descontar`);
+                            return;
+                        }
+
+                        // Calcular el nuevo stock evitando números negativos
                         const nuevoStock = Math.max(0, (Number(productoActual.stock) || 0) - pedidoItem.cantidad);
+
+                        // Enviar la actualización completa a PHP
                         await api.productos.update(pedidoItem.id_producto, {
-                            ...productoActual,
-                            stock: nuevoStock
+                            nombre: productoActual.nombre,
+                            descripcion: productoActual.descripcion || '',
+                            precio: productoActual.precio,
+                            stock: nuevoStock,
+                            id_categoria: productoActual.id_categoria
                         });
-                    } catch (error) {
-                        console.error(`Error al descontar stock del producto ${pedidoItem.id_producto}:`, error);
-                    }
-                })
-            );
+                    })
+                );
+            } catch (error) {
+                console.error("Error global al intentar descontar el inventario:", error);
+            }
         }
     },
 
