@@ -17,7 +17,7 @@ export const NAV_ITEMS = {
     { label: 'Configuraciones', icon: Settings, path: 'settings' },
   ],
   COCINERO: [
-    { label: 'Display de Cocina', icon: ChefHat, path: 'kds' },
+    { label: 'Pantalla de Cocina', icon: ChefHat, path: 'kds' },
     { label: 'Inventario', icon: Package, path: 'inventory' },
     { label: 'Configuraciones', icon: Settings, path: 'settings' },
   ],

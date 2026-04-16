@@ -160,7 +160,7 @@ export function WaiterOrders() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('https://menu-master-api.onrender.com/pedidos');
+      const response = await fetch('https://menu-master-api.onrender.com/pedidos/activos');
       const data = await response.json();
 
       const pedidosArray = Array.isArray(data) ? data : (data.pedidos || data.data || []);
