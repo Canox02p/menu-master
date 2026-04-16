@@ -1,9 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// ¡AQUÍ ESTÁ EL ARREGLO! Se agregó Platform a la lista
-import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, SafeAreaView, ActivityIndicator, Alert, Platform } from 'react-native';
-import { Minus, Plus, Send, ReceiptText, ChevronLeft, Trash2, Clock, User, CheckCircle2 } from 'lucide-react-native';
+import {
+  View, Text, TouchableOpacity, ScrollView, useWindowDimensions,
+  Pressable, StyleProp, ViewStyle, SafeAreaView, ActivityIndicator,
+  Alert, Platform, TextInput
+} from 'react-native';
+import {
+  Minus, Plus, Send, ReceiptText, ChevronLeft, Trash2,
+  Clock, User, CheckCircle2, Search, X, Package
+} from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
@@ -19,6 +25,7 @@ interface MenuItem {
   name: string;
   price: number;
   category: string;
+  stock?: number; // cantidad en inventario
 }
 
 interface CartItem extends MenuItem {
@@ -40,6 +47,7 @@ interface MenuItemCardProps {
   primaryColor: string;
   widthStyle: StyleProp<ViewStyle>;
   onAdd: (item: MenuItem) => void;
+  cartQty: number;
 }
 
 interface CartItemRowProps {
@@ -52,11 +60,42 @@ interface CartItemRowProps {
 }
 
 // ==========================================
-// 2. SUBCOMPONENTES
+// 2. BADGE DE STOCK
 // ==========================================
+const StockBadge = ({ stock, isDark }: { stock: number | undefined; isDark: boolean }) => {
+  if (stock === undefined || stock === null) return null;
 
-const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuItemCardProps) => {
+  let bgColor = 'rgba(16,185,129,0.12)';
+  let textColor = '#10b981';
+  let label = `${stock} disponibles`;
+
+  if (stock === 0) {
+    bgColor = 'rgba(239,68,68,0.12)';
+    textColor = '#ef4444';
+    label = 'Sin stock';
+  } else if (stock <= 5) {
+    bgColor = 'rgba(245,158,11,0.12)';
+    textColor = '#f59e0b';
+    label = `Solo ${stock}`;
+  }
+
+  return (
+    <View
+      className="flex-row items-center gap-1 px-2 py-0.5 rounded-full"
+      style={{ backgroundColor: bgColor }}
+    >
+      <Package color={textColor} size={9} />
+      <Text style={{ color: textColor, fontSize: 9, fontWeight: '700' }}>{label}</Text>
+    </View>
+  );
+};
+
+// ==========================================
+// 3. TARJETA DE PRODUCTO
+// ==========================================
+const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd, cartQty }: MenuItemCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const sinStock = item.stock !== undefined && item.stock === 0;
 
   return (
     <View style={widthStyle} className="p-2 mb-2">
@@ -65,31 +104,60 @@ const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuIte
         onHoverOut={() => setIsHovered(false)}
         onPressIn={() => setIsHovered(true)}
         onPressOut={() => setIsHovered(false)}
-        onPress={() => onAdd(item)}
+        onPress={() => !sinStock && onAdd(item)}
+        disabled={sinStock}
       >
         <View
-          className={cn(
-            "rounded-[20px] p-5 transition-all duration-200 h-36 flex-col justify-between border",
-            isDark ? "bg-[#1E1E1E]" : "bg-white"
-          )}
+          className="rounded-[20px] p-5 h-36 flex-col justify-between border"
           style={{
-            borderColor: isHovered ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7'),
-            transform: [{ scale: isHovered ? 0.98 : 1 }]
+            backgroundColor: sinStock
+              ? (isDark ? '#161616' : '#fafafa')
+              : (isDark ? '#1E1E1E' : '#ffffff'),
+            borderColor: isHovered && !sinStock
+              ? primaryColor
+              : cartQty > 0
+                ? `${primaryColor}55`
+                : (isDark ? '#2A2A2A' : '#e4e4e7'),
+            opacity: sinStock ? 0.55 : 1,
+            transform: [{ scale: isHovered && !sinStock ? 0.98 : 1 }],
           }}
         >
-          <Text className={cn("font-bold text-base leading-tight", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={2}>
-            {item.name}
-          </Text>
+          {/* Indicador de cantidad en carrito */}
+          {cartQty > 0 && (
+            <View
+              className="absolute top-3 right-3 w-6 h-6 rounded-full items-center justify-center"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Text className="text-white font-bold" style={{ fontSize: 10 }}>{cartQty}</Text>
+            </View>
+          )}
+
+          <View className="flex-1">
+            <Text
+              className={cn('font-bold text-base leading-tight', isDark ? 'text-zinc-200' : 'text-zinc-800')}
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
+          </View>
 
           <View className="flex-row justify-between items-end mt-auto w-full">
-            <Text style={{ color: primaryColor }} className="text-lg font-headline font-bold">
-              ${item.price.toFixed(2)}
-            </Text>
+            <View className="flex-col gap-1">
+              <Text style={{ color: sinStock ? (isDark ? '#52525b' : '#a1a1aa') : primaryColor }} className="text-lg font-headline font-bold">
+                ${item.price.toFixed(2)}
+              </Text>
+              {/* BADGE DE STOCK */}
+              <StockBadge stock={item.stock} isDark={isDark} />
+            </View>
             <View
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-              style={{ backgroundColor: isDark ? '#2A2A2A' : '#f4f4f5' }}
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: sinStock ? (isDark ? '#1a1a1a' : '#f0f0f0') : (isDark ? '#2A2A2A' : '#f4f4f5') }}
             >
-              <Plus color={isDark ? "#a1a1aa" : "#71717a"} size={16} strokeWidth={3} />
+              <Plus
+                color={sinStock ? (isDark ? '#3f3f46' : '#d4d4d8') : (isDark ? '#a1a1aa' : '#71717a')}
+                size={16}
+                strokeWidth={3}
+              />
             </View>
           </View>
         </View>
@@ -98,11 +166,17 @@ const MenuItemCard = ({ item, isDark, primaryColor, widthStyle, onAdd }: MenuIte
   );
 };
 
+// ==========================================
+// 4. FILA DEL CARRITO
+// ==========================================
 const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease, onRemove }: CartItemRowProps) => {
   return (
-    <View className="flex-row items-center justify-between py-3 border-b" style={{ borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}>
+    <View
+      className="flex-row items-center justify-between py-3 border-b"
+      style={{ borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}
+    >
       <View className="flex-1 pr-3">
-        <Text className={cn("font-bold text-sm mb-1", isDark ? "text-zinc-200" : "text-zinc-800")} numberOfLines={2}>
+        <Text className={cn('font-bold text-sm mb-1', isDark ? 'text-zinc-200' : 'text-zinc-800')} numberOfLines={2}>
           {item.name}
         </Text>
         <Text style={{ color: primaryColor }} className="text-sm font-bold">
@@ -117,10 +191,10 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease, onRem
           className="w-8 h-8 rounded-full border items-center justify-center"
           style={{ borderColor: isDark ? '#3f3f46' : '#d4d4d8' }}
         >
-          <Minus color={isDark ? "#d4d4d8" : "#52525b"} size={14} strokeWidth={3} />
+          <Minus color={isDark ? '#d4d4d8' : '#52525b'} size={14} strokeWidth={3} />
         </TouchableOpacity>
 
-        <Text className={cn("font-bold text-sm w-8 text-center", isDark ? "text-white" : "text-zinc-900")}>
+        <Text className={cn('font-bold text-sm w-8 text-center', isDark ? 'text-white' : 'text-zinc-900')}>
           {item.qty}
         </Text>
 
@@ -138,9 +212,8 @@ const CartItemRow = ({ item, isDark, primaryColor, onIncrease, onDecrease, onRem
 };
 
 // ==========================================
-// 3. COMPONENTE PRINCIPAL
+// 5. COMPONENTE PRINCIPAL
 // ==========================================
-
 export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterName, onClose }: OrderTakingProps) {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
@@ -153,8 +226,11 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [currentTime, setCurrentTime] = useState('');
+
+  // --- NUEVO: barra de búsqueda ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -171,7 +247,15 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
           id: p.id_producto?.toString() || p.id?.toString() || Math.random().toString(),
           name: p.nombre,
           price: Number(p.precio) || 0,
-          category: p.categoria || 'General'
+          category: p.categoria || 'General',
+          // Mapear el stock desde la API (puede venir como cantidad, stock, inventario, etc.)
+          stock: p.cantidad !== undefined
+            ? Number(p.cantidad)
+            : p.stock !== undefined
+              ? Number(p.stock)
+              : p.inventario !== undefined
+                ? Number(p.inventario)
+                : undefined,
         }));
 
         setMenuItems(mappedItems);
@@ -208,24 +292,29 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
   };
 
   const removeFromCart = (id: string) => {
-    setCart(prev => prev.map(i => i.id === id ? { ...i, qty: Math.max(0, i.qty - 1) } : i).filter(i => i.qty > 0));
+    setCart(prev =>
+      prev.map(i => i.id === id ? { ...i, qty: Math.max(0, i.qty - 1) } : i).filter(i => i.qty > 0)
+    );
   };
 
   const deleteFromCart = (id: string) => {
     setCart(prev => prev.filter(i => i.id !== id));
   };
 
-  const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  // ==========================================
-  // LOGICA: ENVIAR COMANDA A COCINA
-  // ==========================================
+  // --- NUEVO: filtrado con búsqueda + categoría ---
+  const displayedMenu = menuItems.filter(item => {
+    const matchesCategory = selectedCategory === 'Todas' || item.category === selectedCategory;
+    const matchesSearch = searchQuery.trim() === '' ||
+      item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   const handleSendOrder = async () => {
     if (cart.length === 0) return;
-
     try {
       setIsSubmitting(true);
-
       const payload = {
         id_mesa: tableId,
         id_mesero: waiterId,
@@ -264,51 +353,35 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
     }
   };
 
-  // ==========================================
-  // LOGICA: COBRAR Y LIBERAR MESA
-  // ==========================================
   const handleCheckout = () => {
     if (Platform.OS === 'web') {
       if (window.confirm(`¿Registrar pago y liberar la ${tableName || `Mesa #${tableNumber}`}?`)) {
         processCheckout();
       }
     } else {
-      Alert.alert(
-        "Cobrar Mesa",
-        `¿Registrar pago y liberar la ${tableName || `Mesa #${tableNumber}`}?`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Cobrar", style: "default", onPress: processCheckout }
-        ]
-      );
+      Alert.alert("Cobrar Mesa", `¿Registrar pago y liberar la ${tableName || `Mesa #${tableNumber}`}?`, [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Cobrar", style: "default", onPress: processCheckout }
+      ]);
     }
   };
 
   const processCheckout = async () => {
     setIsSubmitting(true);
     try {
-      // Liberar la mesa en la base de datos
       await fetch(`https://menu-master-api.onrender.com/mesas/${tableId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado: 'LIBRE', mesero_nombre: '' })
       });
-
-      toast({
-        title: "Pago Exitoso",
-        description: `La ${tableName || `Mesa #${tableNumber}`} ha sido cobrada y liberada.`
-      });
-      onClose(); // Cerrar vista y recargar mesas
+      toast({ title: "Pago Exitoso", description: `La ${tableName || `Mesa #${tableNumber}`} ha sido cobrada y liberada.` });
+      onClose();
     } catch (error) {
       toast({ title: "Error", description: "No se pudo procesar el pago.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const displayedMenu = selectedCategory === 'Todas'
-    ? menuItems
-    : menuItems.filter(i => i.category === selectedCategory);
 
   return (
     <SafeAreaView
@@ -317,9 +390,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
     >
       <View style={{ flex: 1, flexDirection: 'column' }} className="w-full mx-auto">
 
-        {/* ========================================== */}
-        {/* HEADER SUPERIOR */}
-        {/* ========================================== */}
+        {/* ====== HEADER SUPERIOR ====== */}
         <View className={cn(
           "px-6 py-4 flex-row items-center justify-between border-b",
           isDark ? "bg-[#121212] border-[#2A2A2A]" : "bg-[#f4f4f5] border-zinc-200"
@@ -336,13 +407,10 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               <Text className={cn("text-2xl font-bold", isDark ? "text-white" : "text-zinc-900")}>
                 {tableName || `Mesa #${tableNumber}`}
               </Text>
-              <Text className="text-xs text-zinc-500 tracking-wide uppercase mt-1">
-                Nueva Comanda
-              </Text>
+              <Text className="text-xs text-zinc-500 tracking-wide uppercase mt-1">Nueva Comanda</Text>
             </View>
           </View>
 
-          {/* INFORMACIÓN DEL MESERO Y BOTÓN DE COBRO */}
           <View className="hidden md:flex flex-row items-center gap-6">
             <View className="flex-row items-center gap-4 border-r pr-6" style={{ borderColor: isDark ? '#2A2A2A' : '#e4e4e7' }}>
               <View className="flex-row items-center gap-2">
@@ -354,20 +422,17 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                 <Text className={cn("text-sm font-mono font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{currentTime}</Text>
               </View>
             </View>
-
-            {/* BOTÓN PARA COBRAR MESA */}
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleCheckout}
               disabled={isSubmitting}
-              className="flex-row items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 rounded-xl transition-transform active:scale-95"
+              className="flex-row items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 rounded-xl"
             >
               {isSubmitting ? <ActivityIndicator color="#10b981" size="small" /> : <CheckCircle2 color="#10b981" size={18} />}
               <Text className="text-emerald-500 font-bold text-sm">Cobrar Mesa</Text>
             </TouchableOpacity>
           </View>
 
-          {/* BADGE PARA MÓVILES */}
           <Badge
             variant="outline"
             className={cn("rounded-full px-4 py-1.5 md:hidden", isDark ? "border-[#2A2A2A] bg-[#1E1E1E]" : "border-zinc-300 bg-white")}
@@ -375,16 +440,14 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
           />
         </View>
 
-        {/* ========================================== */}
-        {/* CUERPO PRINCIPAL (Split Layout) */}
-        {/* ========================================== */}
+        {/* ====== CUERPO PRINCIPAL ====== */}
         <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column', overflow: 'hidden' }}>
 
           {/* LADO IZQUIERDO: MENÚ */}
           <View style={{ flex: 1, flexDirection: 'column', padding: 24 }}>
 
             {/* TABS DE CATEGORÍAS */}
-            <View style={{ height: 60, borderBottomWidth: 1, borderBottomColor: isDark ? '#2A2A2A' : '#e4e4e7', marginBottom: 16 }}>
+            <View style={{ height: 60, borderBottomWidth: 1, borderBottomColor: isDark ? '#2A2A2A' : '#e4e4e7', marginBottom: 12 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {categories.map(cat => {
                   const isSelected = selectedCategory === cat;
@@ -400,10 +463,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                         justifyContent: 'center',
                       }}
                     >
-                      <Text className={cn(
-                        "text-sm font-bold",
-                        isSelected ? "text-white" : (isDark ? "text-zinc-400" : "text-zinc-600")
-                      )}>
+                      <Text className={cn("text-sm font-bold", isSelected ? "text-white" : (isDark ? "text-zinc-400" : "text-zinc-600"))}>
                         {cat}
                       </Text>
                     </TouchableOpacity>
@@ -412,11 +472,64 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               </ScrollView>
             </View>
 
+            {/* ====== BARRA DE BÚSQUEDA (NUEVA) ====== */}
+            <View className="mb-4">
+              <View
+                className="flex-row items-center rounded-2xl px-4 border"
+                style={{
+                  backgroundColor: isDark ? '#1E1E1E' : '#ffffff',
+                  borderColor: searchFocused
+                    ? primaryColor
+                    : isDark ? '#2A2A2A' : '#e4e4e7',
+                  height: 48,
+                }}
+              >
+                <Search color={searchFocused ? primaryColor : (isDark ? '#52525b' : '#a1a1aa')} size={18} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
+                  placeholder="Buscar platillo..."
+                  placeholderTextColor={isDark ? '#52525b' : '#a1a1aa'}
+                  style={{
+                    flex: 1,
+                    marginLeft: 10,
+                    fontSize: 14,
+                    fontWeight: '500',
+                    color: isDark ? '#e4e4e7' : '#18181b',
+                    outline: 'none',
+                  }}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1">
+                    <X color={isDark ? '#71717a' : '#a1a1aa'} size={16} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Contador de resultados */}
+              {searchQuery.length > 0 && (
+                <Text className="text-xs text-zinc-500 mt-2 ml-1">
+                  {displayedMenu.length === 0
+                    ? 'Sin resultados'
+                    : `${displayedMenu.length} resultado${displayedMenu.length !== 1 ? 's' : ''}`}
+                </Text>
+              )}
+            </View>
+
             {/* PRODUCTOS */}
             <View style={{ flex: 1 }}>
               {isLoading ? (
                 <View className="flex-1 items-center justify-center">
                   <ActivityIndicator size="large" color={primaryColor} />
+                </View>
+              ) : displayedMenu.length === 0 ? (
+                <View className="flex-1 items-center justify-center opacity-40 pb-20">
+                  <Search color={isDark ? '#a1a1aa' : '#71717a'} size={48} />
+                  <Text className={cn("font-bold text-base mt-4", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                    No se encontró "{searchQuery}"
+                  </Text>
                 </View>
               ) : (
                 <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -429,6 +542,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                         primaryColor={primaryColor}
                         widthStyle={getCardWidth()}
                         onAdd={addToCart}
+                        cartQty={cart.find(c => c.id === item.id)?.qty || 0}
                       />
                     ))}
                   </View>
@@ -439,10 +553,14 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
 
           {/* LADO DERECHO: TICKET DE ORDEN */}
           <View
-            style={{ width: isDesktop ? 400 : '100%', height: isDesktop ? '100%' : 400, borderLeftWidth: isDesktop ? 1 : 0, borderTopWidth: !isDesktop ? 1 : 0 }}
+            style={{
+              width: isDesktop ? 400 : '100%',
+              height: isDesktop ? '100%' : 400,
+              borderLeftWidth: isDesktop ? 1 : 0,
+              borderTopWidth: !isDesktop ? 1 : 0
+            }}
             className={cn("flex-col shadow-2xl", isDark ? "bg-[#161616] border-[#2A2A2A]" : "bg-white border-zinc-200")}
           >
-            {/* CABECERA DEL TICKET */}
             <View className="p-6 pb-4 flex-row justify-between items-center">
               <View className="flex-row items-center gap-3">
                 <ReceiptText color={primaryColor} size={22} />
@@ -457,7 +575,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               )}
             </View>
 
-            {/* ITEMS DEL CARRITO */}
             <View style={{ flex: 1 }}>
               <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
                 {cart.length === 0 ? (
@@ -485,7 +602,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
               </ScrollView>
             </View>
 
-            {/* PIE DEL TICKET */}
             <View className={cn("p-6 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-200")}>
               <View className="flex-row justify-between items-center mb-4">
                 <Text className={cn("text-base font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>Subtotal</Text>
@@ -493,24 +609,26 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                   ${total.toFixed(2)}
                 </Text>
               </View>
-
               <View className="flex-row justify-between items-center mb-6">
                 <Text className={cn("text-2xl font-bold", isDark ? "text-white" : "text-black")}>Total</Text>
                 <Text style={{ color: primaryColor }} className="text-3xl font-bold">
                   ${total.toFixed(2)}
                 </Text>
               </View>
-
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={handleSendOrder}
                 disabled={isSubmitting || cart.length === 0}
                 style={{ backgroundColor: cart.length > 0 ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7') }}
-                className="w-full py-4 rounded-xl items-center justify-center flex-row shadow-lg active:scale-95 transition-transform"
+                className="w-full py-4 rounded-xl items-center justify-center flex-row shadow-lg"
               >
                 {isSubmitting ? <ActivityIndicator color="white" /> : (
                   <>
-                    <Send color={cart.length === 0 ? (isDark ? '#52525b' : '#a1a1aa') : "white"} size={18} className="mr-2" />
+                    <Send
+                      color={cart.length === 0 ? (isDark ? '#52525b' : '#a1a1aa') : "white"}
+                      size={18}
+                      className="mr-2"
+                    />
                     <Text className={cn("text-base font-bold", cart.length === 0 ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-white")}>
                       Enviar a Cocina
                     </Text>
@@ -518,7 +636,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                 )}
               </TouchableOpacity>
             </View>
-
           </View>
         </View>
 

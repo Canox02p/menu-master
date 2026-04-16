@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, useWindowDimensions, Platform, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, DimensionValue } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions, Platform, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, DimensionValue, Modal } from 'react-native';
 import { Card } from '@/components/ui/card';
-import { Clock, Receipt, Printer, X, MapPin, ChevronDown, ChevronUp, CreditCard, Banknote, User, CalendarClock, UtensilsCrossed } from 'lucide-react-native';
+import { Clock, Receipt, Printer, X, MapPin, ChevronDown, ChevronUp, CreditCard, Banknote, User, CalendarClock, UtensilsCrossed, CheckCircle2 } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
@@ -47,7 +47,231 @@ interface VentaData {
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 2. TICKET OVERLAY
+// 2. MODAL DE MÉTODO DE PAGO
+// ==========================================
+const PaymentMethodModal = ({
+  order,
+  visible,
+  onClose,
+  onConfirm,
+  primaryColor,
+  isDark,
+}: {
+  order: OrderData | null;
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: (order: OrderData, metodo: 'EFECTIVO' | 'TARJETA') => void;
+  primaryColor: string;
+  isDark: boolean;
+}) => {
+  const [selectedMethod, setSelectedMethod] = useState<'EFECTIVO' | 'TARJETA' | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Reset selection when modal opens
+  useEffect(() => {
+    if (visible) {
+      setSelectedMethod(null);
+      setIsProcessing(false);
+    }
+  }, [visible]);
+
+  if (!order || !visible) return null;
+
+  const handleConfirm = async () => {
+    if (!selectedMethod) return;
+    setIsProcessing(true);
+    await onConfirm(order, selectedMethod);
+    setIsProcessing(false);
+  };
+
+  const safeProductos = Array.isArray(order.productos) ? order.productos : [];
+  const numMesa = order.numero_mesa || '?';
+
+  return (
+    <SafeAreaView className="absolute z-[300] top-0 bottom-0 left-0 right-0 bg-black/70 items-center justify-center p-4">
+      <View
+        className="w-full max-w-sm rounded-[28px] overflow-hidden shadow-2xl"
+        style={{ backgroundColor: isDark ? '#1E1E1E' : '#ffffff' }}
+      >
+        {/* Header */}
+        <View
+          className="p-5 flex-row justify-between items-center border-b"
+          style={{ borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}
+        >
+          <View>
+            <Text className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-zinc-900')}>
+              Método de Pago
+            </Text>
+            <Text className="text-zinc-500 text-xs mt-0.5">Mesa {numMesa} · ${Number(order.total).toFixed(2)}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={onClose}
+            className="w-9 h-9 rounded-full items-center justify-center"
+            style={{ backgroundColor: isDark ? '#2A2A2A' : '#f4f4f5' }}
+          >
+            <X color={isDark ? '#a1a1aa' : '#71717a'} size={18} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Resumen de cuenta */}
+        <View className="px-5 pt-4 pb-3">
+          <Text
+            className="text-[10px] font-bold tracking-widest uppercase mb-3"
+            style={{ color: isDark ? '#52525b' : '#a1a1aa' }}
+          >
+            Resumen de cuenta
+          </Text>
+          <View
+            className="rounded-2xl p-4"
+            style={{ backgroundColor: isDark ? '#161616' : '#f9f9f9' }}
+          >
+            {safeProductos.map((item, idx) => (
+              <View
+                key={idx}
+                className="flex-row justify-between items-center py-1.5"
+                style={{
+                  borderBottomWidth: idx < safeProductos.length - 1 ? 0.5 : 0,
+                  borderBottomColor: isDark ? '#2A2A2A' : '#e4e4e7',
+                }}
+              >
+                <Text
+                  className={cn('text-xs flex-1 pr-2', isDark ? 'text-zinc-300' : 'text-zinc-700')}
+                  numberOfLines={1}
+                >
+                  <Text className="font-bold">{item.cantidad}x</Text> {item.nombre}
+                </Text>
+                <Text className={cn('text-xs font-mono font-bold', isDark ? 'text-zinc-400' : 'text-zinc-600')}>
+                  ${(Number(item.subtotal) || Number(item.precio_unitario) * Number(item.cantidad) || 0).toFixed(2)}
+                </Text>
+              </View>
+            ))}
+            <View className="flex-row justify-between items-center mt-3 pt-2" style={{ borderTopWidth: 1, borderTopColor: isDark ? '#3f3f46' : '#e4e4e7' }}>
+              <Text className={cn('text-base font-bold', isDark ? 'text-white' : 'text-black')}>TOTAL</Text>
+              <Text style={{ color: primaryColor }} className="text-xl font-mono font-bold">
+                ${Number(order.total).toFixed(2)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Selección de método */}
+        <View className="px-5 pb-4">
+          <Text
+            className="text-[10px] font-bold tracking-widest uppercase mb-3"
+            style={{ color: isDark ? '#52525b' : '#a1a1aa' }}
+          >
+            Selecciona cómo paga
+          </Text>
+          <View className="flex-row gap-3">
+            {/* Botón Efectivo */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setSelectedMethod('EFECTIVO')}
+              className="flex-1 rounded-2xl p-4 items-center justify-center border-2"
+              style={{
+                borderColor: selectedMethod === 'EFECTIVO' ? '#10b981' : (isDark ? '#2A2A2A' : '#e4e4e7'),
+                backgroundColor:
+                  selectedMethod === 'EFECTIVO'
+                    ? 'rgba(16,185,129,0.1)'
+                    : isDark
+                      ? '#161616'
+                      : '#f9f9f9',
+              }}
+            >
+              <Banknote
+                color={selectedMethod === 'EFECTIVO' ? '#10b981' : isDark ? '#71717a' : '#a1a1aa'}
+                size={32}
+              />
+              <Text
+                className="font-bold text-sm mt-2"
+                style={{ color: selectedMethod === 'EFECTIVO' ? '#10b981' : isDark ? '#a1a1aa' : '#71717a' }}
+              >
+                Efectivo
+              </Text>
+              {selectedMethod === 'EFECTIVO' && (
+                <View className="mt-2">
+                  <CheckCircle2 color="#10b981" size={16} />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Botón Tarjeta */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setSelectedMethod('TARJETA')}
+              className="flex-1 rounded-2xl p-4 items-center justify-center border-2"
+              style={{
+                borderColor: selectedMethod === 'TARJETA' ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7'),
+                backgroundColor:
+                  selectedMethod === 'TARJETA'
+                    ? `${primaryColor}18`
+                    : isDark
+                      ? '#161616'
+                      : '#f9f9f9',
+              }}
+            >
+              <CreditCard
+                color={selectedMethod === 'TARJETA' ? primaryColor : isDark ? '#71717a' : '#a1a1aa'}
+                size={32}
+              />
+              <Text
+                className="font-bold text-sm mt-2"
+                style={{ color: selectedMethod === 'TARJETA' ? primaryColor : isDark ? '#a1a1aa' : '#71717a' }}
+              >
+                Tarjeta
+              </Text>
+              {selectedMethod === 'TARJETA' && (
+                <View className="mt-2">
+                  <CheckCircle2 color={primaryColor} size={16} />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Botón confirmar */}
+        <View className="px-5 pb-5">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            disabled={!selectedMethod || isProcessing}
+            onPress={handleConfirm}
+            className="w-full py-4 rounded-2xl items-center justify-center flex-row gap-2"
+            style={{
+              backgroundColor: selectedMethod
+                ? selectedMethod === 'EFECTIVO'
+                  ? '#10b981'
+                  : primaryColor
+                : isDark
+                  ? '#2A2A2A'
+                  : '#e4e4e7',
+            }}
+          >
+            {isProcessing ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                {selectedMethod === 'TARJETA' ? (
+                  <CreditCard color={selectedMethod ? 'white' : isDark ? '#52525b' : '#a1a1aa'} size={18} />
+                ) : (
+                  <Banknote color={selectedMethod ? 'white' : isDark ? '#52525b' : '#a1a1aa'} size={18} />
+                )}
+                <Text
+                  className="font-bold text-base"
+                  style={{ color: selectedMethod ? 'white' : isDark ? '#52525b' : '#a1a1aa' }}
+                >
+                  {selectedMethod ? `Confirmar Cobro · $${Number(order.total).toFixed(2)}` : 'Elige un método de pago'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+// ==========================================
+// 3. TICKET OVERLAY
 // ==========================================
 const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { order: OrderData | null, visible: boolean, onClose: () => void, primaryColor: string, isDark: boolean }) => {
   if (!order || !visible) return null;
@@ -130,7 +354,7 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
 };
 
 // ==========================================
-// 3. TARJETA DE HISTORIAL (VENTAS)
+// 4. TARJETA DE HISTORIAL (VENTAS)
 // ==========================================
 const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark: boolean, primaryColor: string }) => {
   const [expanded, setExpanded] = useState(false);
@@ -151,8 +375,6 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
 
   return (
     <Card className={cn("border-none rounded-[24px] mb-3 overflow-hidden", isDark ? "bg-[#1E1E1E]" : "bg-white shadow-md")}>
-
-      {/* Header */}
       <View className={cn("p-5 flex-row justify-between items-start border-b", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
         <View className="flex-row items-center gap-4">
           <View className={cn("w-12 h-12 rounded-[14px] items-center justify-center", isDark ? "bg-black/40" : "bg-zinc-100")}>
@@ -175,7 +397,6 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
         </View>
       </View>
 
-      {/* Total y método de pago */}
       <View className="px-5 py-4 flex-row justify-between items-center">
         <View>
           <Text className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Total Cobrado</Text>
@@ -199,15 +420,13 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
         </View>
       </View>
 
-      {/* Info rápida: mesero */}
-      <View className={cn("px-5 pb-4 flex-row items-center gap-2", isDark ? "" : "")}>
+      <View className={cn("px-5 pb-4 flex-row items-center gap-2")}>
         <User color={isDark ? "#71717a" : "#a1a1aa"} size={13} />
         <Text className={cn("text-xs", isDark ? "text-zinc-400" : "text-zinc-500")}>
           Atendió: <Text className="font-bold">{venta.nombre_mesero || 'Mesero'}</Text>
         </Text>
       </View>
 
-      {/* Acordeón detalle */}
       <View className={cn("border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
         <TouchableOpacity onPress={() => setExpanded(!expanded)} className="px-5 py-3.5 flex-row justify-between items-center">
           <Text className={cn("text-xs font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>
@@ -221,8 +440,6 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
 
         {expanded && (
           <View className="px-5 pb-5">
-
-            {/* Sección: datos de la mesa */}
             <View className={cn("rounded-2xl p-4 mb-3", isDark ? "bg-black/30" : "bg-zinc-50")}>
               <View className="flex-row items-center gap-2 mb-3">
                 <MapPin color={primaryColor} size={13} />
@@ -233,7 +450,6 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
               <InfoRow icon={<CalendarClock color={isDark ? "#71717a" : "#a1a1aa"} size={13} />} label="Hora de cierre" value={!isNaN(fechaVenta.getTime()) ? fechaVenta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'} />
             </View>
 
-            {/* Sección: Atención */}
             <View className={cn("rounded-2xl p-4 mb-3", isDark ? "bg-black/30" : "bg-zinc-50")}>
               <View className="flex-row items-center gap-2 mb-3">
                 <User color={primaryColor} size={13} />
@@ -244,7 +460,6 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
               <InfoRow icon={<Text className="text-xs">🧾</Text>} label="Folio de venta" value={`#${String(venta._id).slice(-8).toUpperCase()}`} />
             </View>
 
-            {/* Sección: Platillos */}
             <View className={cn("rounded-2xl p-4", isDark ? "bg-black/30" : "bg-zinc-50")}>
               <View className="flex-row items-center gap-2 mb-3">
                 <UtensilsCrossed color={primaryColor} size={13} />
@@ -265,7 +480,6 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
                 <Text style={{ color: primaryColor }} className="text-lg font-mono font-bold">${Number(venta.monto_pagado || 0).toFixed(2)}</Text>
               </View>
             </View>
-
           </View>
         )}
       </View>
@@ -274,7 +488,7 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL
+// 5. COMPONENTE PRINCIPAL
 // ==========================================
 export function WaiterOrders() {
   const { theme, primaryColor } = useTheme();
@@ -289,6 +503,9 @@ export function WaiterOrders() {
   const [filter, setFilter] = useState<'Ongoing' | 'History'>('Ongoing');
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [selectedTicket, setSelectedTicket] = useState<OrderData | null>(null);
+
+  // --- NUEVO: estado para el modal de método de pago ---
+  const [paymentOrder, setPaymentOrder] = useState<OrderData | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -349,20 +566,13 @@ export function WaiterOrders() {
     setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleCobrar = async (order: OrderData) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`¿Confirmas el cobro de $${order.total.toFixed(2)} y la liberación de la mesa?`)) {
-        procesarCobro(order);
-      }
-    } else {
-      Alert.alert("Procesar Cobro", `¿Confirmas el cobro de $${order.total.toFixed(2)}?`, [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Cobrar", style: "default", onPress: () => procesarCobro(order) }
-      ]);
-    }
+  // --- NUEVO: abrir modal de método de pago ---
+  const handleCobrar = (order: OrderData) => {
+    setPaymentOrder(order);
   };
 
-  const procesarCobro = async (order: OrderData) => {
+  // --- NUEVO: procesarCobro recibe el método seleccionado ---
+  const procesarCobro = async (order: OrderData, metodoPago: 'EFECTIVO' | 'TARJETA') => {
     try {
       const payloadVenta = {
         id_pedido: order.originalIds?.[0] || order._id,
@@ -370,7 +580,7 @@ export function WaiterOrders() {
         numero_mesa: order.numero_mesa,
         nombre_mesa: order.nombre_mesa || `Mesa ${order.numero_mesa}`,
         nombre_mesero: order.nombre_mesero || user?.name || 'Mesero',
-        metodo_pago: 'EFECTIVO',
+        metodo_pago: metodoPago,
         division: false,
         monto_pagado: order.total,
         productos_cobrados: order.productos.map(item => ({
@@ -397,7 +607,11 @@ export function WaiterOrders() {
         }
       }
 
-      toast({ title: "Pago Registrado", description: "La orden se ha cobrado exitosamente." });
+      setPaymentOrder(null);
+      toast({
+        title: "Pago Registrado",
+        description: `Cobro con ${metodoPago === 'TARJETA' ? 'tarjeta' : 'efectivo'} registrado exitosamente.`
+      });
       fetchOrders();
       fetchVentas();
     } catch (error) {
@@ -499,7 +713,6 @@ export function WaiterOrders() {
 
               {displayedOrders.map((order) => {
                 const isReady = order.estado === 'LISTO';
-                const isCooking = order.estado === 'EN_COCINA' || (!isReady && order.estado !== 'PAGADO');
                 const isExpanded = expandedCards[order._id];
 
                 let fecha = new Date();
@@ -512,6 +725,8 @@ export function WaiterOrders() {
                 return (
                   <View key={order._id} style={getCardWidth()} className="p-2 mb-2">
                     <Card className={cn("border-none rounded-[24px] flex flex-col", isDark ? "bg-[#1E1E1E]" : "bg-white shadow-md")}>
+
+                      {/* Cabecera */}
                       <View className={cn("p-5 flex-row justify-between items-start border-b", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
                         <View className="flex-row items-center gap-4">
                           <View className={cn("w-12 h-12 rounded-[14px] flex items-center justify-center shadow-sm", isDark ? "bg-black/40" : "bg-zinc-100")}>
@@ -538,6 +753,7 @@ export function WaiterOrders() {
                         </View>
                       </View>
 
+                      {/* Total */}
                       <View className="p-5 flex-row justify-between items-center">
                         <View>
                           <Text className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Cuenta Total</Text>
@@ -551,6 +767,7 @@ export function WaiterOrders() {
                         </View>
                       </View>
 
+                      {/* Acordeón detalle */}
                       <View className={cn("px-5 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
                         <TouchableOpacity onPress={() => toggleExpand(order._id)} className="py-4 flex-row justify-between items-center">
                           <Text className={cn("text-sm font-bold", isDark ? "text-zinc-400" : "text-zinc-600")}>Ver detalle de cuenta</Text>
@@ -572,6 +789,7 @@ export function WaiterOrders() {
                         )}
                       </View>
 
+                      {/* Botones */}
                       <View className="p-4 pt-0 flex-row gap-3 mt-2">
                         <TouchableOpacity
                           activeOpacity={0.8}
@@ -600,10 +818,21 @@ export function WaiterOrders() {
         </View>
       </ScrollView>
 
+      {/* TICKET OVERLAY */}
       <TicketOverlay
         order={selectedTicket}
         visible={selectedTicket !== null}
         onClose={() => setSelectedTicket(null)}
+        primaryColor={primaryColor}
+        isDark={isDark}
+      />
+
+      {/* MODAL DE MÉTODO DE PAGO */}
+      <PaymentMethodModal
+        order={paymentOrder}
+        visible={paymentOrder !== null}
+        onClose={() => setPaymentOrder(null)}
+        onConfirm={procesarCobro}
         primaryColor={primaryColor}
         isDark={isDark}
       />
