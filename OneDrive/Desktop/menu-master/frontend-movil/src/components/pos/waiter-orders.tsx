@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, useWindowDimensions, Platform, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, DimensionValue } from 'react-native';
 import { Card } from '@/components/ui/card';
-import { Clock, Receipt, Printer, X, MapPin, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Clock, Receipt, Printer, X, MapPin, ChevronDown, ChevronUp, CreditCard, Banknote, User, CalendarClock, UtensilsCrossed } from 'lucide-react-native';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
@@ -30,23 +30,31 @@ interface OrderData {
   nombre_mesa?: string;
   ubicacion_mesa?: string;
   id_mesa?: any;
-  originalIds?: string[]; // NUEVO: Para guardar los IDs de todas las sub-órdenes agrupadas
+  originalIds?: string[];
+}
+
+interface VentaData {
+  _id: string;
+  fecha_venta: string;
+  numero_mesa: number;
+  nombre_mesa: string;
+  nombre_mesero: string;
+  metodo_pago: string;
+  monto_pagado: number;
+  productos_cobrados: { nombre: string; cantidad: number; precio: number }[];
 }
 
 const CHARCOAL_GRAY = "#171A1C";
 
 // ==========================================
-// 2. COMPONENTE TICKET (Intacto)
+// 2. TICKET OVERLAY
 // ==========================================
 const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { order: OrderData | null, visible: boolean, onClose: () => void, primaryColor: string, isDark: boolean }) => {
   if (!order || !visible) return null;
 
   const handlePrint = () => {
-    if (Platform.OS === 'web') {
-      window.print();
-    } else {
-      Alert.alert("Impresión", "Iniciando impresión del ticket...");
-    }
+    if (Platform.OS === 'web') { window.print(); }
+    else { Alert.alert("Impresión", "Iniciando impresión del ticket..."); }
   };
 
   let fecha = new Date();
@@ -54,37 +62,31 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
 
   const safeProductos = Array.isArray(order.productos) ? order.productos : [];
   const totalItems = safeProductos.reduce((acc, item) => acc + (Number(item.cantidad) || 0), 0);
-
   const numMesa = order.numero_mesa || order.id_mesa?.numero_mesa || '?';
-  const nomMesa = order.nombre_mesa || order.id_mesa?.nombre || '';
-  const zonaMesa = order.ubicacion_mesa || order.id_mesa?.ubicacion || 'General';
+  const nomMesa = order.nombre_mesa || order.id_mesa?.nombre_mesa || '';
+  const zonaMesa = order.ubicacion_mesa || order.id_mesa?.area || order.id_mesa?.ubicacion || 'General';
 
   return (
     <SafeAreaView className="absolute z-[200] top-0 bottom-0 left-0 right-0 bg-black/60 items-center justify-center p-4">
       <View className="w-full max-w-sm bg-white rounded-t-[24px] rounded-b-[8px] overflow-hidden shadow-2xl flex-col max-h-[90%]">
-
         <View className="p-4 flex-row justify-between items-center border-b border-zinc-200 bg-zinc-50">
           <Text className="font-bold text-zinc-800 text-lg">Ticket de Compra</Text>
-          <TouchableOpacity onPress={onClose} className="p-2 bg-zinc-200 rounded-full active:scale-95 transition-transform">
+          <TouchableOpacity onPress={onClose} className="p-2 bg-zinc-200 rounded-full">
             <X color="#52525b" size={20} />
           </TouchableOpacity>
         </View>
-
         <ScrollView className="p-6 flex-1" showsVerticalScrollIndicator={false}>
           <View className="items-center mb-6">
             <Text className="text-2xl font-headline font-bold text-black mb-1">MENU MASTER</Text>
             <Text className="text-zinc-500 text-xs">Ticket #{String(order._id || '0000').slice(-6).toUpperCase()}</Text>
           </View>
-
           <View className="space-y-1.5 mb-6 border-b border-zinc-200 pb-4">
             <Text className="text-sm font-medium text-zinc-700">Fecha: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleDateString() : '--/--/----'}</Text></Text>
             <Text className="text-sm font-medium text-zinc-700">Hora: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleTimeString() : '--:--'}</Text></Text>
             <Text className="text-sm font-medium text-zinc-700">Le atendió: <Text className="font-bold uppercase">{order.nombre_mesero || 'Mesero'}</Text></Text>
             <View className="flex-row flex-wrap mt-2 items-center gap-2">
               <View className="bg-zinc-100 px-2 py-1 rounded border border-zinc-200">
-                <Text className="text-sm font-bold text-zinc-800">
-                  Mesa {numMesa} {nomMesa ? `- ${nomMesa}` : ''}
-                </Text>
+                <Text className="text-sm font-bold text-zinc-800">Mesa {numMesa} {nomMesa ? `- ${nomMesa}` : ''}</Text>
               </View>
               <View className="flex-row items-center gap-1">
                 <MapPin color="#71717a" size={14} />
@@ -92,25 +94,20 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
               </View>
             </View>
           </View>
-
           <View className="border-b border-dashed border-zinc-300 pb-4 mb-4">
             <View className="flex-row justify-between mb-3">
               <Text className="text-[10px] font-bold text-zinc-500 w-8">CANT</Text>
               <Text className="text-[10px] font-bold text-zinc-500 flex-1">DESCRIPCIÓN</Text>
               <Text className="text-[10px] font-bold text-zinc-500 text-right">IMPORTE</Text>
             </View>
-
             {safeProductos.map((item, idx) => (
               <View key={idx} className="flex-row justify-between mb-2 items-start">
                 <Text className="text-sm font-bold text-zinc-800 w-8">{item.cantidad || 1}</Text>
-                <Text className="text-sm font-medium text-zinc-700 flex-1 pr-2">{item.nombre || 'Item sin nombre'}</Text>
-                <Text className="text-sm font-mono font-bold text-zinc-800">
-                  ${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}
-                </Text>
+                <Text className="text-sm font-medium text-zinc-700 flex-1 pr-2">{item.nombre || 'Item'}</Text>
+                <Text className="text-sm font-mono font-bold text-zinc-800">${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}</Text>
               </View>
             ))}
           </View>
-
           <View className="flex-row justify-between items-center mb-1">
             <Text className="text-zinc-500 font-medium">Total de Artículos:</Text>
             <Text className="font-bold text-zinc-800">{totalItems}</Text>
@@ -119,50 +116,184 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
             <Text className="text-2xl font-bold text-black">TOTAL</Text>
             <Text className="text-3xl font-mono font-bold text-black">${Number(order.total || 0).toFixed(2)}</Text>
           </View>
-
           <Text className="text-center text-zinc-400 text-xs mt-8 mb-4">¡Gracias por su preferencia!</Text>
         </ScrollView>
-
         <View className="p-4 bg-zinc-50 border-t border-zinc-200">
-          <TouchableOpacity
-            onPress={handlePrint}
-            style={{ backgroundColor: primaryColor }}
-            className="w-full py-4 rounded-xl items-center justify-center flex-row shadow-lg active:scale-95 transition-transform"
-          >
+          <TouchableOpacity onPress={handlePrint} style={{ backgroundColor: primaryColor }} className="w-full py-4 rounded-xl items-center justify-center flex-row shadow-lg">
             <Printer color="white" size={20} className="mr-2" />
             <Text className="text-white font-bold text-lg">Imprimir Ticket</Text>
           </TouchableOpacity>
         </View>
-
       </View>
     </SafeAreaView>
   );
 };
 
 // ==========================================
-// 3. COMPONENTE PRINCIPAL
+// 3. TARJETA DE HISTORIAL (VENTAS)
+// ==========================================
+const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark: boolean, primaryColor: string }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  let fechaVenta = new Date();
+  try { if (venta.fecha_venta) fechaVenta = new Date(venta.fecha_venta); } catch (e) { }
+
+  const totalItems = venta.productos_cobrados?.reduce((acc, p) => acc + (Number(p.cantidad) || 0), 0) || 0;
+  const esTarjeta = venta.metodo_pago?.toUpperCase().includes('TARJETA') || venta.metodo_pago?.toUpperCase().includes('CARD');
+
+  const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) => (
+    <View className="flex-row items-center gap-3 py-2" style={{ borderBottomWidth: 0.5, borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}>
+      <View style={{ opacity: 0.5 }}>{icon}</View>
+      <Text className={cn("text-xs flex-1", isDark ? "text-zinc-400" : "text-zinc-500")}>{label}</Text>
+      <Text className={cn("text-xs font-bold text-right", isDark ? "text-zinc-200" : "text-zinc-800")}>{value}</Text>
+    </View>
+  );
+
+  return (
+    <Card className={cn("border-none rounded-[24px] mb-3 overflow-hidden", isDark ? "bg-[#1E1E1E]" : "bg-white shadow-md")}>
+
+      {/* Header */}
+      <View className={cn("p-5 flex-row justify-between items-start border-b", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
+        <View className="flex-row items-center gap-4">
+          <View className={cn("w-12 h-12 rounded-[14px] items-center justify-center", isDark ? "bg-black/40" : "bg-zinc-100")}>
+            <Text style={{ color: primaryColor }} className="font-headline font-bold text-lg">T{venta.numero_mesa}</Text>
+          </View>
+          <View>
+            <Text className={cn("text-base font-bold", isDark ? "text-white" : "text-zinc-900")}>
+              Mesa {venta.numero_mesa}{venta.nombre_mesa ? ` · ${venta.nombre_mesa}` : ''}
+            </Text>
+            <View className="flex-row items-center gap-1 mt-0.5">
+              <CalendarClock color={isDark ? "#71717a" : "#a1a1aa"} size={11} />
+              <Text className={cn("text-[11px] font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                {!isNaN(fechaVenta.getTime()) ? fechaVenta.toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '--'}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View className="px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10">
+          <Text className="text-[10px] font-bold tracking-widest uppercase text-emerald-500">PAGADO</Text>
+        </View>
+      </View>
+
+      {/* Total y método de pago */}
+      <View className="px-5 py-4 flex-row justify-between items-center">
+        <View>
+          <Text className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Total Cobrado</Text>
+          <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-black")}>
+            ${Number(venta.monto_pagado || 0).toFixed(2)}
+          </Text>
+        </View>
+        <View className="items-end gap-1">
+          <View className={cn("flex-row items-center gap-2 px-3 py-2 rounded-xl", isDark ? "bg-black/30" : "bg-zinc-50 border border-zinc-200")}>
+            {esTarjeta
+              ? <CreditCard color={isDark ? "#a1a1aa" : "#71717a"} size={14} />
+              : <Banknote color={isDark ? "#a1a1aa" : "#71717a"} size={14} />
+            }
+            <Text className={cn("text-xs font-bold uppercase", isDark ? "text-zinc-300" : "text-zinc-700")}>
+              {venta.metodo_pago || 'Efectivo'}
+            </Text>
+          </View>
+          <Text className={cn("text-[10px] text-right", isDark ? "text-zinc-500" : "text-zinc-400")}>
+            {totalItems} artículo{totalItems !== 1 ? 's' : ''}
+          </Text>
+        </View>
+      </View>
+
+      {/* Info rápida: mesero */}
+      <View className={cn("px-5 pb-4 flex-row items-center gap-2", isDark ? "" : "")}>
+        <User color={isDark ? "#71717a" : "#a1a1aa"} size={13} />
+        <Text className={cn("text-xs", isDark ? "text-zinc-400" : "text-zinc-500")}>
+          Atendió: <Text className="font-bold">{venta.nombre_mesero || 'Mesero'}</Text>
+        </Text>
+      </View>
+
+      {/* Acordeón detalle */}
+      <View className={cn("border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
+        <TouchableOpacity onPress={() => setExpanded(!expanded)} className="px-5 py-3.5 flex-row justify-between items-center">
+          <Text className={cn("text-xs font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>
+            {expanded ? 'Ocultar detalle' : 'Ver detalle completo'}
+          </Text>
+          {expanded
+            ? <ChevronUp color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
+            : <ChevronDown color={isDark ? "#71717a" : "#a1a1aa"} size={16} />
+          }
+        </TouchableOpacity>
+
+        {expanded && (
+          <View className="px-5 pb-5">
+
+            {/* Sección: datos de la mesa */}
+            <View className={cn("rounded-2xl p-4 mb-3", isDark ? "bg-black/30" : "bg-zinc-50")}>
+              <View className="flex-row items-center gap-2 mb-3">
+                <MapPin color={primaryColor} size={13} />
+                <Text style={{ color: primaryColor }} className="text-xs font-bold uppercase tracking-widest">Info de Mesa</Text>
+              </View>
+              <InfoRow icon={<Text className="text-xs">🔢</Text>} label="Número de mesa" value={`Mesa ${venta.numero_mesa}`} />
+              {venta.nombre_mesa ? <InfoRow icon={<Text className="text-xs">🏷️</Text>} label="Nombre asignado" value={venta.nombre_mesa} /> : null}
+              <InfoRow icon={<CalendarClock color={isDark ? "#71717a" : "#a1a1aa"} size={13} />} label="Hora de cierre" value={!isNaN(fechaVenta.getTime()) ? fechaVenta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'} />
+            </View>
+
+            {/* Sección: Atención */}
+            <View className={cn("rounded-2xl p-4 mb-3", isDark ? "bg-black/30" : "bg-zinc-50")}>
+              <View className="flex-row items-center gap-2 mb-3">
+                <User color={primaryColor} size={13} />
+                <Text style={{ color: primaryColor }} className="text-xs font-bold uppercase tracking-widest">Servicio</Text>
+              </View>
+              <InfoRow icon={<User color={isDark ? "#71717a" : "#a1a1aa"} size={13} />} label="Mesero" value={(venta.nombre_mesero || 'N/A').toUpperCase()} />
+              <InfoRow icon={esTarjeta ? <CreditCard color={isDark ? "#71717a" : "#a1a1aa"} size={13} /> : <Banknote color={isDark ? "#71717a" : "#a1a1aa"} size={13} />} label="Método de pago" value={venta.metodo_pago || 'EFECTIVO'} />
+              <InfoRow icon={<Text className="text-xs">🧾</Text>} label="Folio de venta" value={`#${String(venta._id).slice(-8).toUpperCase()}`} />
+            </View>
+
+            {/* Sección: Platillos */}
+            <View className={cn("rounded-2xl p-4", isDark ? "bg-black/30" : "bg-zinc-50")}>
+              <View className="flex-row items-center gap-2 mb-3">
+                <UtensilsCrossed color={primaryColor} size={13} />
+                <Text style={{ color: primaryColor }} className="text-xs font-bold uppercase tracking-widest">Platillos Ordenados</Text>
+              </View>
+              {(venta.productos_cobrados || []).map((p, idx) => (
+                <View key={idx} className="flex-row justify-between items-center py-1.5" style={{ borderBottomWidth: idx < venta.productos_cobrados.length - 1 ? 0.5 : 0, borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}>
+                  <Text className={cn("text-xs flex-1", isDark ? "text-zinc-300" : "text-zinc-700")} numberOfLines={1}>
+                    <Text className="font-bold">{p.cantidad}x</Text> {p.nombre}
+                  </Text>
+                  <Text className={cn("text-xs font-mono font-bold", isDark ? "text-zinc-400" : "text-zinc-600")}>
+                    ${((Number(p.precio) || 0) * (Number(p.cantidad) || 1)).toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+              <View className="flex-row justify-between items-center mt-3 pt-2" style={{ borderTopWidth: 1, borderTopColor: isDark ? '#3f3f46' : '#e4e4e7' }}>
+                <Text className={cn("text-sm font-bold", isDark ? "text-white" : "text-black")}>TOTAL</Text>
+                <Text style={{ color: primaryColor }} className="text-lg font-mono font-bold">${Number(venta.monto_pagado || 0).toFixed(2)}</Text>
+              </View>
+            </View>
+
+          </View>
+        )}
+      </View>
+    </Card>
+  );
+};
+
+// ==========================================
+// 4. COMPONENTE PRINCIPAL
 // ==========================================
 export function WaiterOrders() {
   const { theme, primaryColor } = useTheme();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
   const { toast } = useToast();
-  const { user } = useAuth(); // EXTRAEMOS EL USUARIO AQUÍ PARA EL COBRO
+  const { user } = useAuth();
 
   const [orders, setOrders] = useState<OrderData[]>([]);
+  const [ventas, setVentas] = useState<VentaData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'Ongoing' | 'History'>('Ongoing');
-
-  // Estado para manejar qué tarjetas están expandidas (Menú desplegable)
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-
   const [selectedTicket, setSelectedTicket] = useState<OrderData | null>(null);
 
   const fetchOrders = async () => {
     try {
       const response = await fetch('https://menu-master-api.onrender.com/pedidos/activos');
       const data = await response.json();
-
       const pedidosArray = Array.isArray(data) ? data : (data.pedidos || data.data || []);
 
       const mappedOrders: OrderData[] = pedidosArray.map((p: any) => {
@@ -175,13 +306,13 @@ export function WaiterOrders() {
           fecha_creacion: p.fecha_creacion || p.createdAt || new Date().toISOString(),
           estado: estadoNormalizado,
           total: Number(p.total) || 0,
-          nombre_mesero: p.nombre_mesero || p.mesero_nombre || 'Mesero',
+          nombre_mesero: p.nombre_mesero || p.mesero_nombre || p.id_mesero?.nombre || 'Mesero',
           productos: Array.isArray(p.productos) ? p.productos : [],
           numero_mesa: p.numero_mesa || p.id_mesa?.numero_mesa || 0,
-          nombre_mesa: p.nombre_mesa || p.id_mesa?.nombre || '',
-          ubicacion_mesa: p.ubicacion_mesa || p.id_mesa?.ubicacion || 'General',
+          nombre_mesa: p.nombre_mesa || p.id_mesa?.nombre_mesa || p.id_mesa?.nombre || '',
+          ubicacion_mesa: p.ubicacion_mesa || p.id_mesa?.area || p.id_mesa?.ubicacion || 'General',
           id_mesa: p.id_mesa,
-          originalIds: [p._id] // Guardamos el ID real de la base de datos
+          originalIds: [p._id]
         };
       });
 
@@ -193,11 +324,26 @@ export function WaiterOrders() {
     }
   };
 
+  const fetchVentas = async () => {
+    try {
+      const response = await fetch('https://menu-master-api.onrender.com/ventas');
+      const data = await response.json();
+      const arr = Array.isArray(data) ? data : [];
+      setVentas(arr);
+    } catch (error) {
+      console.error("Error al cargar historial:", error);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(() => { fetchOrders(); }, 5000);
+    fetchVentas();
+    const interval = setInterval(() => {
+      fetchOrders();
+      if (filter === 'History') fetchVentas();
+    }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [filter]);
 
   const toggleExpand = (id: string) => {
     setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
@@ -216,13 +362,11 @@ export function WaiterOrders() {
     }
   };
 
-  // ✅ AQUÍ ESTÁ LA FUNCIÓN ACTUALIZADA
   const procesarCobro = async (order: OrderData) => {
     try {
-      // 1. Armar payload de Venta
       const payloadVenta = {
         id_pedido: order.originalIds?.[0] || order._id,
-        id_mesero: user?.id || '000000000000000000000000', // Usamos el ID real del mesero autenticado
+        id_mesero: user?.id || '000000000000000000000000',
         numero_mesa: order.numero_mesa,
         nombre_mesa: order.nombre_mesa || `Mesa ${order.numero_mesa}`,
         nombre_mesero: order.nombre_mesero || user?.name || 'Mesero',
@@ -232,19 +376,16 @@ export function WaiterOrders() {
         productos_cobrados: order.productos.map(item => ({
           nombre: item.nombre,
           cantidad: item.cantidad,
-          // Extraemos el precio unitario previniendo que no venga directo
           precio: item.precio_unitario || (item.subtotal / item.cantidad) || 0
         }))
       };
 
-      // 2. Disparar Venta
       await fetch('https://menu-master-api.onrender.com/ventas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payloadVenta)
       });
 
-      // 3. Limpiar sub-órdenes si era una mesa agrupada
       const idsToPay = order.originalIds || [order._id];
       if (idsToPay.length > 1) {
         for (let i = 1; i < idsToPay.length; i++) {
@@ -258,45 +399,25 @@ export function WaiterOrders() {
 
       toast({ title: "Pago Registrado", description: "La orden se ha cobrado exitosamente." });
       fetchOrders();
+      fetchVentas();
     } catch (error) {
       toast({ title: "Error", description: "No se pudo procesar el cobro.", variant: "destructive" });
     }
   };
 
-  // ==========================================
-  // LÓGICA DE AGRUPACIÓN (Consolidar Mesas)
-  // ==========================================
   const getConsolidatedOrders = () => {
-    // 1. Filtrar por Activos o Historial
-    const filtered = orders.filter(o => filter === 'History' ? o.estado === 'PAGADO' : o.estado !== 'PAGADO');
-
-    // Si es historial, no las agrupamos para ver el registro exacto de cada pago
-    if (filter === 'History') return filtered;
-
-    // 2. Si son activas, agrupamos por número de mesa
+    const filtered = orders.filter(o => o.estado !== 'PAGADO');
     const groupedMap = new Map<string, OrderData>();
 
     filtered.forEach(o => {
       const key = o.numero_mesa ? String(o.numero_mesa) : o._id;
-
       if (!groupedMap.has(key)) {
-        groupedMap.set(key, {
-          ...o,
-          _id: `MESA-${key}`, // Creamos un ID virtual para la tarjeta
-          originalIds: [o._id], // Guardamos el ID real
-          productos: [...o.productos.map(p => ({ ...p }))] // Clon profundo de productos
-        });
+        groupedMap.set(key, { ...o, _id: `MESA-${key}`, originalIds: [o._id], productos: [...o.productos.map(p => ({ ...p }))] });
       } else {
         const existing = groupedMap.get(key)!;
         existing.originalIds!.push(o._id);
         existing.total += o.total;
-
-        // Si alguna orden está en cocina, toda la mesa sigue en cocina
-        if (o.estado === 'EN_COCINA') {
-          existing.estado = 'EN_COCINA';
-        }
-
-        // Sumar productos repetidos
+        if (o.estado === 'EN_COCINA') existing.estado = 'EN_COCINA';
         o.productos.forEach(prod => {
           const exProd = existing.productos.find(ep => ep.nombre === prod.nombre);
           if (exProd) {
@@ -313,7 +434,6 @@ export function WaiterOrders() {
   };
 
   const displayedOrders = getConsolidatedOrders();
-
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
@@ -333,177 +453,153 @@ export function WaiterOrders() {
             <View className="flex-row items-center gap-4">
               <View>
                 <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                  Órdenes Activas
+                  {filter === 'Ongoing' ? 'Órdenes Activas' : 'Historial de Ventas'}
                 </Text>
-                <Text className="text-zinc-500">Supervisa las órdenes en preparación y procesa cobros.</Text>
+                <Text className="text-zinc-500">
+                  {filter === 'Ongoing' ? 'Supervisa las órdenes en preparación y procesa cobros.' : 'Registro completo de cuentas cerradas.'}
+                </Text>
               </View>
               {isLoading && <ActivityIndicator color={primaryColor} size="small" />}
             </View>
 
             <View className={cn("flex-row p-1.5 rounded-xl border", isDark ? "bg-[#1E1E1E] border-[#2A2A2A]" : "bg-zinc-100 border-zinc-200")}>
-              <TouchableOpacity
-                onPress={() => setFilter('Ongoing')}
-                className={cn("px-6 py-2.5 rounded-lg transition-all", filter === 'Ongoing' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}
-              >
-                <Text className={cn("font-bold text-sm", filter === 'Ongoing' ? (isDark ? "text-white" : "text-zinc-900") : "text-zinc-500")}>
-                  Activas
-                </Text>
+              <TouchableOpacity onPress={() => setFilter('Ongoing')} className={cn("px-6 py-2.5 rounded-lg", filter === 'Ongoing' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}>
+                <Text className={cn("font-bold text-sm", filter === 'Ongoing' ? (isDark ? "text-white" : "text-zinc-900") : "text-zinc-500")}>Activas</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setFilter('History')}
-                className={cn("px-6 py-2.5 rounded-lg transition-all", filter === 'History' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}
-              >
-                <Text className={cn("font-bold text-sm", filter === 'History' ? (isDark ? "text-white" : "text-zinc-900") : "text-zinc-500")}>
-                  Historial
-                </Text>
+              <TouchableOpacity onPress={() => { setFilter('History'); fetchVentas(); }} className={cn("px-6 py-2.5 rounded-lg", filter === 'History' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}>
+                <Text className={cn("font-bold text-sm", filter === 'History' ? (isDark ? "text-white" : "text-zinc-900") : "text-zinc-500")}>Historial</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* GRID DE TARJETAS DE ORDEN */}
-          <View className="flex-row flex-wrap -mx-2">
-            {!isLoading && displayedOrders.length === 0 && (
-              <View className="w-full py-32 items-center justify-center opacity-50">
-                <Receipt color={isDark ? "white" : "black"} size={64} className="mb-4" />
-                <Text className={cn("text-xl font-bold font-headline", isDark ? "text-white" : "text-zinc-900")}>
-                  {filter === 'Ongoing' ? 'No hay órdenes activas' : 'El historial está vacío'}
-                </Text>
-              </View>
-            )}
+          {/* HISTORIAL DE VENTAS */}
+          {filter === 'History' && (
+            <View className="px-2">
+              {ventas.length === 0 && !isLoading && (
+                <View className="py-32 items-center justify-center opacity-50">
+                  <Receipt color={isDark ? "white" : "black"} size={64} className="mb-4" />
+                  <Text className={cn("text-xl font-bold font-headline", isDark ? "text-white" : "text-zinc-900")}>El historial está vacío</Text>
+                </View>
+              )}
+              {ventas.map((venta) => (
+                <HistoryCard key={venta._id} venta={venta} isDark={isDark} primaryColor={primaryColor} />
+              ))}
+            </View>
+          )}
 
-            {displayedOrders.map((order) => {
-              const isReady = order.estado === 'LISTO';
-              const isCooking = order.estado === 'EN_COCINA' || (!isReady && order.estado !== 'PAGADO');
-              const isPaid = order.estado === 'PAGADO';
-              const isExpanded = expandedCards[order._id];
+          {/* GRID DE ÓRDENES ACTIVAS */}
+          {filter === 'Ongoing' && (
+            <View className="flex-row flex-wrap -mx-2">
+              {!isLoading && displayedOrders.length === 0 && (
+                <View className="w-full py-32 items-center justify-center opacity-50">
+                  <Receipt color={isDark ? "white" : "black"} size={64} className="mb-4" />
+                  <Text className={cn("text-xl font-bold font-headline", isDark ? "text-white" : "text-zinc-900")}>No hay órdenes activas</Text>
+                </View>
+              )}
 
-              let fecha = new Date();
-              try { if (order.fecha_creacion) fecha = new Date(order.fecha_creacion); } catch (e) { }
-              const diffMins = Math.floor((Date.now() - fecha.getTime()) / 60000);
+              {displayedOrders.map((order) => {
+                const isReady = order.estado === 'LISTO';
+                const isCooking = order.estado === 'EN_COCINA' || (!isReady && order.estado !== 'PAGADO');
+                const isExpanded = expandedCards[order._id];
 
-              const safeProductos = Array.isArray(order.productos) ? order.productos : [];
-              const itemsCount = safeProductos.reduce((acc, i) => acc + (Number(i.cantidad) || 0), 0);
-              const numMesa = order.numero_mesa || '?';
+                let fecha = new Date();
+                try { if (order.fecha_creacion) fecha = new Date(order.fecha_creacion); } catch (e) { }
+                const diffMins = Math.floor((Date.now() - fecha.getTime()) / 60000);
+                const safeProductos = Array.isArray(order.productos) ? order.productos : [];
+                const itemsCount = safeProductos.reduce((acc, i) => acc + (Number(i.cantidad) || 0), 0);
+                const numMesa = order.numero_mesa || '?';
 
-              return (
-                <View key={order._id} style={getCardWidth()} className="p-2 mb-2">
-                  <Card className={cn(
-                    "border-none rounded-[24px] flex flex-col transition-all",
-                    isDark ? "bg-[#1E1E1E]" : "bg-white shadow-md"
-                  )}>
-
-                    {/* CABECERA TARJETA */}
-                    <View className={cn("p-5 flex-row justify-between items-start border-b", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
-                      <View className="flex-row items-center gap-4">
-                        <View className={cn("w-12 h-12 rounded-[14px] flex items-center justify-center shadow-sm", isDark ? "bg-black/40" : "bg-zinc-100")}>
-                          <Text style={{ color: primaryColor }} className="font-headline font-bold text-lg">T{numMesa}</Text>
-                        </View>
-                        <View>
-                          <Text className={cn("text-base font-bold", isDark ? "text-white" : "text-zinc-900")}>
-                            {filter === 'Ongoing' ? `Mesa Consolidada` : `#${String(order._id).slice(-4).toUpperCase()}`}
-                          </Text>
-                          <View className="flex-row items-center gap-1 mt-1">
-                            <Clock color={isDark ? "#71717a" : "#a1a1aa"} size={12} />
-                            <Text className={cn("text-[11px] font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>
-                              {filter === 'Ongoing' ? `Hace ${isNaN(diffMins) ? 0 : diffMins} min` : (isNaN(fecha.getTime()) ? '--:--' : fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}
-                            </Text>
+                return (
+                  <View key={order._id} style={getCardWidth()} className="p-2 mb-2">
+                    <Card className={cn("border-none rounded-[24px] flex flex-col", isDark ? "bg-[#1E1E1E]" : "bg-white shadow-md")}>
+                      <View className={cn("p-5 flex-row justify-between items-start border-b", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
+                        <View className="flex-row items-center gap-4">
+                          <View className={cn("w-12 h-12 rounded-[14px] flex items-center justify-center shadow-sm", isDark ? "bg-black/40" : "bg-zinc-100")}>
+                            <Text style={{ color: primaryColor }} className="font-headline font-bold text-lg">T{numMesa}</Text>
                           </View>
-                        </View>
-                      </View>
-
-                      {/* BADGE DE ESTADO */}
-                      <View className={cn(
-                        "px-3 py-1.5 rounded-full border",
-                        isReady && "border-emerald-500/30 bg-emerald-500/10",
-                        isCooking && "border-amber-500/30 bg-amber-500/10",
-                        isPaid && "border-zinc-500/30 bg-zinc-500/10"
-                      )}>
-                        <Text className={cn("text-[10px] font-bold tracking-widest uppercase",
-                          isReady && "text-emerald-500",
-                          isCooking && "text-amber-500",
-                          isPaid && "text-zinc-400"
-                        )}>
-                          {order.estado.replace(/_/g, ' ')}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* CUERPO CENTRAL (TOTALES) */}
-                    <View className="p-5 flex-row justify-between items-center">
-                      <View>
-                        <Text className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Cuenta Total</Text>
-                        <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-black")}>
-                          ${Number(order.total || 0).toFixed(2)}
-                        </Text>
-                      </View>
-                      <View className="items-end">
-                        <Text className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Items</Text>
-                        <Text className={cn("text-xl font-bold", isDark ? "text-white" : "text-black")}>
-                          {itemsCount}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* NUEVO: MENÚ DESPLEGABLE (ACORDEÓN DE LA CUENTA) */}
-                    <View className={cn("px-5 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
-                      <TouchableOpacity
-                        onPress={() => toggleExpand(order._id)}
-                        className="py-4 flex-row justify-between items-center"
-                      >
-                        <Text className={cn("text-sm font-bold", isDark ? "text-zinc-400" : "text-zinc-600")}>Ver detalle de cuenta</Text>
-                        {isExpanded ? <ChevronUp color={isDark ? "#a1a1aa" : "#71717a"} size={18} /> : <ChevronDown color={isDark ? "#a1a1aa" : "#71717a"} size={18} />}
-                      </TouchableOpacity>
-
-                      {isExpanded && (
-                        <View className="pb-4 space-y-2">
-                          {safeProductos.map((item, idx) => (
-                            <View key={idx} className="flex-row justify-between items-center">
-                              <Text className={cn("text-xs flex-1", isDark ? "text-zinc-300" : "text-zinc-700")} numberOfLines={1}>
-                                <Text className="font-bold">{item.cantidad}x</Text> {item.nombre}
-                              </Text>
-                              <Text className={cn("text-xs font-mono font-bold", isDark ? "text-zinc-400" : "text-zinc-600")}>
-                                ${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}
+                          <View>
+                            <Text className={cn("text-base font-bold", isDark ? "text-white" : "text-zinc-900")}>Mesa Consolidada</Text>
+                            <View className="flex-row items-center gap-1 mt-1">
+                              <Clock color={isDark ? "#71717a" : "#a1a1aa"} size={12} />
+                              <Text className={cn("text-[11px] font-bold", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                                Hace {isNaN(diffMins) ? 0 : diffMins} min
                               </Text>
                             </View>
-                          ))}
+                          </View>
                         </View>
-                      )}
-                    </View>
+                        <View className={cn("px-3 py-1.5 rounded-full border",
+                          isReady ? "border-emerald-500/30 bg-emerald-500/10" : "border-amber-500/30 bg-amber-500/10"
+                        )}>
+                          <Text className={cn("text-[10px] font-bold tracking-widest uppercase",
+                            isReady ? "text-emerald-500" : "text-amber-500"
+                          )}>
+                            {order.estado.replace(/_/g, ' ')}
+                          </Text>
+                        </View>
+                      </View>
 
-                    {/* BOTONES DE ACCIÓN INFERIORES */}
-                    <View className="p-4 pt-0 flex-row gap-3 mt-2">
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => setSelectedTicket(order)}
-                        className={cn("flex-1 py-3.5 rounded-xl border flex-row items-center justify-center gap-2 active:scale-95 transition-transform",
-                          isDark ? "border-[#3f3f46] bg-[#2A2A2A]" : "border-zinc-300 bg-white"
+                      <View className="p-5 flex-row justify-between items-center">
+                        <View>
+                          <Text className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Cuenta Total</Text>
+                          <Text className={cn("text-3xl font-headline font-bold", isDark ? "text-white" : "text-black")}>
+                            ${Number(order.total || 0).toFixed(2)}
+                          </Text>
+                        </View>
+                        <View className="items-end">
+                          <Text className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Items</Text>
+                          <Text className={cn("text-xl font-bold", isDark ? "text-white" : "text-black")}>{itemsCount}</Text>
+                        </View>
+                      </View>
+
+                      <View className={cn("px-5 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
+                        <TouchableOpacity onPress={() => toggleExpand(order._id)} className="py-4 flex-row justify-between items-center">
+                          <Text className={cn("text-sm font-bold", isDark ? "text-zinc-400" : "text-zinc-600")}>Ver detalle de cuenta</Text>
+                          {isExpanded ? <ChevronUp color={isDark ? "#a1a1aa" : "#71717a"} size={18} /> : <ChevronDown color={isDark ? "#a1a1aa" : "#71717a"} size={18} />}
+                        </TouchableOpacity>
+                        {isExpanded && (
+                          <View className="pb-4 space-y-2">
+                            {safeProductos.map((item, idx) => (
+                              <View key={idx} className="flex-row justify-between items-center">
+                                <Text className={cn("text-xs flex-1", isDark ? "text-zinc-300" : "text-zinc-700")} numberOfLines={1}>
+                                  <Text className="font-bold">{item.cantidad}x</Text> {item.nombre}
+                                </Text>
+                                <Text className={cn("text-xs font-mono font-bold", isDark ? "text-zinc-400" : "text-zinc-600")}>
+                                  ${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
                         )}
-                      >
-                        <Receipt color={isDark ? "white" : "black"} size={16} />
-                        <Text className={cn("font-bold text-sm", isDark ? "text-white" : "text-black")}>Ticket</Text>
-                      </TouchableOpacity>
+                      </View>
 
-                      {filter === 'Ongoing' && (
+                      <View className="p-4 pt-0 flex-row gap-3 mt-2">
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => setSelectedTicket(order)}
+                          className={cn("flex-1 py-3.5 rounded-xl border flex-row items-center justify-center gap-2", isDark ? "border-[#3f3f46] bg-[#2A2A2A]" : "border-zinc-300 bg-white")}
+                        >
+                          <Receipt color={isDark ? "white" : "black"} size={16} />
+                          <Text className={cn("font-bold text-sm", isDark ? "text-white" : "text-black")}>Ticket</Text>
+                        </TouchableOpacity>
                         <TouchableOpacity
                           activeOpacity={0.8}
                           disabled={!isReady}
                           onPress={() => handleCobrar(order)}
                           style={{ backgroundColor: isReady ? primaryColor : (isDark ? '#2A2A2A' : '#e4e4e7') }}
-                          className="flex-1 py-3.5 rounded-xl flex-row items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+                          className="flex-1 py-3.5 rounded-xl flex-row items-center justify-center gap-2 shadow-sm"
                         >
                           <Text className={cn("font-bold text-sm", isReady ? "text-white" : "text-zinc-500")}>Cobrar</Text>
                         </TouchableOpacity>
-                      )}
-                    </View>
-                  </Card>
-                </View>
-              );
-            })}
-          </View>
+                      </View>
+                    </Card>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      {/* MODAL DEL RECIBO */}
       <TicketOverlay
         order={selectedTicket}
         visible={selectedTicket !== null}
@@ -511,7 +607,6 @@ export function WaiterOrders() {
         primaryColor={primaryColor}
         isDark={isDark}
       />
-
     </View>
   );
 }

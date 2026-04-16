@@ -127,8 +127,18 @@ app.delete('/mesas/:id', async (req, res) => {
 // ==========================================
 app.post('/pedidos', (req, res) => pedidoController.crearPedido(req, res));
 
+// ✨ NUEVA RUTA: Obtiene TODOS los pedidos (Activos e Historial) con información completa de mesero y mesa
+app.get('/pedidos', async (req, res) => {
+    try {
+        const pedidos = await Pedido.find()
+            .populate('id_mesa')
+            .populate('id_mesero', 'nombre')
+            .sort({ fecha_creacion: -1 }); // Los más recientes primero
+        res.json(pedidos);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/pedidos/activos', async (req, res) => {
-    // ✨ CAMBIO APLICADO AQUÍ: Añadimos populate('id_mesero', 'nombre')
     const pedidos = await Pedido.find({ estado: { $ne: 'PAGADO' } })
         .populate('id_mesa')
         .populate('id_mesero', 'nombre');
@@ -247,6 +257,21 @@ app.post('/ventas', async (req, res) => {
 
         res.status(201).json({ mensaje: "Venta registrada", venta, ticket });
     } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+// ✨ NUEVA RUTA: Historial de Ventas Profundamente Anidado
+app.get('/ventas', async (req, res) => {
+    try {
+        const ventas = await Venta.find()
+            .populate({
+                path: 'id_pedido', // Traemos el pedido para ver productos y HORA DE LLEGADA (fecha_creacion)
+                populate: { path: 'id_mesa' } // Dentro del pedido, traemos la MESA (capacidad y ubicación)
+            })
+            .populate('id_mesero', 'nombre') // Traemos el nombre real del mesero
+            .sort({ fecha_venta: -1 }) // Los cobros más recientes primero
+            .limit(100);
+        res.json(ventas);
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ==========================================
