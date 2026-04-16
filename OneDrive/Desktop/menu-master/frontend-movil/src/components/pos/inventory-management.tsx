@@ -46,7 +46,7 @@ export function InventoryManagement() {
 
   // Modales
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null); // Para editar stock
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Formulario Nuevo
@@ -69,7 +69,7 @@ export function InventoryManagement() {
         nombre: p.nombre,
         categoria: p.categoria || 'General',
         stock: Number(p.stock) || 0,
-        stock_minimo: Number(p.stock_minimo) || 10, // Default visual si no hay
+        stock_minimo: Number(p.stock_minimo) || 10,
         precio: Number(p.precio) || 0,
       }));
       setItems(mappedItems);
@@ -112,9 +112,6 @@ export function InventoryManagement() {
     }
   };
 
-  // ==========================================
-  // ACTUALIZAR STOCK (MODAL DE EDICIÓN)
-  // ==========================================
   const openEditModal = (item: InventoryItem) => {
     setSelectedItem(item);
     setEditStock({ stock: item.stock, stock_minimo: item.stock_minimo });
@@ -128,8 +125,11 @@ export function InventoryManagement() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          nombre: selectedItem.nombre,
+          categoria: selectedItem.categoria,
+          precio: selectedItem.precio,
           stock: editStock.stock,
-          stock_minimo: editStock.stock_minimo
+          stock_minimo: editStock.stock_minimo,
         })
       });
       toast({ title: "Stock actualizado", description: "Se han guardado los cambios." });
@@ -248,7 +248,6 @@ export function InventoryManagement() {
                 <Text className={cn("font-bold text-sm hidden md:flex", filterType !== 'ALL' ? "text-blue-500" : (isDark ? "text-zinc-300" : "text-zinc-700"))}>Filtros</Text>
               </TouchableOpacity>
 
-              {/* Menú Flotante de Filtros */}
               {showFilterMenu && (
                 <View className={cn("absolute top-16 right-0 w-48 rounded-2xl shadow-xl border p-2 z-50", isDark ? "bg-[#2A2A2A] border-[#3f3f46]" : "bg-white border-zinc-200")}>
                   {[
@@ -274,7 +273,6 @@ export function InventoryManagement() {
           {/* TABLA DE INVENTARIO */}
           <View className={cn("rounded-[32px] overflow-hidden border", isDark ? "bg-[#1E1E1E] border-[#2A2A2A]" : "bg-white border-zinc-200 shadow-sm")}>
 
-            {/* Headers de Tabla (Solo Desktop) */}
             {isDesktop && (
               <View className={cn("flex-row items-center px-6 py-4 border-b", isDark ? "border-[#2A2A2A] bg-black/20" : "border-zinc-100 bg-zinc-50")}>
                 <Text className="flex-[2] text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Producto</Text>
@@ -294,7 +292,7 @@ export function InventoryManagement() {
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    onPress={() => openEditModal(item)} // La flecha o toda la fila abre el modal
+                    onPress={() => openEditModal(item)}
                     activeOpacity={0.7}
                     className={cn(
                       "flex-col md:flex-row items-start md:items-center px-6 py-5 border-b transition-colors",
@@ -412,7 +410,6 @@ export function InventoryManagement() {
               </View>
 
               <View className="p-6 space-y-6">
-                {/* Control de Stock Actual */}
                 <View>
                   <Text className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 text-center">Unidades en Bodega</Text>
                   <View className="flex-row items-center justify-center gap-6">
@@ -428,7 +425,6 @@ export function InventoryManagement() {
                   </View>
                 </View>
 
-                {/* Control de Stock Mínimo */}
                 <View className={cn("p-4 rounded-2xl border flex-row items-center justify-between", isDark ? "bg-[#2A2A2A] border-[#3f3f46]" : "bg-zinc-50 border-zinc-200")}>
                   <View>
                     <Text className={cn("font-bold text-sm", isDark ? "text-white" : "text-zinc-800")}>Alerta Mínima</Text>

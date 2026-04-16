@@ -79,13 +79,18 @@ export const api = {
                 body: JSON.stringify(data),
             });
             return res.json();
-        }
+        },
     },
 
     // --- MÓDULO DE INVENTARIO (MySQL via PHP) ---
     productos: {
         getAll: async () => {
             const res = await fetch(`${BASE_URL}/productos`, { headers: await getHeaders() });
+            return res.json();
+        },
+        getById: async (id: string) => {
+            const res = await fetch(`${BASE_URL}/productos/${id}`, { headers: await getHeaders() });
+            if (!res.ok) throw new Error(`Error al obtener producto ${id}`);
             return res.json();
         },
         create: async (data: object) => {
@@ -110,6 +115,22 @@ export const api = {
                 headers: await getHeaders()
             });
             return res.json();
+        },
+        descontarInventarioPorPedido: async (itemsPedido: { id_producto: string; cantidad: number }[]) => {
+            await Promise.all(
+                itemsPedido.map(async (pedidoItem) => {
+                    try {
+                        const productoActual = await api.productos.getById(pedidoItem.id_producto);
+                        const nuevoStock = Math.max(0, (Number(productoActual.stock) || 0) - pedidoItem.cantidad);
+                        await api.productos.update(pedidoItem.id_producto, {
+                            ...productoActual,
+                            stock: nuevoStock
+                        });
+                    } catch (error) {
+                        console.error(`Error al descontar stock del producto ${pedidoItem.id_producto}:`, error);
+                    }
+                })
+            );
         }
     },
 

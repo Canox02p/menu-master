@@ -25,7 +25,7 @@ interface MenuItem {
   name: string;
   price: number;
   category: string;
-  stock?: number; // cantidad en inventario
+  stock?: number;
 }
 
 interface CartItem extends MenuItem {
@@ -338,6 +338,14 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
       });
       if (!resPedido.ok) throw new Error("No se pudo crear el pedido.");
 
+      // --- AQUÍ SE AGREGÓ EL DESCUENTO DE INVENTARIO ---
+      const itemsInventario = cart.map(item => ({
+        id_producto: item.id.toString(),
+        cantidad: item.qty
+      }));
+      await api.productos.descontarInventarioPorPedido(itemsInventario);
+      // ------------------------------------------------
+
       await fetch(`https://menu-master-api.onrender.com/mesas/${tableId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -638,7 +646,6 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
             </View>
           </View>
         </View>
-
       </View>
     </SafeAreaView>
   );
