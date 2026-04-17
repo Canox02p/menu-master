@@ -4,7 +4,7 @@ import { MesaStatus } from './mesa-status';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, useWindowDimensions, Platform, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, DimensionValue } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Users, MapPin, CheckCircle2, X, Trash2, Edit2 } from 'lucide-react-native';
+import { Plus, Users, MapPin, CheckCircle2, X, Trash2, Edit2 } from 'lucide-react-native'; // <--- Importamos Trash2
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +40,6 @@ export function TableManagement() {
         ubicacion: 'Principal'
     });
 
-    // Función de carga (con opción de carga silenciosa para el tiempo real)
     const loadMesas = async (silent = false) => {
         try {
             if (!silent) setIsLoading(true);
@@ -49,32 +48,49 @@ export function TableManagement() {
             const validMesas = Array.isArray(data) ? data.filter(m => m && m._id) : [];
             setMesas(validMesas.sort((a: Mesa, b: Mesa) => a.numero_mesa - b.numero_mesa));
         } catch (error) {
-            if (!silent) toast({ title: "Error", description: "No se pudieron cargar.", variant: "destructive" });
+            if (!silent) toast({ title: "Error", variant: "destructive" });
         } finally {
             if (!silent) setIsLoading(false);
         }
     };
 
-    // ACTUALIZACIÓN AUTOMÁTICA (Cada 5 segundos)
     useEffect(() => {
         loadMesas();
         const interval = setInterval(() => loadMesas(true), 5000);
         return () => clearInterval(interval);
     }, []);
 
-    const openCreateModal = () => {
-        setEditingId(null);
-        setNewMesa({ numero_mesa: '', nombre: '', capacidad: '4', ubicacion: 'Principal' });
-        setIsModalVisible(true);
+    // --- FUNCIONES DE ELIMINACIÓN REINTEGRADAS ---
+    const handleEliminar = async (id: string, numero_mesa: number) => {
+        const mensaje = `¿Seguro que deseas eliminar la Mesa ${numero_mesa}?`;
+        if (Platform.OS === 'web') {
+            if (window.confirm(mensaje)) ejecutarEliminacion(id);
+        } else {
+            Alert.alert("Eliminar Mesa", mensaje, [
+                { text: "Cancelar", style: "cancel" },
+                { text: "Eliminar", style: "destructive", onPress: () => ejecutarEliminacion(id) }
+            ]);
+        }
+    };
+
+    const ejecutarEliminacion = async (id: string) => {
+        try {
+            const response = await fetch(`${BASE_URL}/mesas/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                toast({ title: "Eliminada", description: "La mesa ha sido borrada." });
+                loadMesas();
+            }
+        } catch (e) {
+            toast({ title: "Error", variant: "destructive" });
+        }
     };
 
     const openEditModal = (mesa: Mesa) => {
-        if (!mesa) return;
         setEditingId(mesa._id);
         setNewMesa({
-            numero_mesa: String(mesa.numero_mesa ?? ''),
+            numero_mesa: String(mesa.numero_mesa),
             nombre: mesa.nombre_mesa || '',
-            capacidad: String(mesa.capacidad ?? '4'),
+            capacidad: String(mesa.capacidad),
             ubicacion: mesa.ubicacion || 'Principal'
         });
         setIsModalVisible(true);
@@ -108,11 +124,8 @@ export function TableManagement() {
     };
 
     const isDesktop = width >= 1024;
-    const isTablet = width >= 768 && width < 1024;
     const getCardWidth = (): { width: DimensionValue } => {
-        if (isDesktop) return { width: '25%' };
-        if (isTablet) return { width: '33.33%' };
-        return { width: '100%' };
+        return isDesktop ? { width: '25%' } : { width: '100%' };
     };
 
     return (
@@ -120,14 +133,10 @@ export function TableManagement() {
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
                 <View className="px-4 pt-8 max-w-[1400px] mx-auto w-full">
 
-                    <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
-                        <View>
-                            <Text className={cn("text-3xl font-bold", isDark ? "text-white" : "text-zinc-900")}>Gestión de Mesas</Text>
-                            <Text className="text-zinc-500">Visualización en tiempo real del estado de sala.</Text>
-                        </View>
-                        <TouchableOpacity onPress={openCreateModal} style={{ backgroundColor: primaryColor }} className="rounded-2xl flex-row items-center gap-2 px-6 py-3 shadow-lg active:scale-95">
+                    <View className="flex-row justify-between items-center mb-8 px-2">
+                        <Text className={cn("text-3xl font-bold", isDark ? "text-white" : "text-zinc-900")}>Gestión</Text>
+                        <TouchableOpacity onPress={() => { setEditingId(null); setIsModalVisible(true); }} style={{ backgroundColor: primaryColor }} className="rounded-2xl p-4 shadow-lg">
                             <Plus color="white" size={20} />
-                            <Text className="text-white font-bold">Añadir Mesa</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -143,20 +152,23 @@ export function TableManagement() {
                                                     <Text style={{ color: primaryColor }} className="text-xl font-bold">{mesa.numero_mesa}</Text>
                                                 </View>
                                                 <View>
-                                                    <Text className={cn("text-lg font-bold", isDark ? "text-white" : "text-zinc-900")} numberOfLines={1}>
-                                                        {`Mesa ${mesa.numero_mesa}`}
+                                                    <Text className={cn("text-lg font-bold", isDark ? "text-white" : "text-zinc-900")}>
+                                                        Mesa {mesa.numero_mesa}
                                                     </Text>
                                                 </View>
                                             </View>
 
+                                            {/* BOTONES DE ACCIÓN: EDITAR Y ELIMINAR (Recuperado) */}
                                             <View className="flex-row gap-1.5">
                                                 <TouchableOpacity onPress={() => openEditModal(mesa)} className={cn("p-2.5 rounded-xl", isDark ? "bg-[#2A2A2A]" : "bg-zinc-100")}>
                                                     <Edit2 color={isDark ? "#a1a1aa" : "#71717a"} size={16} />
                                                 </TouchableOpacity>
+                                                <TouchableOpacity onPress={() => handleEliminar(mesa._id, mesa.numero_mesa)} className="p-2.5 bg-red-500/10 rounded-xl">
+                                                    <Trash2 color="#ef4444" size={16} />
+                                                </TouchableOpacity>
                                             </View>
                                         </View>
 
-                                        {/* SOLO AGREGAMOS ESTO: ETIQUETA DE ESTADO AUTOMÁTICA */}
                                         <MesaStatus mesa={mesa} isDark={isDark} />
 
                                     </CardContent>
@@ -167,8 +179,7 @@ export function TableManagement() {
                 </View>
             </ScrollView>
 
-            {/* MODAL RESTAURADO AL DISEÑO ORIGINAL "BONITO" */}
-            <Modal visible={isModalVisible} transparent={true} animationType="fade">
+            <Modal visible={isModalVisible} transparent animationType="fade">
                 <View className="flex-1 bg-black/60 items-center justify-center p-4">
                     <View className={cn("w-full max-w-md p-6 rounded-[32px] shadow-2xl", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
                         <View className="flex-row justify-between items-center mb-6 pb-4 border-b" style={{ borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}>
@@ -232,18 +243,8 @@ export function TableManagement() {
                             </View>
                         </View>
 
-                        <TouchableOpacity
-                            onPress={handleGuardarMesa}
-                            disabled={isSaving}
-                            style={{ backgroundColor: primaryColor }}
-                            className="p-4 rounded-xl items-center flex-row justify-center shadow-lg active:scale-95"
-                        >
-                            {isSaving ? <ActivityIndicator color="white" /> : (
-                                <>
-                                    <CheckCircle2 color="white" size={20} className="mr-2" />
-                                    <Text className="text-white font-bold text-base">{editingId ? "Actualizar Mesa" : "Guardar Mesa"}</Text>
-                                </>
-                            )}
+                        <TouchableOpacity onPress={handleGuardarMesa} style={{ backgroundColor: primaryColor }} className="p-4 rounded-xl">
+                            <Text className="text-white text-center font-bold">Actualizar</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
