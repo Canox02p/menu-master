@@ -17,7 +17,7 @@ const CHARCOAL_GRAY = "#171A1C";
 // ==========================================
 // 1. INTERFACES
 // ==========================================
-interface ProductoVenta {
+export interface ProductoVenta {
     nombre?: string;
     name?: string;           // ← campo alternativo del API
     cantidad?: number;
@@ -31,7 +31,7 @@ interface ProductoVenta {
     total?: number;          // ← campo alternativo
 }
 
-interface VentaData {
+export interface VentaData {
     _id: string;
     total?: number;
     monto_pagado?: number;
@@ -57,7 +57,7 @@ interface VentaData {
     order_items?: ProductoVenta[]; // ← campo alternativo
 }
 
-interface StatCardProps {
+export interface StatCardProps {
     title: string;
     value: string;
     subtitle: string;

@@ -28,6 +28,7 @@
     "mysql2": "^3.19.0",
     "nativewind": "^4.1.6",
     "react-modal": "^3.16.3",
-    "react-native-reanimated": "^3.16.7"
+    "react-native-reanimated": "^3.16.7",
+    "react-native-thermal-receipt-printer": "^1.2.0-rc.2"
   }
 }
