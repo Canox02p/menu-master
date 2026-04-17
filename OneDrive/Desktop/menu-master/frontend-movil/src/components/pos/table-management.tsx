@@ -31,7 +31,6 @@ export function TableManagement() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Estado para saber si estamos editando
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const [newMesa, setNewMesa] = useState({
@@ -47,7 +46,6 @@ export function TableManagement() {
             const response = await fetch(`${BASE_URL}/mesas`);
             const data = await response.json();
 
-            // Verificación segura de datos recibidos de MongoDB
             const validMesas = Array.isArray(data)
                 ? data.filter(m => m && m._id && m.numero_mesa != null)
                 : [];
@@ -70,10 +68,8 @@ export function TableManagement() {
 
     const openEditModal = (mesa: Mesa) => {
         if (!mesa) return;
-
-        setEditingId(mesa._id || null);
+        setEditingId(mesa._id);
         setNewMesa({
-            // Solución al error Uncaught TypeError: uso de String() seguro
             numero_mesa: String(mesa.numero_mesa ?? ''),
             nombre: mesa.nombre || '',
             capacidad: String(mesa.capacidad ?? '4'),
@@ -107,20 +103,29 @@ export function TableManagement() {
                 body: JSON.stringify(payload)
             });
 
+            // CORRECCIÓN: Validar respuesta antes de intentar parsear JSON
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Error al guardar en la base de datos.');
+                const errorText = await response.text();
+                // Si el servidor manda HTML (Error 404/500), lanzamos el error con el estatus
+                throw new Error(`Servidor respondió con error ${response.status}. Verifica que la ruta ${method} ${url} exista en el Backend.`);
             }
+
+            const responseData = await response.json();
 
             toast({
                 title: "¡Éxito!",
-                description: editingId ? `La Mesa ${payload.numero_mesa} ha sido actualizada.` : `Mesa ${payload.numero_mesa} registrada exitosamente.`
+                description: editingId ? `Mesa ${payload.numero_mesa} actualizada.` : `Mesa ${payload.numero_mesa} registrada.`
             });
 
             setIsModalVisible(false);
             loadMesas();
         } catch (error: any) {
-            toast({ title: "Error de Guardado", description: error.message, variant: "destructive" });
+            // Aquí capturamos el error "Unexpected token <" de forma amigable
+            const friendlyError = error.message.includes('Unexpected token')
+                ? "El servidor envió una respuesta no válida (HTML en lugar de JSON). Revisa el log de Render."
+                : error.message;
+
+            toast({ title: "Error de Guardado", description: friendlyError, variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -142,10 +147,10 @@ export function TableManagement() {
         try {
             const response = await fetch(`${BASE_URL}/mesas/${id}`, { method: 'DELETE' });
             if (response.ok) {
-                toast({ title: "Eliminada", description: "La mesa ha sido borrada del sistema." });
+                toast({ title: "Eliminada", description: "La mesa ha sido borrada." });
                 loadMesas();
             } else {
-                throw new Error("No se pudo eliminar");
+                throw new Error("No se pudo eliminar de la base de datos.");
             }
         } catch (e) {
             toast({ title: "Error", description: "Error al conectar con la base de datos.", variant: "destructive" });
@@ -166,7 +171,7 @@ export function TableManagement() {
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
                 <View className="px-4 pt-8 max-w-[1400px] mx-auto w-full">
 
-                    {/* Header de Gestión */}
+                    {/* Header */}
                     <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
                         <View>
                             <Text className={cn("text-3xl font-bold", isDark ? "text-white" : "text-zinc-900")}>Gestión de Mesas</Text>
@@ -197,11 +202,10 @@ export function TableManagement() {
                         )}
 
                         {mesas.map((mesa) => (
-                            <View key={mesa._id || Math.random().toString()} style={getCardWidth()} className="p-2 mb-2">
+                            <View key={mesa._id} style={getCardWidth()} className="p-2 mb-2">
                                 <Card className={cn("border-none overflow-hidden rounded-[24px] shadow-sm", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
                                     <CardContent className="p-5">
 
-                                        {/* Cabecera de la Tarjeta */}
                                         <View className="flex-row justify-between items-start mb-4">
                                             <View className="flex-row items-center gap-3">
                                                 <View className="w-12 h-12 rounded-[14px] items-center justify-center" style={{ backgroundColor: `${primaryColor}15` }}>
@@ -230,7 +234,7 @@ export function TableManagement() {
                                             </View>
                                         </View>
 
-                                        {/* DETALLES DE LA MESA (UBICACIÓN Y CAPACIDAD) */}
+                                        {/* DETALLES DE LA MESA (UBICACIÓN Y CAPACIDAD CON DÍGITO) */}
                                         <View className={cn("flex-row items-center justify-between pt-4 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
                                             <View className="flex-row items-center gap-2">
                                                 <MapPin color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
@@ -241,7 +245,7 @@ export function TableManagement() {
                                             <View className="flex-row items-center gap-2">
                                                 <Users color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
                                                 <Text className={cn("text-sm font-bold", isDark ? "text-white" : "text-zinc-700")}>
-                                                    {mesa.capacidad} Capacidad
+                                                    {mesa.capacidad || 0} Capacidad
                                                 </Text>
                                             </View>
                                         </View>
@@ -254,7 +258,7 @@ export function TableManagement() {
                 </View>
             </ScrollView>
 
-            {/* Modal de Formulario (Crear / Editar) */}
+            {/* Modal de Formulario */}
             <Modal visible={isModalVisible} transparent={true} animationType="fade">
                 <View className="flex-1 bg-black/60 items-center justify-center p-4">
                     <View className={cn("w-full max-w-md p-6 rounded-[32px] shadow-2xl", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
@@ -294,7 +298,7 @@ export function TableManagement() {
                                 <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Nombre</Text>
                                 <TextInput
                                     className={cn("px-4 py-4 rounded-xl font-bold", isDark ? "bg-[#2A2A2A] text-white" : "bg-zinc-100 text-black")}
-                                    placeholder="Nombre de mesa"
+                                    placeholder="Nombre opcional"
                                     value={newMesa.nombre}
                                     onChangeText={(t) => setNewMesa({ ...newMesa, nombre: t })}
                                 />
@@ -310,7 +314,7 @@ export function TableManagement() {
                                                 borderColor: newMesa.ubicacion === zona ? primaryColor : (isDark ? '#3f3f46' : '#d4d4d8'),
                                                 backgroundColor: newMesa.ubicacion === zona ? `${primaryColor}15` : (isDark ? '#2A2A2A' : '#f4f4f5')
                                             }}
-                                            className="px-4 py-2 rounded-xl border"
+                                            className="px-4 py-2 rounded-xl border flex-grow items-center"
                                         >
                                             <Text style={{ color: newMesa.ubicacion === zona ? primaryColor : (isDark ? '#a1a1aa' : '#71717a') }} className="text-xs font-bold">
                                                 {zona}
