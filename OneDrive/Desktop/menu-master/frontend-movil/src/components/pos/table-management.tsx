@@ -117,7 +117,11 @@ export function TableManagement() {
             setIsModalVisible(false);
             loadMesas();
         } catch (error: any) {
-            toast({ title: "Error de Guardado", description: error.message, variant: "destructive" });
+            const friendlyError = error.message.includes('Unexpected token')
+                ? "El servidor envió una respuesta no válida (HTML en lugar de JSON). Revisa el log de Render."
+                : error.message;
+
+            toast({ title: "Error de Guardado", description: friendlyError, variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -192,9 +196,8 @@ export function TableManagement() {
                                                     <Text style={{ color: primaryColor }} className="text-xl font-bold">{mesa.numero_mesa}</Text>
                                                 </View>
                                                 <View>
-                                                    {/* CORRECCIÓN: Mostrar nombre_mesa dinámico */}
                                                     <Text className={cn("text-lg font-bold", isDark ? "text-white" : "text-zinc-900")} numberOfLines={1}>
-                                                        {mesa.nombre_mesa || `Mesa ${mesa.numero_mesa}`}
+                                                        {`Mesa ${mesa.numero_mesa}`}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -216,20 +219,32 @@ export function TableManagement() {
                                         </View>
 
                                         {/* DETALLES INFERIORES */}
-                                        <View className={cn("flex-row items-center justify-between pt-4 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
-                                            <View className="flex-row items-center gap-2">
-                                                <MapPin color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
-                                                <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-zinc-600")}>
-                                                    {mesa.ubicacion || "Principal"}
+                                        <View className={cn("pt-4 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
+
+                                            {/* AGREGADO: MOSTRAR NOMBRE_MESA ARRIBA DE LA ZONA */}
+                                            <View className="mb-2 flex-row">
+                                                <Text className={cn("text-xs font-bold", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                                                    Nombre:{" "}
+                                                </Text>
+                                                <Text className={cn("text-xs font-bold", isDark ? "text-white" : "text-zinc-900")}>
+                                                    {mesa.nombre_mesa || "Sin asignar"}
                                                 </Text>
                                             </View>
-                                            <View className="flex-row items-center gap-2">
-                                                <Users color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
-                                                {/* CORRECCIÓN: Solo el dígito de capacidad */}
-                                                <View className={cn("px-2 py-0.5 rounded-md", isDark ? "bg-zinc-800" : "bg-zinc-100")}>
-                                                    <Text className={cn("text-sm font-bold", isDark ? "text-white" : "text-zinc-700")}>
-                                                        {mesa.capacidad || 0}
+
+                                            <View className="flex-row items-center justify-between">
+                                                <View className="flex-row items-center gap-2">
+                                                    <MapPin color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
+                                                    <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-zinc-600")}>
+                                                        {mesa.ubicacion || "Principal"}
                                                     </Text>
+                                                </View>
+                                                <View className="flex-row items-center gap-2">
+                                                    <Users color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
+                                                    <View className={cn("px-2 py-0.5 rounded-md", isDark ? "bg-zinc-800" : "bg-zinc-100")}>
+                                                        <Text className={cn("text-sm font-bold", isDark ? "text-white" : "text-zinc-700")}>
+                                                            {mesa.capacidad || 0}
+                                                        </Text>
+                                                    </View>
                                                 </View>
                                             </View>
                                         </View>
@@ -311,7 +326,7 @@ export function TableManagement() {
                             onPress={handleGuardarMesa}
                             disabled={isSaving}
                             style={{ backgroundColor: primaryColor }}
-                            className="p-4 rounded-xl items-center flex-row justify-center shadow-lg active:scale-95"
+                            className="p-4 rounded-xl items-center flex-row justify-center shadow-lg active:scale-95 transition-transform"
                         >
                             {isSaving ? <ActivityIndicator color="white" /> : (
                                 <>
