@@ -111,6 +111,7 @@ app.put('/mesas/:id', async (req, res) => {
         const mesaActualizada = await Mesa.findByIdAndUpdate(
             req.params.id,
             {
+                nombre_mesa: nombre,
                 numero_mesa: req.body.numero_mesa,
                 capacidad: req.body.capacidad,
                 ubicacion: req.body.ubicacion,

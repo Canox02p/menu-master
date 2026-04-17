@@ -8,10 +8,11 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
 import { useToast } from '@/hooks/use-toast';
 
+// Interfaz actualizada para coincidir con el Backend
 interface Mesa {
     _id: string;
     numero_mesa: number;
-    nombre?: string;
+    nombre_mesa?: string; // Nombre que viene de MongoDB
     capacidad: number;
     ubicacion: string;
     estado: 'LIBRE' | 'OCUPADA';
@@ -35,7 +36,7 @@ export function TableManagement() {
 
     const [newMesa, setNewMesa] = useState({
         numero_mesa: '',
-        nombre: '',
+        nombre: '', // Este es el campo que editamos en el modal
         capacidad: '4',
         ubicacion: 'Principal'
     });
@@ -71,7 +72,7 @@ export function TableManagement() {
         setEditingId(mesa._id);
         setNewMesa({
             numero_mesa: String(mesa.numero_mesa ?? ''),
-            nombre: mesa.nombre || '',
+            nombre: mesa.nombre_mesa || '', // Mapeamos nombre_mesa del backend al input "nombre"
             capacidad: String(mesa.capacidad ?? '4'),
             ubicacion: mesa.ubicacion || 'Principal'
         });
@@ -88,7 +89,7 @@ export function TableManagement() {
         try {
             const payload = {
                 numero_mesa: Number(newMesa.numero_mesa),
-                nombre: newMesa.nombre.trim(),
+                nombre: newMesa.nombre.trim(), // Enviamos "nombre", el backend lo mapeará a "nombre_mesa"
                 capacidad: Number(newMesa.capacidad),
                 ubicacion: newMesa.ubicacion.trim(),
                 ...(editingId ? {} : { estado: 'LIBRE' })
@@ -103,36 +104,27 @@ export function TableManagement() {
                 body: JSON.stringify(payload)
             });
 
-            // CORRECCIÓN: Validar respuesta antes de intentar parsear JSON
             if (!response.ok) {
                 const errorText = await response.text();
-                // Si el servidor manda HTML (Error 404/500), lanzamos el error con el estatus
-                throw new Error(`Servidor respondió con error ${response.status}. Verifica que la ruta ${method} ${url} exista en el Backend.`);
+                throw new Error(`Error ${response.status}: El servidor no pudo procesar la solicitud.`);
             }
-
-            const responseData = await response.json();
 
             toast({
                 title: "¡Éxito!",
-                description: editingId ? `Mesa ${payload.numero_mesa} actualizada.` : `Mesa ${payload.numero_mesa} registrada.`
+                description: editingId ? `La mesa ha sido actualizada.` : `Mesa registrada exitosamente.`
             });
 
             setIsModalVisible(false);
             loadMesas();
         } catch (error: any) {
-            // Aquí capturamos el error "Unexpected token <" de forma amigable
-            const friendlyError = error.message.includes('Unexpected token')
-                ? "El servidor envió una respuesta no válida (HTML en lugar de JSON). Revisa el log de Render."
-                : error.message;
-
-            toast({ title: "Error de Guardado", description: friendlyError, variant: "destructive" });
+            toast({ title: "Error de Guardado", description: error.message, variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleEliminar = async (id: string, numero_mesa: number) => {
-        const mensaje = `¿Seguro que deseas eliminar permanentemente la Mesa ${numero_mesa}?`;
+        const mensaje = `¿Seguro que deseas eliminar la Mesa ${numero_mesa}?`;
         if (Platform.OS === 'web') {
             if (window.confirm(mensaje)) ejecutarEliminacion(id);
         } else {
@@ -175,7 +167,7 @@ export function TableManagement() {
                     <View className="flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2">
                         <View>
                             <Text className={cn("text-3xl font-bold", isDark ? "text-white" : "text-zinc-900")}>Gestión de Mesas</Text>
-                            <Text className="text-zinc-500">Añade, edita y organiza los espacios físicos del restaurante.</Text>
+                            <Text className="text-zinc-500">Organiza los espacios físicos de tu restaurante.</Text>
                         </View>
                         <TouchableOpacity
                             onPress={openCreateModal}
@@ -189,18 +181,6 @@ export function TableManagement() {
 
                     {/* Grid de Mesas */}
                     <View className="flex-row flex-wrap -mx-2">
-                        {mesas.length === 0 && !isLoading && (
-                            <View className="w-full py-20 items-center justify-center opacity-50">
-                                <Text className={cn("text-xl font-bold", isDark ? "text-white" : "text-zinc-900")}>No hay mesas configuradas.</Text>
-                            </View>
-                        )}
-
-                        {isLoading && (
-                            <View className="w-full py-10 items-center justify-center">
-                                <ActivityIndicator color={primaryColor} size="large" />
-                            </View>
-                        )}
-
                         {mesas.map((mesa) => (
                             <View key={mesa._id} style={getCardWidth()} className="p-2 mb-2">
                                 <Card className={cn("border-none overflow-hidden rounded-[24px] shadow-sm", isDark ? "bg-[#1E1E1E]" : "bg-white")}>
@@ -212,8 +192,9 @@ export function TableManagement() {
                                                     <Text style={{ color: primaryColor }} className="text-xl font-bold">{mesa.numero_mesa}</Text>
                                                 </View>
                                                 <View>
+                                                    {/* CORRECCIÓN: Mostrar nombre_mesa dinámico */}
                                                     <Text className={cn("text-lg font-bold", isDark ? "text-white" : "text-zinc-900")} numberOfLines={1}>
-                                                        {mesa.nombre || `Mesa ${mesa.numero_mesa}`}
+                                                        {mesa.nombre_mesa || `Mesa ${mesa.numero_mesa}`}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -234,7 +215,7 @@ export function TableManagement() {
                                             </View>
                                         </View>
 
-                                        {/* DETALLES DE LA MESA (UBICACIÓN Y CAPACIDAD CON DÍGITO) */}
+                                        {/* DETALLES INFERIORES */}
                                         <View className={cn("flex-row items-center justify-between pt-4 border-t", isDark ? "border-[#2A2A2A]" : "border-zinc-100")}>
                                             <View className="flex-row items-center gap-2">
                                                 <MapPin color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
@@ -244,9 +225,12 @@ export function TableManagement() {
                                             </View>
                                             <View className="flex-row items-center gap-2">
                                                 <Users color={isDark ? "#71717a" : "#a1a1aa"} size={14} />
-                                                <Text className={cn("text-sm font-bold", isDark ? "text-white" : "text-zinc-700")}>
-                                                    {mesa.capacidad || 0} Capacidad
-                                                </Text>
+                                                {/* CORRECCIÓN: Solo el dígito de capacidad */}
+                                                <View className={cn("px-2 py-0.5 rounded-md", isDark ? "bg-zinc-800" : "bg-zinc-100")}>
+                                                    <Text className={cn("text-sm font-bold", isDark ? "text-white" : "text-zinc-700")}>
+                                                        {mesa.capacidad || 0}
+                                                    </Text>
+                                                </View>
                                             </View>
                                         </View>
 
@@ -277,7 +261,6 @@ export function TableManagement() {
                                     <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Número *</Text>
                                     <TextInput
                                         className={cn("px-4 py-4 rounded-xl font-bold", isDark ? "bg-[#2A2A2A] text-white" : "bg-zinc-100 text-black")}
-                                        placeholder="Ej. 1"
                                         keyboardType="numeric"
                                         value={newMesa.numero_mesa}
                                         onChangeText={(t) => setNewMesa({ ...newMesa, numero_mesa: t })}
@@ -287,7 +270,6 @@ export function TableManagement() {
                                     <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Capacidad *</Text>
                                     <TextInput
                                         className={cn("px-4 py-4 rounded-xl font-bold", isDark ? "bg-[#2A2A2A] text-white" : "bg-zinc-100 text-black")}
-                                        placeholder="Pax"
                                         keyboardType="numeric"
                                         value={newMesa.capacidad}
                                         onChangeText={(t) => setNewMesa({ ...newMesa, capacidad: t })}
@@ -295,10 +277,10 @@ export function TableManagement() {
                                 </View>
                             </View>
                             <View>
-                                <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Nombre</Text>
+                                <Text className="text-zinc-500 text-xs font-bold mb-2 uppercase">Nombre Personalizado</Text>
                                 <TextInput
                                     className={cn("px-4 py-4 rounded-xl font-bold", isDark ? "bg-[#2A2A2A] text-white" : "bg-zinc-100 text-black")}
-                                    placeholder="Nombre opcional"
+                                    placeholder="Ej. VIP Esquina"
                                     value={newMesa.nombre}
                                     onChangeText={(t) => setNewMesa({ ...newMesa, nombre: t })}
                                 />
@@ -329,7 +311,7 @@ export function TableManagement() {
                             onPress={handleGuardarMesa}
                             disabled={isSaving}
                             style={{ backgroundColor: primaryColor }}
-                            className="p-4 rounded-xl items-center flex-row justify-center shadow-lg active:scale-95 transition-transform"
+                            className="p-4 rounded-xl items-center flex-row justify-center shadow-lg active:scale-95"
                         >
                             {isSaving ? <ActivityIndicator color="white" /> : (
                                 <>
