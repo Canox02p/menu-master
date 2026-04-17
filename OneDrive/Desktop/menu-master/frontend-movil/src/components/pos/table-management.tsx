@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 interface Mesa {
     _id: string;
     numero_mesa: number;
-    nombre_mesa?: string; // Nombre que viene de MongoDB
+    nombre_mesa: string; // Nombre que viene de MongoDB
     capacidad: number;
     ubicacion: string;
     estado: 'LIBRE' | 'OCUPADA';
