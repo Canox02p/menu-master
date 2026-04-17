@@ -506,7 +506,7 @@ export function OrderTaking({ tableId, tableNumber, tableName, waiterId, waiterN
                     fontSize: 14,
                     fontWeight: '500',
                     color: isDark ? '#e4e4e7' : '#18181b',
-                    outline: 'none',
+                    //  outline: 'none',
                   }}
                 />
                 {searchQuery.length > 0 && (
