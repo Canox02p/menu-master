@@ -67,7 +67,6 @@ const PaymentMethodModal = ({
   const [selectedMethod, setSelectedMethod] = useState<'EFECTIVO' | 'TARJETA' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Reset selection when modal opens
   useEffect(() => {
     if (visible) {
       setSelectedMethod(null);
@@ -273,13 +272,20 @@ const PaymentMethodModal = ({
 // ==========================================
 // 3. TICKET OVERLAY
 // ==========================================
-const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { order: OrderData | null, visible: boolean, onClose: () => void, primaryColor: string, isDark: boolean }) => {
+const TicketOverlay = ({
+  order,
+  visible,
+  onClose,
+  primaryColor,
+  isDark,
+}: {
+  order: OrderData | null;
+  visible: boolean;
+  onClose: () => void;
+  primaryColor: string;
+  isDark: boolean;
+}) => {
   if (!order || !visible) return null;
-
-  const handlePrint = () => {
-    if (Platform.OS === 'web') { window.print(); }
-    else { Alert.alert("Impresión", "Iniciando impresión del ticket..."); }
-  };
 
   let fecha = new Date();
   try { if (order.fecha_creacion) fecha = new Date(order.fecha_creacion); } catch (e) { }
@@ -289,6 +295,135 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
   const numMesa = order.numero_mesa || order.id_mesa?.numero_mesa || '?';
   const nomMesa = order.nombre_mesa || order.id_mesa?.nombre_mesa || '';
   const zonaMesa = order.ubicacion_mesa || order.id_mesa?.area || order.id_mesa?.ubicacion || 'General';
+  const ticketId = String(order._id || '0000').slice(-6).toUpperCase();
+
+  // ✅ CORRECCIÓN: Abre una ventana limpia con solo el ticket en lugar de imprimir toda la página
+  const handlePrint = () => {
+    if (Platform.OS === 'web') {
+      const productosHTML = safeProductos.map(item => `
+        <tr>
+          <td style="padding: 4px 0; font-weight: bold; width: 32px;">${item.cantidad || 1}</td>
+          <td style="padding: 4px 0;">${item.nombre || 'Item'}</td>
+          <td style="padding: 4px 0; text-align: right; font-family: monospace; font-weight: bold;">
+            $${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}
+          </td>
+        </tr>
+      `).join('');
+
+      const printWindow = window.open('', '_blank', 'width=400,height=650');
+      if (!printWindow) return;
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8"/>
+            <title>Ticket #${ticketId}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+                color: #000;
+                background: #fff;
+                padding: 20px;
+                max-width: 300px;
+                margin: 0 auto;
+              }
+              .center { text-align: center; }
+              .divider { border-top: 1px dashed #999; margin: 10px 0; }
+              .divider-solid { border-top: 1px solid #999; margin: 10px 0; }
+              .bold { font-weight: bold; }
+              .logo { font-size: 18px; font-weight: bold; letter-spacing: 2px; margin-bottom: 4px; }
+              .subtitle { font-size: 11px; color: #555; }
+              .info-row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 12px; }
+              .badge {
+                display: inline-block; border: 1px solid #ccc;
+                padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;
+                margin-top: 6px;
+              }
+              table { width: 100%; border-collapse: collapse; }
+              thead td { font-size: 10px; font-weight: bold; color: #555; padding-bottom: 6px; }
+              .total-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; }
+              .total-label { font-size: 20px; font-weight: bold; }
+              .total-amount { font-size: 24px; font-weight: bold; font-family: monospace; }
+              .thanks { text-align: center; color: #888; font-size: 11px; margin-top: 20px; }
+              @media print {
+                body { padding: 0; }
+                @page { margin: 8mm; size: 80mm auto; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="center" style="margin-bottom: 16px;">
+              <div class="logo">MENU MASTER</div>
+              <div class="subtitle">Ticket #${ticketId}</div>
+            </div>
+
+            <div class="divider-solid"></div>
+
+            <div style="margin: 8px 0;">
+              <div class="info-row">
+                <span>Fecha:</span>
+                <span class="bold">${!isNaN(fecha.getTime()) ? fecha.toLocaleDateString() : '--/--/----'}</span>
+              </div>
+              <div class="info-row">
+                <span>Hora:</span>
+                <span class="bold">${!isNaN(fecha.getTime()) ? fecha.toLocaleTimeString() : '--:--'}</span>
+              </div>
+              <div class="info-row">
+                <span>Le atendió:</span>
+                <span class="bold">${(order.nombre_mesero || 'Mesero').toUpperCase()}</span>
+              </div>
+              <div>
+                <span class="badge">Mesa ${numMesa}${nomMesa ? ` - ${nomMesa}` : ''}</span>
+                <span style="font-size: 11px; color: #555; margin-left: 6px;">📍 ${zonaMesa}</span>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <table>
+              <thead>
+                <tr>
+                  <td style="width: 32px;">CANT</td>
+                  <td>DESCRIPCIÓN</td>
+                  <td style="text-align: right;">IMPORTE</td>
+                </tr>
+              </thead>
+              <tbody>${productosHTML}</tbody>
+            </table>
+
+            <div class="divider"></div>
+
+            <div class="info-row" style="margin-top: 4px;">
+              <span style="color: #555;">Total de Artículos:</span>
+              <span class="bold">${totalItems}</span>
+            </div>
+
+            <div class="divider-solid"></div>
+
+            <div class="total-row">
+              <span class="total-label">TOTAL</span>
+              <span class="total-amount">$${Number(order.total || 0).toFixed(2)}</span>
+            </div>
+
+            <p class="thanks">¡Gracias por su preferencia!</p>
+
+            <script>
+              window.onload = () => {
+                window.print();
+                window.onafterprint = () => window.close();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } else {
+      Alert.alert("Impresión", "Iniciando impresión del ticket...");
+    }
+  };
 
   return (
     <SafeAreaView className="absolute z-[200] top-0 bottom-0 left-0 right-0 bg-black/60 items-center justify-center p-4">
@@ -302,12 +437,18 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
         <ScrollView className="p-6 flex-1" showsVerticalScrollIndicator={false}>
           <View className="items-center mb-6">
             <Text className="text-2xl font-headline font-bold text-black mb-1">MENU MASTER</Text>
-            <Text className="text-zinc-500 text-xs">Ticket #{String(order._id || '0000').slice(-6).toUpperCase()}</Text>
+            <Text className="text-zinc-500 text-xs">Ticket #{ticketId}</Text>
           </View>
           <View className="space-y-1.5 mb-6 border-b border-zinc-200 pb-4">
-            <Text className="text-sm font-medium text-zinc-700">Fecha: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleDateString() : '--/--/----'}</Text></Text>
-            <Text className="text-sm font-medium text-zinc-700">Hora: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleTimeString() : '--:--'}</Text></Text>
-            <Text className="text-sm font-medium text-zinc-700">Le atendió: <Text className="font-bold uppercase">{order.nombre_mesero || 'Mesero'}</Text></Text>
+            <Text className="text-sm font-medium text-zinc-700">
+              Fecha: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleDateString() : '--/--/----'}</Text>
+            </Text>
+            <Text className="text-sm font-medium text-zinc-700">
+              Hora: <Text className="font-bold">{!isNaN(fecha.getTime()) ? fecha.toLocaleTimeString() : '--:--'}</Text>
+            </Text>
+            <Text className="text-sm font-medium text-zinc-700">
+              Le atendió: <Text className="font-bold uppercase">{order.nombre_mesero || 'Mesero'}</Text>
+            </Text>
             <View className="flex-row flex-wrap mt-2 items-center gap-2">
               <View className="bg-zinc-100 px-2 py-1 rounded border border-zinc-200">
                 <Text className="text-sm font-bold text-zinc-800">Mesa {numMesa} {nomMesa ? `- ${nomMesa}` : ''}</Text>
@@ -328,7 +469,9 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
               <View key={idx} className="flex-row justify-between mb-2 items-start">
                 <Text className="text-sm font-bold text-zinc-800 w-8">{item.cantidad || 1}</Text>
                 <Text className="text-sm font-medium text-zinc-700 flex-1 pr-2">{item.nombre || 'Item'}</Text>
-                <Text className="text-sm font-mono font-bold text-zinc-800">${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}</Text>
+                <Text className="text-sm font-mono font-bold text-zinc-800">
+                  ${(Number(item.subtotal) || (Number(item.precio_unitario) * Number(item.cantidad)) || 0).toFixed(2)}
+                </Text>
               </View>
             ))}
           </View>
@@ -343,7 +486,11 @@ const TicketOverlay = ({ order, visible, onClose, primaryColor, isDark }: { orde
           <Text className="text-center text-zinc-400 text-xs mt-8 mb-4">¡Gracias por su preferencia!</Text>
         </ScrollView>
         <View className="p-4 bg-zinc-50 border-t border-zinc-200">
-          <TouchableOpacity onPress={handlePrint} style={{ backgroundColor: primaryColor }} className="w-full py-4 rounded-xl items-center justify-center flex-row shadow-lg">
+          <TouchableOpacity
+            onPress={handlePrint}
+            style={{ backgroundColor: primaryColor }}
+            className="w-full py-4 rounded-xl items-center justify-center flex-row shadow-lg"
+          >
             <Printer color="white" size={20} className="mr-2" />
             <Text className="text-white font-bold text-lg">Imprimir Ticket</Text>
           </TouchableOpacity>
@@ -466,7 +613,14 @@ const HistoryCard = ({ venta, isDark, primaryColor }: { venta: VentaData, isDark
                 <Text style={{ color: primaryColor }} className="text-xs font-bold uppercase tracking-widest">Platillos Ordenados</Text>
               </View>
               {(venta.productos_cobrados || []).map((p, idx) => (
-                <View key={idx} className="flex-row justify-between items-center py-1.5" style={{ borderBottomWidth: idx < venta.productos_cobrados.length - 1 ? 0.5 : 0, borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5' }}>
+                <View
+                  key={idx}
+                  className="flex-row justify-between items-center py-1.5"
+                  style={{
+                    borderBottomWidth: idx < venta.productos_cobrados.length - 1 ? 0.5 : 0,
+                    borderBottomColor: isDark ? '#2A2A2A' : '#f4f4f5',
+                  }}
+                >
                   <Text className={cn("text-xs flex-1", isDark ? "text-zinc-300" : "text-zinc-700")} numberOfLines={1}>
                     <Text className="font-bold">{p.cantidad}x</Text> {p.nombre}
                   </Text>
@@ -503,8 +657,6 @@ export function WaiterOrders() {
   const [filter, setFilter] = useState<'Ongoing' | 'History'>('Ongoing');
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [selectedTicket, setSelectedTicket] = useState<OrderData | null>(null);
-
-  // --- NUEVO: estado para el modal de método de pago ---
   const [paymentOrder, setPaymentOrder] = useState<OrderData | null>(null);
 
   const fetchOrders = async () => {
@@ -529,7 +681,7 @@ export function WaiterOrders() {
           nombre_mesa: p.nombre_mesa || p.id_mesa?.nombre_mesa || p.id_mesa?.nombre || '',
           ubicacion_mesa: p.ubicacion_mesa || p.id_mesa?.area || p.id_mesa?.ubicacion || 'General',
           id_mesa: p.id_mesa,
-          originalIds: [p._id]
+          originalIds: [p._id],
         };
       });
 
@@ -566,12 +718,10 @@ export function WaiterOrders() {
     setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // --- NUEVO: abrir modal de método de pago ---
   const handleCobrar = (order: OrderData) => {
     setPaymentOrder(order);
   };
 
-  // --- NUEVO: procesarCobro recibe el método seleccionado ---
   const procesarCobro = async (order: OrderData, metodoPago: 'EFECTIVO' | 'TARJETA') => {
     try {
       const payloadVenta = {
@@ -586,14 +736,14 @@ export function WaiterOrders() {
         productos_cobrados: order.productos.map(item => ({
           nombre: item.nombre,
           cantidad: item.cantidad,
-          precio: item.precio_unitario || (item.subtotal / item.cantidad) || 0
-        }))
+          precio: item.precio_unitario || (item.subtotal / item.cantidad) || 0,
+        })),
       };
 
       await fetch('https://menu-master-api.onrender.com/ventas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payloadVenta)
+        body: JSON.stringify(payloadVenta),
       });
 
       const idsToPay = order.originalIds || [order._id];
@@ -602,7 +752,7 @@ export function WaiterOrders() {
           await fetch(`https://menu-master-api.onrender.com/pedidos/${idsToPay[i]}/estado`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: 'PAGADO' })
+            body: JSON.stringify({ estado: 'PAGADO' }),
           });
         }
       }
@@ -610,7 +760,7 @@ export function WaiterOrders() {
       setPaymentOrder(null);
       toast({
         title: "Pago Registrado",
-        description: `Cobro con ${metodoPago === 'TARJETA' ? 'tarjeta' : 'efectivo'} registrado exitosamente.`
+        description: `Cobro con ${metodoPago === 'TARJETA' ? 'tarjeta' : 'efectivo'} registrado exitosamente.`,
       });
       fetchOrders();
       fetchVentas();
@@ -677,10 +827,16 @@ export function WaiterOrders() {
             </View>
 
             <View className={cn("flex-row p-1.5 rounded-xl border", isDark ? "bg-[#1E1E1E] border-[#2A2A2A]" : "bg-zinc-100 border-zinc-200")}>
-              <TouchableOpacity onPress={() => setFilter('Ongoing')} className={cn("px-6 py-2.5 rounded-lg", filter === 'Ongoing' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}>
+              <TouchableOpacity
+                onPress={() => setFilter('Ongoing')}
+                className={cn("px-6 py-2.5 rounded-lg", filter === 'Ongoing' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}
+              >
                 <Text className={cn("font-bold text-sm", filter === 'Ongoing' ? (isDark ? "text-white" : "text-zinc-900") : "text-zinc-500")}>Activas</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setFilter('History'); fetchVentas(); }} className={cn("px-6 py-2.5 rounded-lg", filter === 'History' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}>
+              <TouchableOpacity
+                onPress={() => { setFilter('History'); fetchVentas(); }}
+                className={cn("px-6 py-2.5 rounded-lg", filter === 'History' ? (isDark ? "bg-[#2A2A2A] shadow-sm" : "bg-white shadow-sm") : "")}
+              >
                 <Text className={cn("font-bold text-sm", filter === 'History' ? (isDark ? "text-white" : "text-zinc-900") : "text-zinc-500")}>Historial</Text>
               </TouchableOpacity>
             </View>
