@@ -1,5 +1,6 @@
 'use client';
 
+import { MesaStatus } from './mesa-status';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, useWindowDimensions, Pressable, StyleProp, ViewStyle, Platform, ActivityIndicator, TouchableOpacity, Modal, DimensionValue, Alert, SafeAreaView } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
