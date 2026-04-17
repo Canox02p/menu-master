@@ -108,21 +108,29 @@ app.get('/mesas', async (req, res) => {
 
 app.put('/mesas/:id', async (req, res) => {
     try {
+        const { id } = req.params;
+        // Extraemos 'nombre' (como lo manda el frontend)
+        const { numero_mesa, nombre, capacidad, ubicacion } = req.body;
+
         const mesaActualizada = await Mesa.findByIdAndUpdate(
-            req.params.id,
+            id,
             {
+                numero_mesa,
                 nombre_mesa: nombre,
-                numero_mesa: req.body.numero_mesa,
-                capacidad: req.body.capacidad,
-                ubicacion: req.body.ubicacion,
+                capacidad,
+                ubicacion,
                 fecha_actualizacion: Date.now()
             },
             { new: true }
         );
 
         if (!mesaActualizada) return res.status(404).json({ error: "Mesa no encontrada" });
+
+        console.log("Mesa actualizada con éxito:", mesaActualizada);
         res.json(mesaActualizada);
-    } catch (err) { res.status(400).json({ error: err.message }); }
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 app.patch('/mesas/:id/estado', async (req, res) => {
